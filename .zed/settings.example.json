@@ -1,0 +1,55 @@
+{
+  "_setup": [
+    "1. Copy this file to settings.json: cp settings.example.json settings.json",
+    "2. settings.json is gitignored — safe to put real paths here",
+    "3. Set these env vars in your ~/.zshrc (or ~/.bashrc):",
+    "      export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here",
+    "      export PROJECT_ROOT=/absolute/path/to/recruiter",
+    "   Then restart Zed (or run: source ~/.zshrc in terminal, then open Zed from that terminal)",
+    "4. GitHub PAT needs scopes: repo, read:org, workflow"
+  ],
+  "context_servers": {
+    "playwright": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@playwright/mcp@latest"]
+      },
+      "settings": {}
+    },
+    "github": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github@latest"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "$GITHUB_PERSONAL_ACCESS_TOKEN"
+        }
+      },
+      "settings": {}
+    },
+    "filesystem": {
+      "command": {
+        "path": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem@latest",
+          "$PROJECT_ROOT"
+        ]
+      },
+      "settings": {}
+    },
+    "fetch": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch@latest"]
+      },
+      "settings": {}
+    },
+    "sequential-thinking": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@latest"]
+      },
+      "settings": {}
+    }
+  }
+}

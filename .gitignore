@@ -32,6 +32,10 @@ Thumbs.db
 .idea/
 *.swp
 
+# Zed — personal config (paths, tokens)
+# Commit settings.example.json instead
+.zed/settings.json
+
 # Scraped data (debug artifacts)
 scraper/output/
 *.scraped.json
