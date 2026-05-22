@@ -1,0 +1,32 @@
+{
+  "name": "ai-recruiter-scraper",
+  "version": "1.0.0",
+  "description": "Playwright-based scraper for IT job boards with Cloudflare bypass",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "scrape": "ts-node src/index.ts",
+    "test": "jest",
+    "test:justjoin": "jest tests/justjoin.test.ts",
+    "test:nofluffjobs": "jest tests/nofluffjobs.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.45.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testTimeout": 60000
+  }
+}
