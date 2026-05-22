@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "P2 IN PROGRESS — tunnel active at https://ai-recruiter.loca.lt, P2-1/P2-3 done. Next: P2-4 create Webhook node in n8n."
+current_focus: "P2 IN PROGRESS — P2-7 done. Next: P2-8 Switch node by source, P2-9 fallback."
 
 phases:
   P0:
@@ -166,18 +166,17 @@ phases:
         status: done
         note: "curl POST https://ai-recruiter.loca.lt/ → 404 (n8n alive, no handler yet — expected). Bypass-Tunnel-Reminder header added to sender.ts"
       P2-4:
-        {
-          status: pending,
-          note: "Create Webhook node in n8n: POST /jobs/ingest",
-        }
-      P2-5: { status: pending, note: "Respond to Webhook → 200 OK immediately" }
+        status: done
+        note: "Webhook node created: POST /jobs/ingest, Respond to Webhook → {ok:true} / 200"
+      P2-5:
+        status: done
+        note: "Respond to Webhook fires immediately before processing"
       P2-6:
-        { status: pending, note: "Verify $json.body.jobs arrives correctly" }
+        status: done
+        note: "curl localhost:5678/webhook-test/jobs/ingest → {ok:true}; payload confirmed"
       P2-7:
-        {
-          status: pending,
-          note: "Code node: normalize array, ensure url/body/source fields",
-        }
+        status: done
+        note: "Code node: normalizes body.jobs array, ensures all JobOffer fields present"
       P2-8:
         {
           status: pending,

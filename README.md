@@ -93,12 +93,12 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P2-3` Проверить доступность туннеля: `curl -X POST https://ai-recruiter.loca.lt/` → 404 (n8n жив); `Bypass-Tunnel-Reminder: true` добавлен в `sender.ts`
 
 #### 2.2 — Webhook Node
-- [ ] `P2-4` Создать Webhook-узел в n8n: метод POST, путь `/jobs/ingest`
-- [ ] `P2-5` Добавить Respond to Webhook → `200 OK` сразу (не ждать обработки)
-- [ ] `P2-6` Проверить, что тело `[{...}, {...}]` корректно приходит в `$json.body`
+- [x] `P2-4` Создать Webhook-узел в n8n: метод POST, путь `/jobs/ingest`
+- [x] `P2-5` Добавить Respond to Webhook → `200 OK` сразу (не ждать обработки)
+- [x] `P2-6` Проверить, что тело `[{...}, {...}]` корректно приходит в `$json.body`
 
 #### 2.3 — Препроцессинг
-- [ ] `P2-7` Добавить узел Code (JS): нормализовать массив → `$json.body.map(...)`, обеспечить наличие полей `url`, `body`, `source`
+- [x] `P2-7` Добавить узел Code (JS): нормализовать массив → `$json.body.map(...)`, обеспечить наличие полей `url`, `body`, `source`
 - [ ] `P2-8` Добавить узел Switch: роутинг по `source` (justjoin / nofluffjobs / linkedin / manual)
 - [ ] `P2-9` Добавить fallback-ветку для неизвестных источников (логировать, не падать)
 - [ ] `P2-10` Экспортировать JSON-конфиг воркфлоу в `/n8n/workflows/ingest.json`
