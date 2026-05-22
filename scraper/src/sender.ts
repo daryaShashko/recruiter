@@ -1,6 +1,6 @@
-import axios, { AxiosError } from 'axios';
-import { JobOffer, WebhookPayload } from './types';
-import { config } from './config';
+import axios, { AxiosError } from "axios";
+import { JobOffer, WebhookPayload } from "./types";
+import { config } from "./config";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -9,9 +9,12 @@ function sleep(ms: number): Promise<void> {
 /**
  * Send job offers to the n8n Webhook with exponential backoff retry.
  */
-export async function sendToWebhook(jobs: JobOffer[], source: string): Promise<void> {
+export async function sendToWebhook(
+  jobs: JobOffer[],
+  source: string,
+): Promise<void> {
   if (!config.webhookUrl) {
-    throw new Error('WEBHOOK_URL is not configured');
+    throw new Error("WEBHOOK_URL is not configured");
   }
 
   const payload: WebhookPayload = {
@@ -30,18 +33,22 @@ export async function sendToWebhook(jobs: JobOffer[], source: string): Promise<v
     attempt++;
     try {
       console.log(
-        `[Sender] Attempt ${attempt}/${config.sender.maxRetries}: sending ${jobs.length} jobs to webhook...`
+        `[Sender] Attempt ${attempt}/${config.sender.maxRetries}: sending ${jobs.length} jobs to webhook...`,
       );
 
       const response = await axios.post(config.webhookUrl, payload, {
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'AI-Recruiter-Scraper/1.0',
+          "Content-Type": "application/json",
+          "User-Agent": "AI-Recruiter-Scraper/1.0",
+          // Bypass localtunnel interstitial "Click to Continue" page
+          "Bypass-Tunnel-Reminder": "true",
         },
         timeout: 15_000,
       });
 
-      console.log(`[Sender] Webhook responded: ${response.status} ${response.statusText}`);
+      console.log(
+        `[Sender] Webhook responded: ${response.status} ${response.statusText}`,
+      );
       return; // Success
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -50,11 +57,13 @@ export async function sendToWebhook(jobs: JobOffer[], source: string): Promise<v
 
       if (attempt >= config.sender.maxRetries) {
         throw new Error(
-          `[Sender] All ${config.sender.maxRetries} attempts failed. Last error: ${message}`
+          `[Sender] All ${config.sender.maxRetries} attempts failed. Last error: ${message}`,
         );
       }
 
-      console.warn(`[Sender] Attempt ${attempt} failed (${status ?? 'network error'}: ${message}). Retrying in ${delay}ms...`);
+      console.warn(
+        `[Sender] Attempt ${attempt} failed (${status ?? "network error"}: ${message}). Retrying in ${delay}ms...`,
+      );
       await sleep(delay);
       delay *= 2; // Exponential backoff
     }

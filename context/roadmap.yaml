@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "P1 COMPLETE — all scrapers verified, all unit tests passing (31/31). Ready to start P2 n8n webhook pipeline."
+current_focus: "P2 IN PROGRESS — tunnel active at https://ai-recruiter.loca.lt, P2-1/P2-3 done. Next: P2-4 create Webhook node in n8n."
 
 phases:
   P0:
@@ -153,9 +153,42 @@ phases:
 
   P2:
     name: "n8n Webhook Pipeline"
-    status: pending
+    status: in_progress
     goal: "Receive scraper payload, normalize, route by source"
-    blocked_by: "P1 must be complete and tested first"
+    tasks:
+      P2-1:
+        status: done
+        note: "n8n running on localhost:5678; localtunnel with fixed subdomain: npx localtunnel --port 5678 --subdomain ai-recruiter → https://ai-recruiter.loca.lt"
+      P2-2:
+        status: pending
+        note: "GitHub Secret WEBHOOK_URL must be set to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
+      P2-3:
+        status: done
+        note: "curl POST https://ai-recruiter.loca.lt/ → 404 (n8n alive, no handler yet — expected). Bypass-Tunnel-Reminder header added to sender.ts"
+      P2-4:
+        {
+          status: pending,
+          note: "Create Webhook node in n8n: POST /jobs/ingest",
+        }
+      P2-5: { status: pending, note: "Respond to Webhook → 200 OK immediately" }
+      P2-6:
+        { status: pending, note: "Verify $json.body.jobs arrives correctly" }
+      P2-7:
+        {
+          status: pending,
+          note: "Code node: normalize array, ensure url/body/source fields",
+        }
+      P2-8:
+        {
+          status: pending,
+          note: "Switch node: route by source (justjoin/nofluffjobs)",
+        }
+      P2-9: { status: pending, note: "Fallback branch for unknown sources" }
+      P2-10:
+        {
+          status: pending,
+          note: "Export workflow JSON to /n8n/workflows/ingest.json",
+        }
 
   P3:
     name: "Ollama Evaluation Integration"
@@ -184,7 +217,8 @@ phases:
     blocked_by: "P5"
 
 known_blockers:
-  - "P2+: requires n8n running locally with --tunnel for webhook access"
+  - "P2-2: GitHub Secret WEBHOOK_URL needs manual update to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
+  - "localtunnel subdomain may be taken on restart — fallback: npx localtunnel --port 5678 (dynamic URL, update Secret accordingly)"
 
 # ============================================================
 # SYNC RULE

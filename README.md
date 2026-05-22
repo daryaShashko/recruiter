@@ -20,7 +20,7 @@ Telegram (ручная ссылка)  ──────────────
 
 - [x] **PHASE 0** — Project bootstrap ✅
 - [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅
-- [ ] **PHASE 2** — n8n Webhook pipeline
+- [ ] **PHASE 2** — n8n Webhook pipeline 🔄
 - [ ] **PHASE 3** — Ollama evaluation integration
 - [ ] **PHASE 4** — Notion database integration
 - [ ] **PHASE 5** — Telegram bot trigger
@@ -88,9 +88,9 @@ Telegram (ручная ссылка)  ──────────────
 > Цель: принять массив от скрапера, подготовить к оценке LLM.
 
 #### 2.1 — Туннель и доступность
-- [ ] `P2-1` Запустить n8n с туннелем: задокументировать команду (`npx n8n start --tunnel`)
-- [ ] `P2-2` Зафиксировать Webhook URL в GitHub Secret (`WEBHOOK_URL`)
-- [ ] `P2-3` Проверить доступность туннеля: `curl -X POST <url> -d '{}'` → 200
+- [x] `P2-1` Запустить n8n с туннелем: `npx localtunnel --port 5678 --subdomain ai-recruiter` → `https://ai-recruiter.loca.lt`
+- [ ] `P2-2` Зафиксировать Webhook URL в GitHub Secret (`WEBHOOK_URL` = `https://ai-recruiter.loca.lt/webhook/jobs/ingest`)
+- [x] `P2-3` Проверить доступность туннеля: `curl -X POST https://ai-recruiter.loca.lt/` → 404 (n8n жив); `Bypass-Tunnel-Reminder: true` добавлен в `sender.ts`
 
 #### 2.2 — Webhook Node
 - [ ] `P2-4` Создать Webhook-узел в n8n: метод POST, путь `/jobs/ingest`
