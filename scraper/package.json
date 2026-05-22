@@ -7,6 +7,7 @@
     "build": "tsc",
     "scrape": "ts-node src/index.ts",
     "scrape:dry": "DRY_RUN=true ts-node src/index.ts",
+    "scrape:watch": "HEADLESS=false DRY_RUN=true ts-node src/index.ts",
     "test": "jest",
     "test:justjoin": "jest tests/justjoin.test.ts",
     "test:nofluffjobs": "jest tests/nofluffjobs.test.ts",
