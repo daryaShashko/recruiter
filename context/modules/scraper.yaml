@@ -90,26 +90,27 @@ files:
     exports: [scrapeNoFluffJobs]
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://nofluffjobs.com"
-    api_endpoint: "https://nofluffjobs.com/api/search/posting" # verified via DevTools 2025-05
-    method: "POST (intercepted via page.on('response') for page 1; page.evaluate fetch for pages 2+)"
+    method: "SSR extraction — reads Angular serverApp-state from <script id='serverApp-state'> embedded in page HTML"
+    note: "2026-05: NFJ switched from POST XHR /api/search/posting to Angular SSR. No XHR interception needed."
     navigation_url: "https://nofluffjobs.com/pl/praca/javascript"
-    response_path: "json.postings" # confirmed — top-level key in API response
-    id_format: "nofluffjobs_{raw.reference}" # reference is stable across location variants; raw.id is NOT unique
+    ssr_state_key: "STORE_KEY"
+    response_path: "STORE_KEY.searchResponse.postings"
+    id_format: "nofluffjobs_{raw.reference}" # reference is stable across location variants
     status: implemented
     pagination:
-      mechanism: "page 1 via XHR intercept; pages 2..totalPages via page.evaluate fetch (reuses browser session/cookies)"
-      page_param: "body.page (integer, 1-based)"
-      total_pages_field: "json.totalPages"
-      safety_cap: 50
-      inter_page_delay_ms: 300
-    api_response_shape: # verified via DevTools 2025-05
-      totalPages: number
-      totalCount: number # includes all location variants of each job
-      divs: number # unique job postings count (before location expansion); use this for expected batch size
-      postings: RawNoFluffPosting[]
-      rawSearch: string
-      criteriaSearch: object
-      salaryMatchBlock: object
+      mechanism: >
+        SSR is cumulative: page N contains items 1..N*pageSize.
+        Step 1: load page 1 → read totalPages.
+        Step 2: if totalPages > 1, navigate to page=totalPages → get ALL postings in one HTML response.
+        Result: max 2 HTTP requests regardless of total page count.
+      page_param: "URL query: ?page=N (1-based)"
+      total_pages_field: "STORE_KEY.searchResponse.totalPages"
+      safety_cap: 20
+    ssr_response_shape: # confirmed via dry-run 2026-05-22
+      STORE_KEY.searchResponse.postings: RawNoFluffPosting[]
+      STORE_KEY.searchResponse.totalPages: number
+      STORE_KEY.searchResponse.totalCount: number
+      STORE_KEY.params.page: number
     salary_logic: "extractSalary() — requires disclosedAt=VISIBLE; returns 'from–to CURRENCY TYPE/mo'"
     location_logic: "location.fullyRemote → 'Remote'; places[].city contains Gdańsk → 'Gdańsk'; else first non-provinceOnly city"
     body_strategy: "buildBody() — synthetic from title + company + category + seniority + technology + tags + locations"
@@ -117,7 +118,14 @@ files:
     dedup: "deduplicateByReference() — same job appears once per location; keeps remote > Gdańsk > first seen"
     known_gaps:
       - "No full job description in list API — LLM evaluates from structured fields only"
+      - "SSR schema is not public — may break on NFJ frontend changes (use debug-urls.ts to re-check)"
     never_throws: true # catches internally, returns [] on failure
+
+  src/debug-urls.ts:
+    exports: [] # debug script, not imported elsewhere
+    purpose: "Log all non-static network URLs from both sites. Re-run when site structure suspected to have changed."
+    run: "npx ts-node src/debug-urls.ts"
+    note: "DELETE or keep; not part of production pipeline"
 
   src/utils/browser.ts:
     exports: [openPage, closeBrowser]
@@ -145,7 +153,7 @@ scraper_output_contract:
 output:
   format: WebhookPayload
   destination: "WEBHOOK_URL env var (via sender.ts)"
-  artifact_path: "scraper/output/ (uploaded by GitHub Actions)"
+  artifact_path: "output/ (ROOT of repo — index.ts writes to ../../output relative to src/)"
 
 # ============================================================
 # SYNC RULE

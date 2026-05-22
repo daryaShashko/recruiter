@@ -30,20 +30,42 @@ workflows:
       working_directory: scraper/
     steps:
       - { name: "Checkout", action: "actions/checkout@v4" }
-      - { name: "Setup Node.js 20", action: "actions/setup-node@v4", cache: "npm", cache_path: "scraper/package-lock.json" }
+      - {
+          name: "Setup Node.js 20",
+          action: "actions/setup-node@v4",
+          cache: "npm",
+          cache_path: "scraper/package-lock.json",
+        }
       - { name: "Install deps", run: "npm ci" }
-      - { name: "Install Playwright Chromium", run: "npx playwright install chromium --with-deps" }
-      - { name: "Run scraper", run: "npm run scrape", env: { WEBHOOK_URL: "${{ secrets.WEBHOOK_URL }}", DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}" } }
-      - { name: "Upload artifact", action: "actions/upload-artifact@v4", path: "scraper/output/", retention: "7 days", if: always }
-    secrets_used: [WEBHOOK_URL]
+      - {
+          name: "Install Playwright Chromium",
+          run: "npx playwright install chromium --with-deps",
+        }
+      - {
+          name: "Run scraper",
+          run: "npm run scrape",
+          env:
+            {
+              WEBHOOK_URL: "${{ secrets.WEBHOOK_URL }}",
+              DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}",
+            },
+        }
+      - {
+          name: "Upload artifact",
+          action: "actions/upload-artifact@v4",
+          path: "output/",
+          retention: "7 days",
+          if: always,
+        }
     known_gaps:
       - "No concurrency group — parallel runs possible if manual trigger used"
       - "No unit test step"
       - "No Telegram notification on failure"
+      - "Artifact path was scraper/output/ but code writes to repo-root output/ — fixed in workflow"
 
   test.yml:
     path: .github/workflows/test.yml
-    status: not_created  # Pending improvement
+    status: not_created # Pending improvement
     purpose: "Run unit tests on every PR and push to main"
     triggers:
       - "pull_request"
@@ -54,7 +76,12 @@ workflows:
       working_directory: scraper/
     steps:
       - { name: "Checkout", action: "actions/checkout@v4" }
-      - { name: "Setup Node.js 20", action: "actions/setup-node@v4", cache: "npm", cache_path: "scraper/package-lock.json" }
+      - {
+          name: "Setup Node.js 20",
+          action: "actions/setup-node@v4",
+          cache: "npm",
+          cache_path: "scraper/package-lock.json",
+        }
       - { name: "Install deps", run: "npm ci" }
       - { name: "Typecheck", run: "npm run typecheck" }
       - { name: "Unit tests", run: "npm test" }
@@ -62,7 +89,7 @@ workflows:
 
   context-check.yml:
     path: .github/workflows/context-check.yml
-    status: exists  # Created as part of SYNC system
+    status: exists # Created as part of SYNC system
     purpose: "Warn on PR if context YAML files are stale after code changes"
     triggers: [pull_request]
 

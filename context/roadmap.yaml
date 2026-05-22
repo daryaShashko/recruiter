@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "Verify NoFluffJobs XHR endpoint via DevTools (P1-11). JustJoin done."
+current_focus: "P1 core DONE — both scrapers verified via dry-run 2026-05-22 (JJ=199, NFJ=11, total=210). Remaining P1: unit tests (P1-9/P1-10/P1-20). Ready to start P2 n8n webhook in parallel."
 
 phases:
   P0:
@@ -18,7 +18,11 @@ phases:
       P0-1: { status: done, note: "README.md created" }
       P0-2: { status: done, note: "Architecture and phases documented" }
       P0-3: { status: done, note: "Directory structure: /scraper, /n8n, /docs" }
-      P0-4: { status: done, note: ".gitignore (node_modules, .env, playwright state)" }
+      P0-4:
+        {
+          status: done,
+          note: ".gitignore (node_modules, .env, playwright state)",
+        }
       P0-5: { status: done, note: ".env.example with all variables" }
 
   P1:
@@ -29,48 +33,120 @@ phases:
     sub_phases:
       "1.1 Infrastructure":
         P1-1: { status: done, note: "tsconfig.json + package.json in /scraper" }
-        P1-2: { status: done, note: "playwright, typescript, dotenv, axios installed" }
-        P1-3: { status: done, note: "src/config.ts — all params, locations, stacks, seniority" }
-        P1-4: { status: done, note: "src/types.ts — JobOffer, WebhookPayload, EvaluationResult" }
-        P1-5: { status: done, note: "src/utils/browser.ts — Playwright helper with fingerprints" }
+        P1-2:
+          {
+            status: done,
+            note: "playwright, typescript, dotenv, axios installed",
+          }
+        P1-3:
+          {
+            status: done,
+            note: "src/config.ts — all params, locations, stacks, seniority",
+          }
+        P1-4:
+          {
+            status: done,
+            note: "src/types.ts — JobOffer, WebhookPayload, EvaluationResult",
+          }
+        P1-5:
+          {
+            status: done,
+            note: "src/utils/browser.ts — Playwright helper with fingerprints",
+          }
 
       "1.2 JustJoin.it":
         P1-6:
           status: done
           note: "Verified: GET justjoin.it/api/candidate-api/offers — response shape confirmed (json.data[])"
-        P1-7: { status: done, note: "XHR intercept updated with correct path — page.on('response') checks JUSTJOIN_API_PATH" }
+        P1-7:
+          {
+            status: done,
+            note: "XHR intercept updated with correct path — page.on('response') checks JUSTJOIN_API_PATH",
+          }
         P1-8:
           status: done
           note: "Location filter implemented via matchesPreFilter(): workplaceType=remote OR locations[].city contains Gdańsk"
-        P1-9: { status: pending, note: "Unit tests needed — mock page.on('response') with fixture from real API" }
-        P1-10: { status: pending, note: "Edge cases: empty data[], missing employmentTypes, unknown experienceLevel" }
+        P1-9:
+          status: partial
+          note: "Integration tests in scraper/tests/justjoin.test.ts — live network tests. Unit mocks (page.on fixture) still missing."
+        P1-10:
+          {
+            status: pending,
+            note: "Edge cases: empty data[], missing employmentTypes, unknown experienceLevel",
+          }
 
       "1.3 NoFluffJobs":
         P1-11:
-          status: in_progress
-          note: "TODO — verify nofluffjobs.com/api/search/posting via DevTools. Suspected POST endpoint."
-          blocker: "Same as P1-6 — needs manual DevTools inspection"
-        P1-12: { status: done, note: "XHR intercept scaffolded in src/scrapers/nofluffjobs.ts" }
-        P1-13: { status: partial, note: "Seniority filter in URL, but location filter missing" }
-        P1-14: { status: pending }
+          status: done
+          note: >
+            NFJ switched to Angular SSR in 2026-05 (no longer POST XHR).
+            Implemented SSR extractor: reads STORE_KEY.searchResponse.postings
+            from <script id="serverApp-state"> embedded JSON.
+            Verified via dry-run 2026-05-22: 11 offers collected.
+        P1-12:
+          {
+            status: done,
+            note: "nofluffjobs.ts fully implemented (SSR-based, not XHR scaffold)",
+          }
+        P1-13:
+          {
+            status: done,
+            note: "Both location (remote/Gdańsk) AND seniority filters in matchesPreFilter()",
+          }
+        P1-14:
+          {
+            status: done,
+            note: "SSR cumulative pagination: navigate to last page → get all results in 2 requests",
+          }
         P1-15:
-          status: partial
-          note: "Normalized to JobOffer, but company field is empty string (known gap — API doesn't return it)"
+          status: done
+          note: "company from posting.name — not empty; interfaces.yaml updated to reflect this"
 
       "1.4 Orchestrator + Sender":
-        P1-16: { status: done, note: "src/index.ts — Promise.allSettled for parallel scrapers" }
-        P1-17: { status: done, note: "deduplicateOffers() in index.ts — dedup by id using Set" }
-        P1-18: { status: done, note: "src/sender.ts — POST with 3 retries + exponential backoff" }
-        P1-19: { status: done, note: "Logging in place: counts collected/removed/sent" }
-        P1-20: { status: pending, note: "Test against mock server or httpbin.org" }
+        P1-16:
+          {
+            status: done,
+            note: "src/index.ts — Promise.allSettled for parallel scrapers",
+          }
+        P1-17:
+          {
+            status: done,
+            note: "deduplicateOffers() in index.ts — dedup by id using Set",
+          }
+        P1-18:
+          {
+            status: done,
+            note: "src/sender.ts — POST with 3 retries + exponential backoff",
+          }
+        P1-19:
+          {
+            status: done,
+            note: "Logging in place: counts collected/removed/sent",
+          }
+        P1-20:
+          { status: pending, note: "Test against mock server or httpbin.org" }
 
       "1.5 GitHub Actions":
-        P1-21: { status: done, note: ".github/workflows/scraper.yml — cron 0 8 * * *" }
-        P1-22: { status: done, note: "All steps: checkout → npm ci → playwright install → scrape" }
+        P1-21:
+          {
+            status: done,
+            note: ".github/workflows/scraper.yml — cron 0 8 * * *",
+          }
+        P1-22:
+          {
+            status: done,
+            note: "All steps: checkout → npm ci → playwright install → scrape",
+          }
         P1-23: { status: done, note: "WEBHOOK_URL via GitHub Secret" }
-        P1-24: { status: done, note: "workflow_dispatch with dry_run boolean input" }
-        P1-25: { status: done, note: "npx playwright install chromium --with-deps" }
-        P1-26: { status: done, note: "upload-artifact: scraper/output/ → 7 days retention" }
+        P1-24:
+          { status: done, note: "workflow_dispatch with dry_run boolean input" }
+        P1-25:
+          { status: done, note: "npx playwright install chromium --with-deps" }
+        P1-26:
+          {
+            status: done,
+            note: "upload-artifact: scraper/output/ → 7 days retention",
+          }
 
   P2:
     name: "n8n Webhook Pipeline"
@@ -105,8 +181,7 @@ phases:
     blocked_by: "P5"
 
 known_blockers:
-  - "P1-6/P1-11: XHR endpoints must be verified via DevTools before tests can pass"
-  - "P1-15: nofluffjobs company field is empty — may need detail page fetch"
+  - "P1-9/P1-10/P1-20: unit/mock tests not yet written (integration tests exist)"
   - "P2+: requires n8n running locally with --tunnel for webhook access"
 
 # ============================================================

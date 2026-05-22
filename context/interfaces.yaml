@@ -25,7 +25,6 @@ interfaces:
       company:
         type: string
         required: true
-        known_gap: "nofluffjobs company is empty string — search API doesn't return it"
       url:
         type: string
         required: true

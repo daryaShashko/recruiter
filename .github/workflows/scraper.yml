@@ -3,18 +3,18 @@ name: AI Recruiter Scraper
 on:
   # Run daily at 08:00 UTC (10:00 Warsaw time)
   schedule:
-    - cron: '0 8 * * *'
+    - cron: "0 8 * * *"
   # Allow manual trigger for debugging
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (do not send to webhook)'
+        description: "Dry run (do not send to webhook)"
         required: false
-        default: 'false'
+        default: "false"
         type: choice
         options:
-          - 'false'
-          - 'true'
+          - "false"
+          - "true"
 
 jobs:
   scrape:
@@ -29,8 +29,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: scraper/package-lock.json
 
       - name: Install dependencies
@@ -53,6 +53,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scraped-data-${{ github.run_id }}
-          path: scraper/output/
+          path: output/
           retention-days: 7
           if-no-files-found: ignore
