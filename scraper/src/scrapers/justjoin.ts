@@ -11,7 +11,7 @@ const JUSTJOIN_API_PATH = "/api/candidate-api/offers";
 
 // ─── Raw API types (confirmed from actual response) ──────────────────────────
 
-interface RawEmploymentType {
+export interface RawEmploymentType {
   from?: number;
   fromPerUnit?: number;
   to?: number;
@@ -23,7 +23,7 @@ interface RawEmploymentType {
   gross: boolean;
 }
 
-interface RawLocation {
+export interface RawLocation {
   city: string;
   street?: string;
   latitude?: number;
@@ -31,12 +31,12 @@ interface RawLocation {
   slug: string;
 }
 
-interface RawSkill {
+export interface RawSkill {
   name: string;
   level: number; // 1–5
 }
 
-interface RawJustJoinOffer {
+export interface RawJustJoinOffer {
   guid: string;
   slug: string;
   title: string;
@@ -58,7 +58,7 @@ interface RawJustJoinOffer {
  * Extract salary string. Prefers PLN + b2b + Month.
  * Falls back to any PLN entry, then undefined.
  */
-function extractSalary(types: RawEmploymentType[]): string | undefined {
+export function extractSalary(types: RawEmploymentType[]): string | undefined {
   const originalPln = types.filter(
     (e) => e.currency === "PLN" && e.currencySource === "original",
   );
@@ -80,7 +80,7 @@ function extractSalary(types: RawEmploymentType[]): string | undefined {
  * Determine display location.
  * Remote → 'Remote'. Gdańsk in locations → 'Gdańsk'. Otherwise primary city.
  */
-function extractLocation(offer: RawJustJoinOffer): string {
+export function extractLocation(offer: RawJustJoinOffer): string {
   if (offer.workplaceType === "remote") return "Remote";
 
   const gdanskMatch = offer.locations.find(
@@ -130,7 +130,7 @@ function buildBody(raw: RawJustJoinOffer): string {
  * Keeps: remote OR has Gdańsk location, AND not a rejected seniority.
  * Reduces LLM calls by removing obvious non-matches early.
  */
-function matchesPreFilter(offer: RawJustJoinOffer): boolean {
+export function matchesPreFilter(offer: RawJustJoinOffer): boolean {
   // Location gate: remote OR Gdańsk in locations array
   const isRemote = offer.workplaceType === "remote";
   const hasGdansk = offer.locations.some(
@@ -148,7 +148,7 @@ function matchesPreFilter(offer: RawJustJoinOffer): boolean {
   return true;
 }
 
-function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
+export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
   return {
     id: `justjoin_${raw.slug}`,
     title: raw.title,

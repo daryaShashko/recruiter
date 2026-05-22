@@ -13,7 +13,7 @@ const NOFLUFFJOBS_SSR_STATE_SELECTOR = "#serverApp-state";
 
 // ─── Raw API types (confirmed from actual response) ──────────────────────────
 
-interface RawNFJPlace {
+export interface RawNFJPlace {
   city?: string; // present for city-based places
   street?: string;
   country?: { code: string; name: string };
@@ -22,14 +22,14 @@ interface RawNFJPlace {
   url: string;
 }
 
-interface RawNFJLocation {
+export interface RawNFJLocation {
   places: RawNFJPlace[];
   fullyRemote: boolean; // use THIS for remote detection (not posting.fullyRemote)
   covidTimeRemotely: boolean;
   hybridDesc?: string;
 }
 
-interface RawNFJSalary {
+export interface RawNFJSalary {
   from?: number;
   to?: number;
   type: string; // 'b2b' | 'permanent' | 'zlecenie' | ...
@@ -38,12 +38,12 @@ interface RawNFJSalary {
   flexibleUpperBound: boolean;
 }
 
-interface RawNFJTileValue {
+export interface RawNFJTileValue {
   value: string;
   type: string; // 'category' | 'requirement'
 }
 
-interface RawNoFluffPosting {
+export interface RawNoFluffPosting {
   id: string; // includes location suffix: "job-title-company-City-N" — NOT unique across locations!
   name: string; // COMPANY name (not the job title)
   title: string; // job title (plain string)
@@ -141,7 +141,7 @@ function buildBody(posting: RawNoFluffPosting): string {
  * Pre-filter before sending to Ollama.
  * Keeps: remote OR Gdańsk location, AND not a rejected seniority level.
  */
-function matchesPreFilter(posting: RawNoFluffPosting): boolean {
+export function matchesNFJPreFilter(posting: RawNoFluffPosting): boolean {
   // Location gate: remote OR Gdańsk
   const isRemote = posting.location.fullyRemote;
   const hasGdansk = posting.location.places.some(
@@ -184,7 +184,7 @@ function normalizePosting(posting: RawNoFluffPosting): JobOffer {
  * Dedup by reference: same job listed once per location variant → keep best.
  * Priority: remote > has Gdańsk > first seen.
  */
-function deduplicateByReference(
+export function deduplicateByReference(
   postings: RawNoFluffPosting[],
 ): RawNoFluffPosting[] {
   const best = new Map<string, RawNoFluffPosting>();
@@ -232,7 +232,7 @@ function deduplicateByReference(
  *   STORE_KEY.searchResponse.totalPages → number
  *   STORE_KEY.params.page               → number (current page)
  */
-function extractSsrPostings(html: string): {
+export function extractSsrPostings(html: string): {
   postings: RawNoFluffPosting[];
   totalPages: number;
   currentPage: number;
@@ -338,7 +338,7 @@ export async function scrapeNoFluffJobs(): Promise<JobOffer[]> {
     );
 
     // Pre-filter (location + seniority) before sending to Ollama
-    const filtered = uniquePostings.filter(matchesPreFilter);
+    const filtered = uniquePostings.filter(matchesNFJPreFilter);
     console.log(
       `[NoFluffJobs] Pre-filter (location + seniority): ${filtered.length}/${uniquePostings.length} kept`,
     );

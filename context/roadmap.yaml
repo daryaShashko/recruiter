@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "P1 core DONE — both scrapers verified via dry-run 2026-05-22 (JJ=199, NFJ=11, total=210). Remaining P1: unit tests (P1-9/P1-10/P1-20). Ready to start P2 n8n webhook in parallel."
+current_focus: "P1 COMPLETE — all scrapers verified, all unit tests passing (31/31). Ready to start P2 n8n webhook pipeline."
 
 phases:
   P0:
@@ -27,7 +27,7 @@ phases:
 
   P1:
     name: "Scraper — GitHub Actions + Playwright"
-    status: in_progress
+    status: done
     goal: "POST clean JobOffer[] array to n8n webhook"
 
     sub_phases:
@@ -67,12 +67,12 @@ phases:
           status: done
           note: "Location filter implemented via matchesPreFilter(): workplaceType=remote OR locations[].city contains Gdańsk"
         P1-9:
-          status: partial
-          note: "Integration tests in scraper/tests/justjoin.test.ts — live network tests. Unit mocks (page.on fixture) still missing."
+          status: done
+          note: "Unit tests in scraper/tests/justjoin.unit.test.ts — 19 tests, no network. Covers extractSalary, extractLocation, matchesPreFilter, normalizeOffer."
         P1-10:
           {
-            status: pending,
-            note: "Edge cases: empty data[], missing employmentTypes, unknown experienceLevel",
+            status: done,
+            note: "Edge cases covered in justjoin.unit.test.ts: empty employmentTypes[], missing skills, unknown/expert experienceLevel",
           }
 
       "1.3 NoFluffJobs":
@@ -124,7 +124,10 @@ phases:
             note: "Logging in place: counts collected/removed/sent",
           }
         P1-20:
-          { status: pending, note: "Test against mock server or httpbin.org" }
+          {
+            status: done,
+            note: "scraper/tests/sender.test.ts — 4 tests with jest.mock(axios): success, retry-success, all-fail, no-URL",
+          }
 
       "1.5 GitHub Actions":
         P1-21:
@@ -181,7 +184,6 @@ phases:
     blocked_by: "P5"
 
 known_blockers:
-  - "P1-9/P1-10/P1-20: unit/mock tests not yet written (integration tests exist)"
   - "P2+: requires n8n running locally with --tunnel for webhook access"
 
 # ============================================================
