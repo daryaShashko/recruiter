@@ -19,7 +19,7 @@ Telegram (ручная ссылка)  ──────────────
 ## Roadmap
 
 - [x] **PHASE 0** — Project bootstrap ✅
-- [ ] **PHASE 1** — Scraper (GitHub Actions + Playwright)
+- [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅ *(core done, unit tests pending)*
 - [ ] **PHASE 2** — n8n Webhook pipeline
 - [ ] **PHASE 3** — Ollama evaluation integration
 - [ ] **PHASE 4** — Notion database integration
@@ -42,44 +42,45 @@ Telegram (ручная ссылка)  ──────────────
 ---
 
 ### PHASE 1 — Scraper: GitHub Actions + Playwright
-> Цель: обойти Cloudflare и получить чистый массив вакансий с агрегаторов.
-> Выход: POST на n8n Webhook с `[{ id, title, company, url, body, source, salary? }]`
+> Цель: обойти Cloudflare и получить чистый массив вакансий с агрегаторов.  
+> Выход: POST на n8n Webhook с `[{ id, title, company, url, body, source, salary? }]`  
+> **Статус: core DONE — dry-run 2026-05-22: 210 офферов (JJ 199 + NFJ 11) ✅**
 
 #### 1.1 — Инфраструктура скрапера
-- [ ] `P1-1` Инициализировать TypeScript-проект в `/scraper` (`tsconfig.json`, `package.json`)
-- [ ] `P1-2` Установить зависимости: `playwright`, `typescript`, `dotenv`, `axios`
-- [ ] `P1-3` Создать `src/config.ts` — хранение параметров (webhook URL, фильтры стека, города)
-- [ ] `P1-4` Создать `src/types.ts` — интерфейс `JobOffer { id, title, company, url, body, source, salary, scrapedAt }`
-- [ ] `P1-5` Создать `src/utils/browser.ts` — хелпер запуска Playwright с реалистичными fingerprints
+- [x] `P1-1` Инициализировать TypeScript-проект в `/scraper` (`tsconfig.json`, `package.json`)
+- [x] `P1-2` Установить зависимости: `playwright`, `typescript`, `dotenv`, `axios`
+- [x] `P1-3` Создать `src/config.ts` — хранение параметров (webhook URL, фильтры стека, города)
+- [x] `P1-4` Создать `src/types.ts` — интерфейс `JobOffer { id, title, company, url, body, source, salary, scrapedAt }`
+- [x] `P1-5` Создать `src/utils/browser.ts` — хелпер запуска Playwright с реалистичными fingerprints
 
 #### 1.2 — Скрапер JustJoin.it
-- [ ] `P1-6` Исследовать XHR/Fetch-трафик JustJoin.it DevTools → найти эндпоинт отдачи JSON
-- [ ] `P1-7` Написать `src/scrapers/justjoin.ts` — перехват API-ответа через `page.on('response', ...)`
-- [ ] `P1-8` Добавить параметры фильтрации в URL запроса (city: Gdańsk, category: JavaScript)
-- [ ] `P1-9` Написать unit-тест: запустить скрапер, получить > 0 офферов, проверить схему
+- [x] `P1-6` Исследовать XHR/Fetch-трафик JustJoin.it DevTools → найти эндпоинт отдачи JSON
+- [x] `P1-7` Написать `src/scrapers/justjoin.ts` — перехват API-ответа через `page.on('response', ...)`
+- [x] `P1-8` Добавить параметры фильтрации в URL запроса (city: Gdańsk, category: JavaScript)
+- [ ] `P1-9` Написать unit-тест: mock `page.on('response')` с fixture из реального API *(integration тест есть, unit-mock нет)*
 - [ ] `P1-10` Обработать edge-case: пустой список, таймаут, изменение структуры ответа
 
 #### 1.3 — Скрапер NoFluffJobs
-- [ ] `P1-11` Исследовать XHR/Fetch-трафик NoFluffJobs → найти эндпоинт
-- [ ] `P1-12` Написать `src/scrapers/nofluffjobs.ts` — аналогичная схема перехвата
-- [ ] `P1-13` Добавить фильтрацию по локации и технологиям
-- [ ] `P1-14` Написать unit-тест для NoFluffJobs
-- [ ] `P1-15` Унифицировать выход: привести к общему интерфейсу `JobOffer`
+- [x] `P1-11` Исследовать структуру ответа NoFluffJobs → **NFJ переехал на Angular SSR** (2026-05); реализован SSR-экстрактор из `<script id="serverApp-state">`
+- [x] `P1-12` Написать `src/scrapers/nofluffjobs.ts` — SSR-based, не XHR
+- [x] `P1-13` Добавить фильтрацию по локации (remote/Gdańsk) и seniority — `matchesPreFilter()`
+- [x] `P1-14` Пагинация — SSR кумулятивная: переход на последнюю страницу = все результаты за 2 запроса
+- [x] `P1-15` Унифицировать выход: привести к общему интерфейсу `JobOffer` (company из `posting.name`)
 
 #### 1.4 — Оркестратор и отправка
-- [ ] `P1-16` Создать `src/index.ts` — запускает оба скрапера параллельно (`Promise.all`)
-- [ ] `P1-17` Дедупликация на уровне скрапера: убрать дубли по `id` перед отправкой
-- [ ] `P1-18` Написать `src/sender.ts` — POST на Webhook с retry (3 попытки, exponential backoff)
-- [ ] `P1-19` Добавить логирование: сколько вакансий собрано / отправлено / упало с ошибкой
+- [x] `P1-16` Создать `src/index.ts` — запускает оба скрапера параллельно (`Promise.allSettled`)
+- [x] `P1-17` Дедупликация на уровне скрапера: убрать дубли по `id` перед отправкой
+- [x] `P1-18` Написать `src/sender.ts` — POST на Webhook с retry (3 попытки, exponential backoff)
+- [x] `P1-19` Добавить логирование: сколько вакансий собрано / отправлено / упало с ошибкой
 - [ ] `P1-20` Протестировать отправку на mock-сервер (или `httpbin.org`)
 
 #### 1.5 — GitHub Actions Workflow
-- [ ] `P1-21` Создать `.github/workflows/scraper.yml` — триггер `schedule: cron('0 8 * * *')`
-- [ ] `P1-22` Добавить шаги: checkout → `npm ci` → `npx playwright install chromium` → `npm run scrape`
-- [ ] `P1-23` Пробросить Secrets: `WEBHOOK_URL` через `env` из GitHub Secrets
-- [ ] `P1-24` Добавить ручной запуск: `workflow_dispatch` для дебага
-- [ ] `P1-25` Проверить, что GitHub Actions runner имеет нужные системные зависимости для Playwright
-- [ ] `P1-26` Добавить шаг загрузки артефакта (`upload-artifact`): сохранить scraped JSON для дебага
+- [x] `P1-21` Создать `.github/workflows/scraper.yml` — триггер `schedule: cron('0 8 * * *')`
+- [x] `P1-22` Добавить шаги: checkout → `npm ci` → `npx playwright install chromium` → `npm run scrape`
+- [x] `P1-23` Пробросить Secrets: `WEBHOOK_URL` через `env` из GitHub Secrets
+- [x] `P1-24` Добавить ручной запуск: `workflow_dispatch` для дебага
+- [x] `P1-25` Проверить, что GitHub Actions runner имеет нужные системные зависимости для Playwright
+- [x] `P1-26` Добавить шаг загрузки артефакта (`upload-artifact`): сохранить scraped JSON для дебага
 
 ---
 
