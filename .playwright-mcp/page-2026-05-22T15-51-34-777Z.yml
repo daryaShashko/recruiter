@@ -1,0 +1,935 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - link [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img [ref=e10]
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - 'textbox "Search: Job title, company, keyword"'
+                        - group
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - textbox "Location"
+                        - group
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - combobox "Radius": 30 km
+                        - generic:
+                          - button "Open":
+                            - img
+                        - group
+            - button "Search":
+              - generic:
+                - generic:
+                  - img
+              - generic: Search
+        - generic [ref=e16]:
+          - 'button "Search: Job title, company, keyword" [ref=e17] [cursor=pointer]':
+            - img [ref=e20]
+            - generic [ref=e23]: "Search: Job title, company, keyword"
+          - generic [ref=e24]:
+            - separator [ref=e25]
+            - button "Location" [ref=e26] [cursor=pointer]:
+              - img [ref=e29]
+              - generic [ref=e32]: Location
+            - generic [ref=e33]:
+              - separator [ref=e34]
+              - button "More filters" [ref=e35] [cursor=pointer]:
+                - img [ref=e38]
+                - generic [ref=e39]: More filters
+            - button [ref=e40] [cursor=pointer]:
+              - img [ref=e41]
+        - generic [ref=e44]:
+          - link "Post a job" [ref=e45] [cursor=pointer]:
+            - /url: https://panel.justjoin.it/pricing
+            - button "Post a job" [ref=e46]:
+              - generic [ref=e47]: Post a job
+          - button "Sign in" [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: Sign in
+          - img [ref=e54] [cursor=pointer]
+          - button "open sidebar" [ref=e60] [cursor=pointer]:
+            - img [ref=e61]
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - button [ref=e67] [cursor=pointer]:
+              - img [ref=e68]
+            - generic: "0"
+          - link "0" [ref=e71] [cursor=pointer]:
+            - /url: /job-offers/all-locations/javascript
+            - generic [ref=e72]:
+              - button [ref=e74]:
+                - img [ref=e75]
+              - generic: "0"
+          - link "0" [ref=e78] [cursor=pointer]:
+            - /url: https://justjoin.it/raport-wynagrodzen/
+            - generic [ref=e79]:
+              - button [ref=e81]:
+                - img [ref=e82]
+              - generic: "0"
+          - link "0" [ref=e84] [cursor=pointer]:
+            - /url: /salary-calculator
+            - generic [ref=e85]:
+              - button [ref=e87]:
+                - img [ref=e88]
+              - generic: "0"
+          - link "0" [ref=e90] [cursor=pointer]:
+            - /url: https://justjoin.it/brands
+            - generic [ref=e91]:
+              - button [ref=e93]:
+                - img [ref=e94]
+              - generic: "0"
+          - link "0" [ref=e98] [cursor=pointer]:
+            - /url: https://justjoin.it/blog/
+            - generic [ref=e99]:
+              - button [ref=e101]:
+                - img [ref=e102]
+              - generic: "0"
+          - generic [ref=e105]:
+            - button [ref=e107] [cursor=pointer]:
+              - img [ref=e108]
+            - generic: "0"
+          - link "0" [ref=e110] [cursor=pointer]:
+            - /url: https://profile.justjoin.it/application-history
+            - generic [ref=e111]:
+              - button [ref=e113]:
+                - img [ref=e114]
+              - generic: "0"
+          - link "0" [ref=e118] [cursor=pointer]:
+            - /url: https://profile.justjoin.it/recently-viewed
+            - generic [ref=e119]:
+              - button [ref=e121]:
+                - img [ref=e122]
+              - generic: "0"
+          - generic [ref=e126]:
+            - button [ref=e128] [cursor=pointer]:
+              - img [ref=e129]
+            - generic: "0"
+          - link "0" [ref=e132] [cursor=pointer]:
+            - /url: https://profile.justjoin.it/matched-for-you
+            - generic [ref=e133]:
+              - button [ref=e135]:
+                - img [ref=e136]
+              - generic: "0"
+          - link "0" [ref=e138] [cursor=pointer]:
+            - /url: https://profile.justjoin.it/chats
+            - generic [ref=e139]:
+              - button [ref=e141]:
+                - img [ref=e142]
+              - generic: "0"
+          - generic [ref=e144]:
+            - button [ref=e146] [cursor=pointer]:
+              - img [ref=e147]
+            - generic: "0"
+        - generic [ref=e152]:
+          - button [ref=e154] [cursor=pointer]:
+            - img [ref=e156]
+          - generic: "0"
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - link "AI/ML 1 319" [ref=e168] [cursor=pointer]:
+                - /url: /job-offers/all-locations/ai
+                - generic [ref=e169]:
+                  - generic [ref=e170]:
+                    - button [ref=e171]:
+                      - generic:
+                        - img
+                      - img [ref=e172]
+                    - generic [ref=e175]: AI/ML
+                  - generic [ref=e176]: 1 319
+              - link "JavaScript 1 152" [ref=e177] [cursor=pointer]:
+                - /url: /job-offers/all-locations
+                - generic [ref=e178]:
+                  - generic [ref=e179]:
+                    - button [active] [ref=e180]:
+                      - generic:
+                        - img
+                      - img [ref=e181]
+                    - generic [ref=e184]: JavaScript
+                  - generic [ref=e185]: 1 152
+              - link "HTML 23" [ref=e186] [cursor=pointer]:
+                - /url: /job-offers/all-locations/html
+                - generic [ref=e187]:
+                  - generic [ref=e188]:
+                    - button [ref=e189]:
+                      - generic:
+                        - img
+                      - img [ref=e190]
+                    - generic [ref=e193]: HTML
+                  - generic [ref=e194]: "23"
+              - link "PHP 192" [ref=e195] [cursor=pointer]:
+                - /url: /job-offers/all-locations/php
+                - generic [ref=e196]:
+                  - generic [ref=e197]:
+                    - button [ref=e198]:
+                      - generic:
+                        - img
+                      - img [ref=e199]
+                    - generic [ref=e202]: PHP
+                  - generic [ref=e203]: "192"
+              - link "Ruby 72" [ref=e204] [cursor=pointer]:
+                - /url: /job-offers/all-locations/ruby
+                - generic [ref=e205]:
+                  - generic [ref=e206]:
+                    - button [ref=e207]:
+                      - generic:
+                        - img
+                      - img [ref=e208]
+                    - generic [ref=e211]: Ruby
+                  - generic [ref=e212]: "72"
+              - link "Python 1 039" [ref=e213] [cursor=pointer]:
+                - /url: /job-offers/all-locations/python
+                - generic [ref=e214]:
+                  - generic [ref=e215]:
+                    - button [ref=e216]:
+                      - generic:
+                        - img
+                      - img [ref=e217]
+                    - generic [ref=e220]: Python
+                  - generic [ref=e221]: 1 039
+              - link "Java 1 694" [ref=e222] [cursor=pointer]:
+                - /url: /job-offers/all-locations/java
+                - generic [ref=e223]:
+                  - generic [ref=e224]:
+                    - button [ref=e225]:
+                      - generic:
+                        - img
+                      - img [ref=e226]
+                    - generic [ref=e229]: Java
+                  - generic [ref=e230]: 1 694
+              - link "Net 785" [ref=e231] [cursor=pointer]:
+                - /url: /job-offers/all-locations/net
+                - generic [ref=e232]:
+                  - generic [ref=e233]:
+                    - button [ref=e234]:
+                      - generic:
+                        - img
+                      - img [ref=e235]
+                    - generic [ref=e238]: Net
+                  - generic [ref=e239]: "785"
+              - link "Scala 58" [ref=e240] [cursor=pointer]:
+                - /url: /job-offers/all-locations/scala
+                - generic [ref=e241]:
+                  - generic [ref=e242]:
+                    - button [ref=e243]:
+                      - generic:
+                        - img
+                      - img [ref=e244]
+                    - generic [ref=e247]: Scala
+                  - generic [ref=e248]: "58"
+              - link "C 298" [ref=e249] [cursor=pointer]:
+                - /url: /job-offers/all-locations/c
+                - generic [ref=e250]:
+                  - generic [ref=e251]:
+                    - button [ref=e252]:
+                      - generic:
+                        - img
+                      - img [ref=e253]
+                    - generic [ref=e256]: C
+                  - generic [ref=e257]: "298"
+              - link "Mobile 415" [ref=e258] [cursor=pointer]:
+                - /url: /job-offers/all-locations/mobile
+                - generic [ref=e259]:
+                  - generic [ref=e260]:
+                    - button [ref=e261]:
+                      - generic:
+                        - img
+                      - img [ref=e262]
+                    - generic [ref=e265]: Mobile
+                  - generic [ref=e266]: "415"
+              - link "Testing 1 516" [ref=e267] [cursor=pointer]:
+                - /url: /job-offers/all-locations/testing
+                - generic [ref=e268]:
+                  - generic [ref=e269]:
+                    - button [ref=e270]:
+                      - generic:
+                        - img
+                      - img [ref=e271]
+                    - generic [ref=e274]: Testing
+                  - generic [ref=e275]: 1 516
+              - link "DevOps 1 394" [ref=e276] [cursor=pointer]:
+                - /url: /job-offers/all-locations/devops
+                - generic [ref=e277]:
+                  - generic [ref=e278]:
+                    - button [ref=e279]:
+                      - generic:
+                        - img
+                      - img [ref=e280]
+                    - generic [ref=e283]: DevOps
+                  - generic [ref=e284]: 1 394
+              - link "Admin 733" [ref=e285] [cursor=pointer]:
+                - /url: /job-offers/all-locations/admin
+                - generic [ref=e286]:
+                  - generic [ref=e287]:
+                    - button [ref=e288]:
+                      - generic:
+                        - img
+                      - img [ref=e289]
+                    - generic [ref=e292]: Admin
+                  - generic [ref=e293]: "733"
+              - link "UX/UI 306" [ref=e294] [cursor=pointer]:
+                - /url: /job-offers/all-locations/ux
+                - generic [ref=e295]:
+                  - generic [ref=e296]:
+                    - button [ref=e297]:
+                      - generic:
+                        - img
+                      - img [ref=e298]
+                    - generic [ref=e301]: UX/UI
+                  - generic [ref=e302]: "306"
+              - link "PM 1 307" [ref=e303] [cursor=pointer]:
+                - /url: /job-offers/all-locations/pm
+                - generic [ref=e304]:
+                  - generic [ref=e305]:
+                    - button [ref=e306]:
+                      - generic:
+                        - img
+                      - img [ref=e307]
+                    - generic [ref=e310]: PM
+                  - generic [ref=e311]: 1 307
+              - link "Game 100" [ref=e312] [cursor=pointer]:
+                - /url: /job-offers/all-locations/game
+                - generic [ref=e313]:
+                  - generic [ref=e314]:
+                    - button [ref=e315]:
+                      - generic:
+                        - img
+                      - img [ref=e316]
+                    - generic [ref=e319]: Game
+                  - generic [ref=e320]: "100"
+              - link "Analytics 1 377" [ref=e321] [cursor=pointer]:
+                - /url: /job-offers/all-locations/analytics
+                - generic [ref=e322]:
+                  - generic [ref=e323]:
+                    - button [ref=e324]:
+                      - generic:
+                        - img
+                      - img [ref=e325]
+                    - generic [ref=e328]: Analytics
+                  - generic [ref=e329]: 1 377
+              - link "Security 829" [ref=e330] [cursor=pointer]:
+                - /url: /job-offers/all-locations/security
+                - generic [ref=e331]:
+                  - generic [ref=e332]:
+                    - button [ref=e333]:
+                      - generic:
+                        - img
+                      - img [ref=e334]
+                    - generic [ref=e337]: Security
+                  - generic [ref=e338]: "829"
+              - link "Data 2 207" [ref=e339] [cursor=pointer]:
+                - /url: /job-offers/all-locations/data
+                - generic [ref=e340]:
+                  - generic [ref=e341]:
+                    - button [ref=e342]:
+                      - generic:
+                        - img
+                      - img [ref=e343]
+                    - generic [ref=e346]: Data
+                  - generic [ref=e347]: 2 207
+              - link "Go 215" [ref=e348] [cursor=pointer]:
+                - /url: /job-offers/all-locations/go
+                - generic [ref=e349]:
+                  - generic [ref=e350]:
+                    - button [ref=e351]:
+                      - generic:
+                        - img
+                      - img [ref=e352]
+                    - generic [ref=e355]: Go
+                  - generic [ref=e356]: "215"
+              - link "Support 502" [ref=e357] [cursor=pointer]:
+                - /url: /job-offers/all-locations/support
+                - generic [ref=e358]:
+                  - generic [ref=e359]:
+                    - button [ref=e360]:
+                      - generic:
+                        - img
+                      - img [ref=e361]
+                    - generic [ref=e364]: Support
+                  - generic [ref=e365]: "502"
+              - link "ERP 1 001" [ref=e366] [cursor=pointer]:
+                - /url: /job-offers/all-locations/erp
+                - generic [ref=e367]:
+                  - generic [ref=e368]:
+                    - button [ref=e369]:
+                      - generic:
+                        - img
+                      - img [ref=e370]
+                    - generic [ref=e373]: ERP
+                  - generic [ref=e374]: 1 001
+              - link "Architecture 920" [ref=e375] [cursor=pointer]:
+                - /url: /job-offers/all-locations/architecture
+                - generic [ref=e376]:
+                  - generic [ref=e377]:
+                    - button [ref=e378]:
+                      - generic:
+                        - img
+                      - img [ref=e379]
+                    - generic [ref=e382]: Architecture
+                  - generic [ref=e383]: "920"
+              - link "Other 1 525" [ref=e384] [cursor=pointer]:
+                - /url: /job-offers/all-locations/other
+                - generic [ref=e385]:
+                  - generic [ref=e386]:
+                    - button [ref=e387]:
+                      - generic:
+                        - img
+                      - img [ref=e388]
+                    - generic [ref=e391]: Other
+                  - generic [ref=e392]: 1 525
+            - generic:
+              - button:
+                - img
+            - button [ref=e394] [cursor=pointer]:
+              - img [ref=e395]
+          - generic [ref=e397]:
+            - generic [ref=e398]:
+              - generic [ref=e401]:
+                - heading "Job offers JavaScript - 1 152 offers" [level=1] [ref=e1079]
+                - generic [ref=e403]:
+                  - button "Subscribe" [ref=e1081] [cursor=pointer]:
+                    - img [ref=e1084]
+                    - generic [ref=e1087]: Subscribe
+                  - generic "Offers with salary" [ref=e404]:
+                    - generic [ref=e406] [cursor=pointer]:
+                      - checkbox [ref=e407]
+                      - img [ref=e409]
+                  - generic "Remote offers" [ref=e412]:
+                    - generic [ref=e414] [cursor=pointer]:
+                      - checkbox [ref=e415]
+                      - img [ref=e417]
+                  - generic [ref=e421]:
+                    - generic [ref=e422]: "Sort by:"
+                    - button "Default" [ref=e423] [cursor=pointer]:
+                      - generic [ref=e424]: Default
+                      - img [ref=e427]
+              - list [ref=e1089]:
+                - listitem [ref=e1090] [cursor=pointer]:
+                  - link "Web Impact Kraków , +5 Remote Fullstack Engineer (AI, Distributed Systems, Automation) 20 000 - 28 000 PLN/month Distributed systems TypeScript Elixir Node.js Next.js Rust React AI Tools Senior B2B 1-click Apply 12d left" [ref=e1093]:
+                    - /url: /job-offer/web-impact-fullstack-engineer-ai-distributed-systems-automation--krakow-javascript
+                    - generic [ref=e1095]:
+                      - generic [ref=e1096]:
+                        - generic [ref=e1097]:
+                          - img "Web Impact" [ref=e1099]
+                          - generic [ref=e1100]:
+                            - generic [ref=e1101]:
+                              - button "Kraków , +5" [ref=e1102]:
+                                - generic [ref=e1104]:
+                                  - img [ref=e1106]
+                                  - generic [ref=e1109]: Kraków
+                                  - text: ", +5"
+                                  - img [ref=e1110]
+                              - generic [ref=e1112]:
+                                - img [ref=e1114]
+                                - paragraph [ref=e1118]: Remote
+                            - heading "Fullstack Engineer (AI, Distributed Systems, Automation)" [level=3] [ref=e1120]
+                            - generic [ref=e1121]:
+                              - generic [ref=e1122]: 20 000 - 28 000
+                              - generic [ref=e1123]: PLN/month
+                        - button [ref=e1124]:
+                          - img [ref=e1127]
+                      - generic [ref=e1129]:
+                        - generic [ref=e1130]: Distributed systems
+                        - generic [ref=e1131]: TypeScript
+                        - generic [ref=e1132]: Elixir
+                        - generic [ref=e1133]: Node.js
+                        - generic [ref=e1134]: Next.js
+                        - generic [ref=e1135]: Rust
+                        - generic [ref=e1136]: React
+                        - generic [ref=e1137]: AI Tools
+                      - generic [ref=e1139]:
+                        - generic [ref=e1140]:
+                          - generic [ref=e1141]: Senior
+                          - generic [ref=e1143]: B2B
+                        - generic [ref=e1144]:
+                          - generic "1-click Apply" [ref=e1145]:
+                            - img [ref=e1147]
+                          - generic [ref=e1149]: 12d left
+                - listitem [ref=e1150] [cursor=pointer]:
+                  - link "Ness Solution Warszawa , +3 Remote Programista Frontend (React / TypeScript) 115 - 125 PLN/h React Redux Typesrcipt Mid B2B New" [ref=e1153]:
+                    - /url: /job-offer/ness-solution-programista-frontend-react-typescript--warszawa-javascript
+                    - generic [ref=e1155]:
+                      - generic [ref=e1156]:
+                        - generic [ref=e1157]:
+                          - img "Ness Solution" [ref=e1159]
+                          - generic [ref=e1160]:
+                            - generic [ref=e1161]:
+                              - button "Warszawa , +3" [ref=e1162]:
+                                - generic [ref=e1164]:
+                                  - img [ref=e1166]
+                                  - generic [ref=e1169]: Warszawa
+                                  - text: ", +3"
+                                  - img [ref=e1170]
+                              - generic [ref=e1172]:
+                                - img [ref=e1174]
+                                - paragraph [ref=e1178]: Remote
+                            - heading "Programista Frontend (React / TypeScript)" [level=3] [ref=e1180]
+                            - generic [ref=e1181]:
+                              - generic [ref=e1182]: 115 - 125
+                              - generic [ref=e1183]: PLN/h
+                        - button [ref=e1184]:
+                          - img [ref=e1187]
+                      - generic [ref=e1189]:
+                        - generic [ref=e1190]: React
+                        - generic [ref=e1191]: Redux
+                        - generic [ref=e1192]: Typesrcipt
+                      - generic [ref=e1194]:
+                        - generic [ref=e1195]:
+                          - generic [ref=e1196]: Mid
+                          - generic [ref=e1198]: B2B
+                        - generic [ref=e1200]: New
+                - listitem [ref=e1201] [cursor=pointer]:
+                  - generic [ref=e1203]:
+                    - generic [ref=e1204]: Super offer
+                    - link "Appliscale Kraków , +3 Remote Senior Backend Engineer (Node.js / AWS) 19 500 - 25 000 PLN/month TypeScript Node.js REST API Terraform Amazon AWS JavaScript Senior B2B 24d left" [ref=e1205]:
+                      - /url: /job-offer/appliscale-senior-backend-engineer-node-js-aws--krakow-javascript
+                      - generic [ref=e1207]:
+                        - generic [ref=e1208]:
+                          - generic [ref=e1209]:
+                            - img "Appliscale" [ref=e1211]
+                            - generic [ref=e1212]:
+                              - generic [ref=e1213]:
+                                - button "Kraków , +3" [ref=e1214]:
+                                  - generic [ref=e1216]:
+                                    - img [ref=e1218]
+                                    - generic [ref=e1221]: Kraków
+                                    - text: ", +3"
+                                    - img [ref=e1222]
+                                - generic [ref=e1224]:
+                                  - img [ref=e1226]
+                                  - paragraph [ref=e1230]: Remote
+                              - heading "Senior Backend Engineer (Node.js / AWS)" [level=3] [ref=e1232]
+                              - generic [ref=e1233]:
+                                - generic [ref=e1234]: 19 500 - 25 000
+                                - generic [ref=e1235]: PLN/month
+                          - button [ref=e1236]:
+                            - img [ref=e1239]
+                        - generic [ref=e1241]:
+                          - generic [ref=e1242]: TypeScript
+                          - generic [ref=e1243]: Node.js
+                          - generic [ref=e1244]: REST API
+                          - generic [ref=e1245]: Terraform
+                          - generic [ref=e1246]: Amazon AWS
+                          - generic [ref=e1247]: JavaScript
+                        - generic [ref=e1249]:
+                          - generic [ref=e1250]:
+                            - generic [ref=e1251]: Senior
+                            - generic [ref=e1253]: B2B
+                          - generic [ref=e1255]: 24d left
+                - listitem [ref=e1256] [cursor=pointer]:
+                  - link "Andersen Rīga , +2 Remote Frontend Developer (Angular) 3 962 - 7 923 PLN/month Angular JavaScript Junior Any 1-click Apply 10d left" [ref=e1259]:
+                    - /url: /job-offer/andersen-frontend-developer-angular--riga-javascript
+                    - generic [ref=e1261]:
+                      - generic [ref=e1262]:
+                        - generic [ref=e1263]:
+                          - img "Andersen" [ref=e1265]
+                          - generic [ref=e1266]:
+                            - generic [ref=e1267]:
+                              - button "Rīga , +2" [ref=e1268]:
+                                - generic [ref=e1270]:
+                                  - img [ref=e1272]
+                                  - generic [ref=e1275]: Rīga
+                                  - text: ", +2"
+                                  - img [ref=e1276]
+                              - generic [ref=e1278]:
+                                - img [ref=e1280]
+                                - paragraph [ref=e1284]: Remote
+                            - heading "Frontend Developer (Angular)" [level=3] [ref=e1286]
+                            - generic [ref=e1287]:
+                              - generic [ref=e1288]: 3 962 - 7 923
+                              - generic [ref=e1289]: PLN/month
+                        - button [ref=e1290]:
+                          - img [ref=e1293]
+                      - generic [ref=e1295]:
+                        - generic [ref=e1296]: Angular
+                        - generic [ref=e1297]: JavaScript
+                      - generic [ref=e1299]:
+                        - generic [ref=e1300]:
+                          - generic [ref=e1301]: Junior
+                          - generic [ref=e1303]: Any
+                        - generic [ref=e1304]:
+                          - generic "1-click Apply" [ref=e1305]:
+                            - img [ref=e1307]
+                          - generic [ref=e1309]: 10d left
+                - listitem [ref=e1310] [cursor=pointer]:
+                  - generic [ref=e1312]:
+                    - generic [ref=e1313]: Super offer
+                    - link "Link Group Warszawa , +9 Remote Fullstack Developer (AI-Assisted) 22 000 - 24 500 PLN/month CI/CD Angular JSON REST API React Mid B2B 21d left" [ref=e1314]:
+                      - /url: /job-offer/link-group-fullstack-developer-ai-assisted--warszawa-javascript
+                      - generic [ref=e1316]:
+                        - generic [ref=e1317]:
+                          - generic [ref=e1318]:
+                            - img "Link Group" [ref=e1320]
+                            - generic [ref=e1321]:
+                              - generic [ref=e1322]:
+                                - button "Warszawa , +9" [ref=e1323]:
+                                  - generic [ref=e1325]:
+                                    - img [ref=e1327]
+                                    - generic [ref=e1330]: Warszawa
+                                    - text: ", +9"
+                                    - img [ref=e1331]
+                                - generic [ref=e1333]:
+                                  - img [ref=e1335]
+                                  - paragraph [ref=e1339]: Remote
+                              - heading "Fullstack Developer (AI-Assisted)" [level=3] [ref=e1341]
+                              - generic [ref=e1342]:
+                                - generic [ref=e1343]: 22 000 - 24 500
+                                - generic [ref=e1344]: PLN/month
+                          - button [ref=e1345]:
+                            - img [ref=e1348]
+                        - generic [ref=e1350]:
+                          - generic [ref=e1351]: CI/CD
+                          - generic [ref=e1352]: Angular
+                          - generic [ref=e1353]: JSON
+                          - generic [ref=e1354]: REST API
+                          - generic [ref=e1355]: React
+                        - generic [ref=e1357]:
+                          - generic [ref=e1358]:
+                            - generic [ref=e1359]: Mid
+                            - generic [ref=e1361]: B2B
+                          - generic [ref=e1363]: 21d left
+                - listitem [ref=e1364] [cursor=pointer]:
+                  - link "ITDS Warszawa , +4 Remote Senior Full-Stack Developer – React & Python Expertise 23 127 - 34 690 PLN/month Data Visualization LLM Integration PostgreSQL TypeScript REST API development fastapi React Azure Cloud Python Healthcare Analytics Senior B2B 30d left" [ref=e1367]:
+                    - /url: /job-offer/itds-senior-full-stack-developer---react-python-expertise-warszawa-javascript
+                    - generic [ref=e1369]:
+                      - generic [ref=e1370]:
+                        - generic [ref=e1371]:
+                          - img "ITDS" [ref=e1373]
+                          - generic [ref=e1374]:
+                            - generic [ref=e1375]:
+                              - button "Warszawa , +4" [ref=e1376]:
+                                - generic [ref=e1378]:
+                                  - img [ref=e1380]
+                                  - generic [ref=e1383]: Warszawa
+                                  - text: ", +4"
+                                  - img [ref=e1384]
+                              - generic [ref=e1386]:
+                                - img [ref=e1388]
+                                - paragraph [ref=e1392]: Remote
+                            - heading "Senior Full-Stack Developer – React & Python Expertise" [level=3] [ref=e1394]
+                            - generic [ref=e1395]:
+                              - generic [ref=e1396]: 23 127 - 34 690
+                              - generic [ref=e1397]: PLN/month
+                        - button [ref=e1398]:
+                          - img [ref=e1401]
+                      - generic [ref=e1403]:
+                        - generic [ref=e1404]: Data Visualization
+                        - generic [ref=e1405]: LLM Integration
+                        - generic [ref=e1406]: PostgreSQL
+                        - generic [ref=e1407]: TypeScript
+                        - generic [ref=e1408]: REST API development
+                        - generic [ref=e1409]: fastapi
+                        - generic [ref=e1410]: React
+                        - generic [ref=e1411]: Azure Cloud
+                        - generic [ref=e1412]: Python
+                        - generic [ref=e1413]: Healthcare Analytics
+                      - generic [ref=e1415]:
+                        - generic [ref=e1416]:
+                          - generic [ref=e1417]: Senior
+                          - generic [ref=e1419]: B2B
+                        - generic [ref=e1421]: 30d left
+                - listitem [ref=e1422] [cursor=pointer]:
+                  - generic [ref=e1424]:
+                    - generic [ref=e1425]: Super offer
+                    - link "People More P.S.A. Poznań , +4 Remote Senior Frontend / Fullstack Engineer (AI-First | Next.js + Medusa.js) 120 - 170 PLN/h PostgreSQL TypeScript AI nestJS Next.js Medusa.js Prisma React Senior B2B New" [ref=e1426]:
+                      - /url: /job-offer/people-more-p-s-a--senior-frontend-fullstack-engineer-ai-first-next-js-medusa-js--poznan-javascript
+                      - generic [ref=e1428]:
+                        - generic [ref=e1429]:
+                          - generic [ref=e1430]:
+                            - img "People More P.S.A." [ref=e1432]
+                            - generic [ref=e1433]:
+                              - generic [ref=e1434]:
+                                - button "Poznań , +4" [ref=e1435]:
+                                  - generic [ref=e1437]:
+                                    - img [ref=e1439]
+                                    - generic [ref=e1442]: Poznań
+                                    - text: ", +4"
+                                    - img [ref=e1443]
+                                - generic [ref=e1445]:
+                                  - img [ref=e1447]
+                                  - paragraph [ref=e1451]: Remote
+                              - heading "Senior Frontend / Fullstack Engineer (AI-First | Next.js + Medusa.js)" [level=3] [ref=e1453]
+                              - generic [ref=e1454]:
+                                - generic [ref=e1455]: 120 - 170
+                                - generic [ref=e1456]: PLN/h
+                          - button [ref=e1457]:
+                            - img [ref=e1460]
+                        - generic [ref=e1462]:
+                          - generic [ref=e1463]: PostgreSQL
+                          - generic [ref=e1464]: TypeScript
+                          - generic [ref=e1465]: AI
+                          - generic [ref=e1466]: nestJS
+                          - generic [ref=e1467]: Next.js
+                          - generic [ref=e1468]: Medusa.js
+                          - generic [ref=e1469]: Prisma
+                          - generic [ref=e1470]: React
+                        - generic [ref=e1472]:
+                          - generic [ref=e1473]:
+                            - generic [ref=e1474]: Senior
+                            - generic [ref=e1476]: B2B
+                          - generic [ref=e1478]: New
+                - listitem [ref=e1479] [cursor=pointer]:
+                  - link "State Street Kraków , +1 Hybrid Full-Stack Developer (React + Java), Officer 12 000 - 18 000 PLN/month Playwright TypeScript CSS3 Redux Cypress Jest RxJS React Java JavaScript Mid Permanent 1-click Apply 30d left" [ref=e1482]:
+                    - /url: /job-offer/state-street-front-end-engineer-react-java-officer-krakow-javascript
+                    - generic [ref=e1484]:
+                      - generic [ref=e1485]:
+                        - generic [ref=e1486]:
+                          - img "State Street" [ref=e1488]
+                          - generic [ref=e1489]:
+                            - generic [ref=e1490]:
+                              - button "Kraków , +1" [ref=e1491]:
+                                - generic [ref=e1493]:
+                                  - img [ref=e1495]
+                                  - generic [ref=e1498]: Kraków
+                                  - text: ", +1"
+                                  - img [ref=e1499]
+                              - generic [ref=e1501]:
+                                - img [ref=e1503]
+                                - paragraph [ref=e1507]: Hybrid
+                            - heading "Full-Stack Developer (React + Java), Officer" [level=3] [ref=e1509]
+                            - generic [ref=e1510]:
+                              - generic [ref=e1511]: 12 000 - 18 000
+                              - generic [ref=e1512]: PLN/month
+                        - button [ref=e1513]:
+                          - img [ref=e1516]
+                      - generic [ref=e1518]:
+                        - generic [ref=e1519]: Playwright
+                        - generic [ref=e1520]: TypeScript
+                        - generic [ref=e1521]: CSS3
+                        - generic [ref=e1522]: Redux
+                        - generic [ref=e1523]: Cypress
+                        - generic [ref=e1524]: Jest
+                        - generic [ref=e1525]: RxJS
+                        - generic [ref=e1526]: React
+                        - generic [ref=e1527]: Java
+                        - generic [ref=e1528]: JavaScript
+                      - generic [ref=e1530]:
+                        - generic [ref=e1531]:
+                          - generic [ref=e1532]: Mid
+                          - generic [ref=e1534]: Permanent
+                        - generic [ref=e1535]:
+                          - generic "1-click Apply" [ref=e1536]:
+                            - img [ref=e1538]
+                          - generic [ref=e1540]: 30d left
+                - listitem [ref=e1541] [cursor=pointer]:
+                  - link "Okta, Inc. Poland (Remote) Remote Senior Solutions Engineer - Auth0 330 000 - 484 000 PLN/year IAM Cloud Solutions Engineering JavaScript Senior Permanent 14d left" [ref=e1544]:
+                    - /url: /job-offer/okta-inc--senior-solutions-engineer---auth0-poland-remote--javascript
+                    - generic [ref=e1546]:
+                      - generic [ref=e1547]:
+                        - generic [ref=e1548]:
+                          - img "Okta, Inc." [ref=e1550]
+                          - generic [ref=e1551]:
+                            - generic [ref=e1552]:
+                              - generic [ref=e1553]:
+                                - img [ref=e1555]
+                                - paragraph [ref=e1558]: Poland (Remote)
+                              - generic [ref=e1559]:
+                                - img [ref=e1561]
+                                - paragraph [ref=e1565]: Remote
+                            - heading "Senior Solutions Engineer - Auth0" [level=3] [ref=e1567]
+                            - generic [ref=e1568]:
+                              - generic [ref=e1569]: 330 000 - 484 000
+                              - generic [ref=e1570]: PLN/year
+                        - button [ref=e1571]:
+                          - img [ref=e1574]
+                      - generic [ref=e1576]:
+                        - generic [ref=e1577]: IAM
+                        - generic [ref=e1578]: Cloud
+                        - generic [ref=e1579]: Solutions Engineering
+                        - generic [ref=e1580]: JavaScript
+                      - generic [ref=e1582]:
+                        - generic [ref=e1583]:
+                          - generic [ref=e1584]: Senior
+                          - generic [ref=e1586]: Permanent
+                        - generic [ref=e1588]: 14d left
+            - generic [ref=e895]:
+              - generic [ref=e898]:
+                - region "Map" [ref=e899]
+                - img [ref=e903] [cursor=pointer]
+              - button "Hide map" [ref=e905] [cursor=pointer]:
+                - img [ref=e906]
+        - generic [ref=e910]:
+          - generic [ref=e911]: Jobs - cities
+          - generic [ref=e913]:
+            - link "Jobs Remote" [ref=e915] [cursor=pointer]:
+              - /url: /job-offers/remote
+            - link "Jobs Warszawa" [ref=e917] [cursor=pointer]:
+              - /url: /job-offers/warszawa
+            - link "Jobs Kraków" [ref=e919] [cursor=pointer]:
+              - /url: /job-offers/krakow
+            - link "Jobs Białystok" [ref=e921] [cursor=pointer]:
+              - /url: /job-offers/bialystok
+            - link "Jobs Kielce" [ref=e923] [cursor=pointer]:
+              - /url: /job-offers/kielce
+            - link "Jobs Wrocław" [ref=e925] [cursor=pointer]:
+              - /url: /job-offers/wroclaw
+            - link "Jobs Lublin" [ref=e927] [cursor=pointer]:
+              - /url: /job-offers/lublin
+            - link "Jobs Bielsko" [ref=e929] [cursor=pointer]:
+              - /url: /job-offers/bielsko-biala
+            - link "Jobs Poznań" [ref=e931] [cursor=pointer]:
+              - /url: /job-offers/poznan
+            - link "Jobs Radom" [ref=e933] [cursor=pointer]:
+              - /url: /job-offers/radom
+            - link "Jobs Rzeszów" [ref=e935] [cursor=pointer]:
+              - /url: /job-offers/rzeszow
+            - link "Jobs Bydgoszcz" [ref=e937] [cursor=pointer]:
+              - /url: /job-offers/bydgoszcz
+            - link "Jobs Szczecin" [ref=e939] [cursor=pointer]:
+              - /url: /job-offers/szczecin
+            - link "Jobs Częstochowa" [ref=e941] [cursor=pointer]:
+              - /url: /job-offers/czestochowa
+            - link "Jobs Olsztyn" [ref=e943] [cursor=pointer]:
+              - /url: /job-offers/olsztyn
+            - link "Jobs Nowy Sącz" [ref=e945] [cursor=pointer]:
+              - /url: /job-offers/nowy-sacz
+            - link "Jobs Katowice" [ref=e947] [cursor=pointer]:
+              - /url: /job-offers/katowice
+            - link "Jobs Toruń" [ref=e949] [cursor=pointer]:
+              - /url: /job-offers/torun
+            - link "Jobs Kalisz" [ref=e951] [cursor=pointer]:
+              - /url: /job-offers/kalisz
+            - link "Jobs Łódź" [ref=e953] [cursor=pointer]:
+              - /url: /job-offers/lodz
+            - link "Jobs Tarnów" [ref=e955] [cursor=pointer]:
+              - /url: /job-offers/tarnow
+            - link "Jobs Opole" [ref=e957] [cursor=pointer]:
+              - /url: /job-offers/opole
+            - link "Jobs Koszalin" [ref=e959] [cursor=pointer]:
+              - /url: /job-offers/koszalin
+            - link "Jobs Gdańsk" [ref=e961] [cursor=pointer]:
+              - /url: /job-offers/gdansk
+            - link "Jobs Gdynia" [ref=e963] [cursor=pointer]:
+              - /url: /job-offers/gdynia
+            - link "Jobs Płock" [ref=e965] [cursor=pointer]:
+              - /url: /job-offers/plock
+            - link "Jobs Stalowa Wola" [ref=e967] [cursor=pointer]:
+              - /url: /job-offers/stalowa-wola
+            - link "Jobs Przemyśl" [ref=e969] [cursor=pointer]:
+              - /url: /job-offers/przemysl
+            - link "Jobs Słupsk" [ref=e971] [cursor=pointer]:
+              - /url: /job-offers/slupsk
+            - link "Jobs Mielec" [ref=e973] [cursor=pointer]:
+              - /url: /job-offers/mielec
+            - link "Jobs Konin" [ref=e975] [cursor=pointer]:
+              - /url: /job-offers/konin
+            - link "Jobs Włocławek" [ref=e977] [cursor=pointer]:
+              - /url: /job-offers/wloclawek
+            - link "Jobs Krosno" [ref=e979] [cursor=pointer]:
+              - /url: /job-offers/krosno
+            - link "Jobs Siedlce" [ref=e981] [cursor=pointer]:
+              - /url: /job-offers/siedlce
+            - link "Jobs Zielona Góra" [ref=e983] [cursor=pointer]:
+              - /url: /job-offers/zielona-gora
+            - link "Jobs Gniezno" [ref=e985] [cursor=pointer]:
+              - /url: /job-offers/gniezno
+            - link "Jobs Wałbrzych" [ref=e987] [cursor=pointer]:
+              - /url: /job-offers/walbrzych
+            - link "Jobs Stargard" [ref=e989] [cursor=pointer]:
+              - /url: /job-offers/stargard
+            - link "Jobs Rybnik" [ref=e991] [cursor=pointer]:
+              - /url: /job-offers/rybnik
+            - link "Jobs Kwidzyn" [ref=e993] [cursor=pointer]:
+              - /url: /job-offers/kwidzyn
+            - link "Jobs Zamość" [ref=e995] [cursor=pointer]:
+              - /url: /job-offers/zamosc
+            - link "Jobs Elbląg" [ref=e997] [cursor=pointer]:
+              - /url: /job-offers/elblag
+            - link "Jobs Gorzów Wielkopolski" [ref=e999] [cursor=pointer]:
+              - /url: /job-offers/gorzow-wielkopolski
+            - link "Jobs Tychy" [ref=e1001] [cursor=pointer]:
+              - /url: /job-offers/tychy
+            - link "Jobs Legnica" [ref=e1003] [cursor=pointer]:
+              - /url: /job-offers/legnica
+            - link "Jobs Gliwice" [ref=e1005] [cursor=pointer]:
+              - /url: /job-offers/gliwice
+            - link "Jobs Sosnowiec" [ref=e1007] [cursor=pointer]:
+              - /url: /job-offers/sosnowiec
+            - link "Jobs Łomża" [ref=e1009] [cursor=pointer]:
+              - /url: /job-offers/lomza
+    - contentinfo [ref=e1010]:
+      - generic [ref=e1011]:
+        - link [ref=e1013] [cursor=pointer]:
+          - /url: https://justjoin.it
+          - img [ref=e1014]
+        - generic [ref=e1016]:
+          - link "Job offers" [ref=e1017] [cursor=pointer]:
+            - /url: https://justjoin.it
+            - generic [ref=e1018]: Job offers
+          - link "Salary calculator" [ref=e1019] [cursor=pointer]:
+            - /url: https://justjoin.it/salary-calculator
+            - generic [ref=e1020]: Salary calculator
+          - link "Company Profiles" [ref=e1021] [cursor=pointer]:
+            - /url: https://justjoin.it/brands
+            - generic [ref=e1022]: Company Profiles
+          - link "Just Geek IT Blog" [ref=e1023] [cursor=pointer]:
+            - /url: https://justjoin.it/blog/
+            - generic [ref=e1024]: Just Geek IT Blog
+          - link "Employer Panel" [ref=e1025] [cursor=pointer]:
+            - /url: https://panel.justjoin.it/login
+            - generic [ref=e1026]: Employer Panel
+          - button "Candidate Profile" [ref=e1027] [cursor=pointer]:
+            - generic [ref=e1028]: Candidate Profile
+          - link "Pricing" [ref=e1029] [cursor=pointer]:
+            - /url: https://panel.justjoin.it/pricing
+            - generic [ref=e1030]: Pricing
+          - link "rocketjobs.pl" [ref=e1031] [cursor=pointer]:
+            - /url: https://rocketjobs.pl/
+            - generic [ref=e1032]: rocketjobs.pl
+          - link "hellohr.pl" [ref=e1033] [cursor=pointer]:
+            - /url: https://hellohr.pl/
+            - generic [ref=e1034]: hellohr.pl
+          - link "About Us" [ref=e1035] [cursor=pointer]:
+            - /url: https://justjoin.it/brands/story/just-join-it
+            - generic [ref=e1036]: About Us
+          - link "Career" [ref=e1037] [cursor=pointer]:
+            - /url: https://justjoin.it/brands/story/just-join-it
+            - generic [ref=e1038]: Career
+        - list [ref=e1039]:
+          - listitem [ref=e1040]:
+            - link "facebook" [ref=e1041] [cursor=pointer]:
+              - /url: https://www.facebook.com/JustJoinIT/
+              - button [ref=e1042]:
+                - img [ref=e1043]
+          - listitem [ref=e1045]:
+            - link "instagram" [ref=e1046] [cursor=pointer]:
+              - /url: https://www.instagram.com/justjoin.it/
+              - button [ref=e1047]:
+                - img [ref=e1048]
+          - listitem [ref=e1050]:
+            - link "linkedin" [ref=e1051] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/just-join-it/
+              - button [ref=e1052]:
+                - img [ref=e1053]
+          - listitem [ref=e1056]:
+            - link "youtube" [ref=e1057] [cursor=pointer]:
+              - /url: https://www.youtube.com/channel/UCYG1Pkg1jbnYxfJvM-1K5yg
+              - button [ref=e1058]:
+                - img [ref=e1059]
+      - generic [ref=e1062]:
+        - generic [ref=e1063]: © 2026 Just Join IT sp. z o.o.
+        - link "Help" [ref=e1064] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms" [ref=e1065] [cursor=pointer]:
+          - /url: https://justjoin.it/terms-and-privacy-policies
+        - link "Privacy policy" [ref=e1066] [cursor=pointer]:
+          - /url: https://justjoin.it/terms-and-privacy-policies/privacy-policy
+        - link "Cookie settings" [ref=e1067] [cursor=pointer]:
+          - /url: "#"
+  - alert [ref=e1068]: Job offers javascript | Just Join IT

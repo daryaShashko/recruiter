@@ -1,0 +1,1218 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e6]:
+      - link "navbarBrand" [ref=e7] [cursor=pointer]:
+        - /url: /pl
+        - img [ref=e9]
+      - generic [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "oferty pracy" [ref=e14] [cursor=pointer]:
+              - /url: /pl
+          - listitem [ref=e15]:
+            - link "profile firm" [ref=e16] [cursor=pointer]:
+              - /url: /pl/companies
+          - listitem [ref=e17]:
+            - link "Kalkulator wynagrodzeń NEW" [ref=e18] [cursor=pointer]:
+              - /url: /pl/kalkulator-wynagrodzen
+              - text: Kalkulator wynagrodzeń
+              - generic [ref=e19]: NEW
+        - list [ref=e20]:
+          - listitem [ref=e21]:
+            - link "dla pracodawcy" [ref=e22] [cursor=pointer]:
+              - /url: https://nofluffjobs.com/pl/employers
+          - listitem [ref=e23]:
+            - link "Cennik" [ref=e24] [cursor=pointer]:
+              - /url: https://nofluffjobs.com/pl/pricing
+          - listitem [ref=e25]:
+            - link "Publikuj" [ref=e26] [cursor=pointer]:
+              - /url: pl/wizard
+          - listitem [ref=e27]:
+            - generic [ref=e32] [cursor=pointer]: Zaloguj się
+          - listitem [ref=e33]:
+            - img [ref=e37] [cursor=pointer]
+          - listitem [ref=e39]:
+            - img "PL" [ref=e44] [cursor=pointer]
+    - generic [ref=e48]:
+      - generic [ref=e52]:
+        - heading "Tu znajdziesz nową pracę. Sprawdź zarobki i aplikuj." [level=1] [ref=e54]:
+          - text: Tu znajdziesz nową pracę.
+          - generic [ref=e55]: Sprawdź zarobki i aplikuj.
+        - generic [ref=e62]:
+          - grid [ref=e63]:
+            - row "JavaScript" [ref=e64] [cursor=pointer]:
+              - gridcell "JavaScript" [ref=e65]:
+                - generic [ref=e67]:
+                  - generic [ref=e69]: JavaScript
+                  - img [ref=e72]
+            - row "praca" [ref=e75] [cursor=pointer]:
+              - gridcell "praca" [ref=e76]:
+                - generic [ref=e78]:
+                  - generic [ref=e79]:
+                    - img [ref=e81]
+                    - generic [ref=e83]: praca
+                  - img [ref=e86]
+            - textbox "main search input" [ref=e89]
+          - img [ref=e92] [cursor=pointer]
+      - generic [ref=e99]:
+        - generic [ref=e100] [cursor=pointer]:
+          - img [ref=e102]
+          - text: Filtry
+        - generic [ref=e105]:
+          - generic [ref=e106] [cursor=pointer]:
+            - img [ref=e108]
+            - text: IT
+          - generic [ref=e110] [cursor=pointer]:
+            - img [ref=e112]
+            - text: Marketing
+          - generic [ref=e114] [cursor=pointer]:
+            - img [ref=e116]
+            - text: Obsługa klienta
+          - generic [ref=e118] [cursor=pointer]:
+            - img [ref=e120]
+            - text: Sprzedaż
+          - generic [ref=e122] [cursor=pointer]:
+            - img [ref=e124]
+            - text: HR
+          - generic [ref=e126] [cursor=pointer]:
+            - img [ref=e128]
+            - text: Inżynieria
+          - generic [ref=e130] [cursor=pointer]:
+            - img [ref=e132]
+            - text: Pozostałe
+      - generic [ref=e135]:
+        - complementary [ref=e137]:
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - heading "Filtry" [level=2] [ref=e141]
+              - button "Wyczyść" [ref=e142] [cursor=pointer]:
+                - text: Wyczyść
+                - img [ref=e144]
+            - generic [ref=e146]:
+              - heading "Technologie" [level=5] [ref=e147]
+              - generic [ref=e149]:
+                - generic [ref=e150] [cursor=pointer]:
+                  - img [ref=e152]
+                  - text: Java
+                - generic [ref=e154] [cursor=pointer]:
+                  - img [ref=e156]
+                  - text: Python
+                - generic [ref=e158] [cursor=pointer]:
+                  - img [ref=e160]
+                  - text: C#
+                - generic [ref=e162] [cursor=pointer]:
+                  - img [ref=e164]
+                  - text: SQL
+                - generic [ref=e166] [cursor=pointer]:
+                  - img [ref=e168]
+                  - text: C++
+                - generic [ref=e170] [cursor=pointer]:
+                  - img [ref=e172]
+                  - text: Golang
+                - generic [ref=e174] [cursor=pointer]:
+                  - img [ref=e176]
+                  - text: JavaScript
+                - generic [ref=e178] [cursor=pointer]:
+                  - img [ref=e180]
+                  - text: React
+                - generic [ref=e182] [cursor=pointer]:
+                  - img [ref=e184]
+                  - text: Angular
+                - generic [ref=e186] [cursor=pointer]:
+                  - img [ref=e188]
+                  - text: TypeScript
+                - generic [ref=e190] [cursor=pointer]:
+                  - img [ref=e192]
+                  - text: HTML
+                - generic [ref=e197] [cursor=pointer]:
+                  - generic [ref=e198]: + Więcej
+                  - generic [ref=e199]: + Więcej
+            - generic [ref=e200]:
+              - heading "Wynagrodzenie (PLN)" [level=5] [ref=e201]
+              - generic [ref=e203]:
+                - generic "ngx-slider" [ref=e205]:
+                  - slider "ngx-slider" [ref=e210] [cursor=pointer]
+                  - slider "ngx-slider-max" [ref=e211] [cursor=pointer]
+                - generic [ref=e214]:
+                  - generic [ref=e217]:
+                    - textbox [ref=e218]:
+                      - /placeholder: " "
+                    - generic: Min
+                  - generic [ref=e219]: "-"
+                  - generic [ref=e222]:
+                    - textbox [ref=e223]:
+                      - /placeholder: " "
+                    - generic: Max
+                - generic [ref=e227] [cursor=pointer]:
+                  - button "Typ umowy" [ref=e228]
+                  - button "Typ umowy" [ref=e229]
+            - generic [ref=e230]:
+              - heading "Salary match" [level=5] [ref=e231]:
+                - generic [ref=e232]: Salary match
+                - img [ref=e234] [cursor=pointer]
+              - generic [ref=e239] [cursor=pointer]:
+                - img [ref=e241]
+                - generic [ref=e244]: Więcej ofert pracy
+            - generic [ref=e245]:
+              - heading "Moje aplikacje" [level=5] [ref=e246]
+              - generic [ref=e251] [cursor=pointer]: Ukryj już zaaplikowane
+            - generic [ref=e252]:
+              - heading "Lokalizacja" [level=5] [ref=e253]
+              - generic [ref=e254]:
+                - generic [ref=e258] [cursor=pointer]:
+                  - img [ref=e260]
+                  - generic [ref=e263]: Szukaj
+                - generic [ref=e267]:
+                  - generic [ref=e271] [cursor=pointer]: Praca zdalna
+                  - generic [ref=e275] [cursor=pointer]: Praca hybrydowa
+                  - generic [ref=e279] [cursor=pointer]: Praca w terenie
+            - generic [ref=e282]:
+              - heading "Doświadczenie" [level=5] [ref=e283]
+              - generic [ref=e284]:
+                - generic [ref=e288] [cursor=pointer]: Stażysta
+                - generic [ref=e292] [cursor=pointer]: Junior
+                - generic [ref=e296] [cursor=pointer]: Mid
+                - generic [ref=e300] [cursor=pointer]: Senior
+                - generic [ref=e304] [cursor=pointer]: Expert
+            - generic [ref=e305]:
+              - heading "Język pracy" [level=5] [ref=e306]
+              - generic [ref=e310]:
+                - generic [ref=e314] [cursor=pointer]: polski
+                - generic [ref=e318] [cursor=pointer]: angielski
+                - generic [ref=e319]: + Więcej
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - heading "Benefity" [level=5] [ref=e323]
+                - generic [ref=e324]:
+                  - generic [ref=e328] [cursor=pointer]: Budżet szkoleniowy
+                  - generic [ref=e332] [cursor=pointer]: Prywatna opieka medyczna
+                  - generic [ref=e336] [cursor=pointer]: Karta sportowa
+                  - generic [ref=e337]: + Więcej
+              - generic [ref=e338]:
+                - heading "Więcej opcji" [level=5] [ref=e339]
+                - generic [ref=e340]:
+                  - generic [ref=e344] [cursor=pointer]: Rekrutacja online
+                  - generic [ref=e348] [cursor=pointer]: Brak podróży służbowych
+                  - generic [ref=e352] [cursor=pointer]: Bonus relokacyjny
+                  - generic [ref=e353]: + Więcej
+              - generic [ref=e355]:
+                - heading "Własny filtr" [level=5] [ref=e356]
+                - button "praca" [ref=e358] [cursor=pointer]:
+                  - text: praca
+                  - img [ref=e360]
+        - generic [ref=e364]:
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - banner [ref=e367]:
+                - heading "Znalezione oferty pracy JAVASCRIPT" [level=2] [ref=e368]:
+                  - link "Znalezione oferty pracy JAVASCRIPT" [ref=e369] [cursor=pointer]:
+                    - /url: https://nofluffjobs.com/pl/javascript
+                - generic [ref=e370]:
+                  - generic [ref=e371]:
+                    - button "Zapisz wyszukiwanie" [ref=e372] [cursor=pointer]:
+                      - img [ref=e374]
+                      - text: Zapisz wyszukiwanie
+                    - generic [ref=e376]:
+                      - text: otrzymasz oferty na maila i dodatkowo uzyskasz
+                      - strong [ref=e377]: inFakt
+                  - generic [ref=e378] [cursor=pointer]:
+                    - img [ref=e380]
+                    - text: "Sortowanie:"
+                    - generic [ref=e382]:
+                      - text: trafność
+                      - img [ref=e384]
+              - generic [ref=e388]:
+                - link "Company logo" [ref=e389] [cursor=pointer]:
+                  - /url: /pl/job/junior-web-developer-logonet-bydgoszcz
+                  - img "Company logo" [ref=e394]
+                  - complementary [ref=e395]:
+                    - generic [ref=e397]:
+                      - heading "Junior Web Developer" [level=3] [ref=e398]
+                      - complementary
+                    - generic [ref=e399]:
+                      - generic [ref=e401]: 6 000 – 7 200 PLN
+                      - generic [ref=e402]:
+                        - generic [ref=e403]: Frontend
+                        - generic [ref=e404]: JavaScript
+                        - generic [ref=e405]: Praca
+                        - generic [ref=e406]: Git
+                    - generic [ref=e407]:
+                      - heading "Logonet Sp. z o. o." [level=4] [ref=e408]:
+                        - img [ref=e410]
+                        - text: Logonet Sp. z o. o.
+                      - generic [ref=e412]:
+                        - img [ref=e414]
+                        - generic [ref=e417]: Bydgoszcz
+                - link "Company logo" [ref=e420] [cursor=pointer]:
+                  - /url: /pl/job/fullstack-programista-programistka-praca-zdalna-astek-polska-remote
+                  - img "Company logo" [ref=e425]
+                  - complementary [ref=e426]:
+                    - generic [ref=e428]:
+                      - heading "Fullstack Programista/Programistka - Praca zdalna NOWA" [level=3] [ref=e429]:
+                        - text: Fullstack Programista/Programistka - Praca zdalna
+                        - generic [ref=e430]: NOWA
+                      - complementary
+                    - generic [ref=e431]:
+                      - generic [ref=e433]: 18 480 – 21 840 PLN
+                      - generic [ref=e434]:
+                        - generic [ref=e435]: Fullstack
+                        - generic [ref=e436]: JavaScript
+                        - generic [ref=e437]: Java
+                        - generic [ref=e438]: Spring
+                    - generic [ref=e439]:
+                      - heading "ASTEK Polska" [level=4] [ref=e440]:
+                        - img [ref=e442]
+                        - text: ASTEK Polska
+                      - generic [ref=e444]:
+                        - img [ref=e446]
+                        - generic [ref=e449]: Zdalnie
+                - link "Company logo" [ref=e452] [cursor=pointer]:
+                  - /url: /pl/job/fullstack-programista-programistka-praca-zdalna-astek-polska-remote-1
+                  - img "Company logo" [ref=e457]
+                  - complementary [ref=e458]:
+                    - generic [ref=e460]:
+                      - heading "Fullstack Programista/Programistka - Praca zdalna NOWA" [level=3] [ref=e461]:
+                        - text: Fullstack Programista/Programistka - Praca zdalna
+                        - generic [ref=e462]: NOWA
+                      - complementary
+                    - generic [ref=e463]:
+                      - generic [ref=e465]: 12 000 – 15 300 PLN
+                      - generic [ref=e466]:
+                        - generic [ref=e467]: Fullstack
+                        - generic [ref=e468]: JavaScript
+                        - generic [ref=e469]: Java
+                        - generic [ref=e470]: Spring
+                    - generic [ref=e471]:
+                      - heading "ASTEK Polska" [level=4] [ref=e472]:
+                        - img [ref=e474]
+                        - text: ASTEK Polska
+                      - generic [ref=e476]:
+                        - img [ref=e478]
+                        - generic [ref=e480]:
+                          - generic [ref=e481]: Zdalnie
+                          - generic [ref=e482]: "+1"
+                - link [ref=e485] [cursor=pointer]:
+                  - /url: /pl/job/fullstack-developer-with-java-and-javascript-f-m-x-sii-polska-remote
+                  - complementary [ref=e487]:
+                    - generic [ref=e489]:
+                      - heading "Fullstack Developer with Java and JavaScript (f/m/x)" [level=3] [ref=e490]
+                      - complementary
+                    - generic [ref=e491]:
+                      - generic [ref=e493]: 20 000 – 23 500 PLN
+                      - generic [ref=e494]:
+                        - generic [ref=e495]: Fullstack
+                        - generic [ref=e496]: Praca
+                        - generic [ref=e497]: Java
+                        - generic [ref=e498]: polski
+                    - generic [ref=e499]:
+                      - heading "Sii Polska" [level=4] [ref=e500]:
+                        - img [ref=e502]
+                        - text: Sii Polska
+                      - generic [ref=e504]:
+                        - img [ref=e506]
+                        - generic [ref=e508]:
+                          - generic [ref=e509]: Zdalnie
+                          - generic [ref=e510]: "+14"
+                - link [ref=e513] [cursor=pointer]:
+                  - /url: /pl/job/senior-qa-devire-remote
+                  - complementary [ref=e515]:
+                    - generic [ref=e517]:
+                      - heading "Senior QA NOWA" [level=3] [ref=e518]:
+                        - text: Senior QA
+                        - generic [ref=e519]: NOWA
+                      - complementary
+                    - generic [ref=e520]:
+                      - generic [ref=e522]: 25 200 – 26 880 PLN
+                      - generic [ref=e523]:
+                        - generic [ref=e524]: Testing
+                        - generic [ref=e525]: JavaScript
+                        - generic [ref=e526]: Praca
+                        - generic [ref=e527]: QA Engineer
+                    - generic [ref=e528]:
+                      - heading "Devire" [level=4] [ref=e529]:
+                        - img [ref=e531]
+                        - text: Devire
+                      - generic [ref=e533]:
+                        - img [ref=e535]
+                        - generic [ref=e538]: Zdalnie
+                - link [ref=e541] [cursor=pointer]:
+                  - /url: /pl/job/senior-software-engineer-react-typescript-c-aws-cdk-square-one-resources-remote
+                  - complementary [ref=e543]:
+                    - generic [ref=e545]:
+                      - heading "Senior Software Engineer (React, TypeScript, C#, AWS CDK) NOWA" [level=3] [ref=e546]:
+                        - text: Senior Software Engineer (React, TypeScript, C#, AWS CDK)
+                        - generic [ref=e547]: NOWA
+                      - complementary
+                    - generic [ref=e548]:
+                      - generic [ref=e550]: 25 200 – 28 560 PLN
+                      - generic [ref=e551]:
+                        - generic [ref=e552]: Fullstack
+                        - generic [ref=e553]: JavaScript
+                        - generic [ref=e554]: Praca
+                        - generic [ref=e555]: React
+                    - generic [ref=e556]:
+                      - heading "Square One Resources" [level=4] [ref=e557]:
+                        - img [ref=e559]
+                        - text: Square One Resources
+                      - generic [ref=e561]:
+                        - img [ref=e563]
+                        - generic [ref=e565]:
+                          - generic [ref=e566]: Zdalnie
+                          - generic [ref=e567]: "+1"
+                - link [ref=e570] [cursor=pointer]:
+                  - /url: /pl/job/full-stack-platform-engineer-antal-krakow
+                  - complementary [ref=e572]:
+                    - generic [ref=e574]:
+                      - heading "Full Stack / Platform Engineer NOWA" [level=3] [ref=e575]:
+                        - text: Full Stack / Platform Engineer
+                        - generic [ref=e576]: NOWA
+                      - complementary
+                    - generic [ref=e577]:
+                      - generic [ref=e579]: 28 560 – 33 600 PLN
+                      - generic [ref=e580]:
+                        - generic [ref=e581]: Fullstack
+                        - generic [ref=e582]: JavaScript
+                        - generic [ref=e583]: Praca
+                        - generic [ref=e584]: Java
+                    - generic [ref=e585]:
+                      - heading "Antal" [level=4] [ref=e586]:
+                        - img [ref=e588]
+                        - text: Antal
+                      - generic [ref=e590]:
+                        - img [ref=e592]
+                        - generic [ref=e595]: Kraków
+            - link "company logo Make it happen. With code. Aplikuj teraz" [ref=e600] [cursor=pointer]:
+              - /url: https://nofluffjobs.com/pl/?criteria=company%3DjetBrains
+              - generic [ref=e602]:
+                - img "company logo" [ref=e603]
+                - paragraph [ref=e604]: Make it happen. With code.
+              - button "Aplikuj teraz" [ref=e606]
+            - generic [ref=e608]:
+              - link [ref=e609] [cursor=pointer]:
+                - /url: /pl/job/fullstack-net-developer-branza-ubezpieczeniowa-edge-one-solutions-warszawa
+                - complementary [ref=e611]:
+                  - generic [ref=e613]:
+                    - heading "Fullstack .NET Developer | Branża Ubezpieczeniowa NOWA" [level=3] [ref=e614]:
+                      - text: Fullstack .NET Developer | Branża Ubezpieczeniowa
+                      - generic [ref=e615]: NOWA
+                    - complementary
+                  - generic [ref=e616]:
+                    - generic [ref=e617]:
+                      - generic [ref=e618]: Sprawdź wynagrodzenie
+                      - img [ref=e620]
+                    - generic [ref=e622]:
+                      - generic [ref=e623]: Fullstack
+                      - generic [ref=e624]: JavaScript
+                      - generic [ref=e625]: Praca
+                      - generic [ref=e626]: .NET
+                  - generic [ref=e627]:
+                    - heading "Edge One Solutions Sp. z o.o." [level=4] [ref=e628]:
+                      - img [ref=e630]
+                      - text: Edge One Solutions Sp. z o.o.
+                    - generic [ref=e632]:
+                      - img [ref=e634]
+                      - generic [ref=e637]: Warszawa
+              - link [ref=e640] [cursor=pointer]:
+                - /url: /pl/job/programista-frontend-programistka-frontend-react-astek-polska-warszawa
+                - complementary [ref=e642]:
+                  - generic [ref=e644]:
+                    - heading "Programista Frontend / Programistka Frontend (React) NOWA" [level=3] [ref=e645]:
+                      - text: Programista Frontend / Programistka Frontend (React)
+                      - generic [ref=e646]: NOWA
+                    - complementary
+                  - generic [ref=e647]:
+                    - generic [ref=e649]: 21 000 – 23 100 PLN
+                    - generic [ref=e650]:
+                      - generic [ref=e651]: Frontend
+                      - generic [ref=e652]: JavaScript
+                      - generic [ref=e653]: Praca
+                      - generic [ref=e654]: React
+                  - generic [ref=e655]:
+                    - heading "ASTEK Polska" [level=4] [ref=e656]:
+                      - img [ref=e658]
+                      - text: ASTEK Polska
+                    - generic [ref=e660]:
+                      - img [ref=e662]
+                      - generic [ref=e664]:
+                        - generic [ref=e665]: Warszawa
+                        - generic [ref=e666]: "+1"
+              - link [ref=e669] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-c-angular-node-js-antal-remote
+                - complementary [ref=e671]:
+                  - generic [ref=e673]:
+                    - heading "Fullstack Developer (C# / Angular / Node.js) NOWA" [level=3] [ref=e674]:
+                      - text: Fullstack Developer (C# / Angular / Node.js)
+                      - generic [ref=e675]: NOWA
+                    - complementary
+                  - generic [ref=e676]:
+                    - generic [ref=e677]:
+                      - generic [ref=e678]: Sprawdź wynagrodzenie
+                      - img [ref=e680]
+                    - generic [ref=e682]:
+                      - generic [ref=e683]: Fullstack
+                      - generic [ref=e684]: JavaScript
+                      - generic [ref=e685]: Praca
+                      - generic [ref=e686]: Angular
+                  - generic [ref=e687]:
+                    - heading "Antal" [level=4] [ref=e688]:
+                      - img [ref=e690]
+                      - text: Antal
+                    - generic [ref=e692]:
+                      - img [ref=e694]
+                      - generic [ref=e696]:
+                        - generic [ref=e697]: Zdalnie
+                        - generic [ref=e698]: "+1"
+              - link [ref=e701] [cursor=pointer]:
+                - /url: /pl/job/business-analyst-green-minds-remote
+                - complementary [ref=e703]:
+                  - generic [ref=e705]:
+                    - heading "Business Analyst NOWA" [level=3] [ref=e706]:
+                      - text: Business Analyst
+                      - generic [ref=e707]: NOWA
+                    - complementary
+                  - generic [ref=e708]:
+                    - generic [ref=e710]: 25 200 – 27 720 PLN
+                    - generic [ref=e711]:
+                      - generic [ref=e712]: Business Analysis
+                      - generic [ref=e713]: JavaScript
+                      - generic [ref=e714]: Praca
+                      - generic [ref=e715]: SQL
+                  - generic [ref=e716]:
+                    - heading "Green Minds Sp.zo.o." [level=4] [ref=e717]:
+                      - img [ref=e719]
+                      - text: Green Minds Sp.zo.o.
+                    - generic [ref=e721]:
+                      - img [ref=e723]
+                      - generic [ref=e725]:
+                        - generic [ref=e726]: Zdalnie
+                        - generic [ref=e727]: "+1"
+              - link [ref=e730] [cursor=pointer]:
+                - /url: /pl/job/sap-support-square-one-resources-remote
+                - complementary [ref=e732]:
+                  - generic [ref=e734]:
+                    - heading "SAP Support NOWA" [level=3] [ref=e735]:
+                      - text: SAP Support
+                      - generic [ref=e736]: NOWA
+                    - complementary
+                  - generic [ref=e737]:
+                    - generic [ref=e739]: 21 000 – 24 360 PLN
+                    - generic [ref=e740]:
+                      - generic [ref=e741]: ERP
+                      - generic [ref=e742]: JavaScript
+                      - generic [ref=e743]: SAP
+                      - generic [ref=e744]: EDI
+                  - generic [ref=e745]:
+                    - heading "Square One Resources" [level=4] [ref=e746]:
+                      - img [ref=e748]
+                      - text: Square One Resources
+                    - generic [ref=e750]:
+                      - img [ref=e752]
+                      - generic [ref=e754]:
+                        - generic [ref=e755]: Zdalnie
+                        - generic [ref=e756]: "+1"
+              - link [ref=e759] [cursor=pointer]:
+                - /url: /pl/job/senior-system-business-analyst-with-java-kafka-square-one-resources-remote
+                - complementary [ref=e761]:
+                  - generic [ref=e763]:
+                    - heading "Senior System / Business Analyst with (Java/Kafka) NOWA" [level=3] [ref=e764]:
+                      - text: Senior System / Business Analyst with (Java/Kafka)
+                      - generic [ref=e765]: NOWA
+                    - complementary
+                  - generic [ref=e766]:
+                    - generic [ref=e768]: 23 520 – 26 880 PLN
+                    - generic [ref=e769]:
+                      - generic [ref=e770]: Business Analysis
+                      - generic [ref=e771]: JavaScript
+                      - generic [ref=e772]: Business Analyst
+                      - generic [ref=e773]: UML
+                  - generic [ref=e774]:
+                    - heading "Square One Resources" [level=4] [ref=e775]:
+                      - img [ref=e777]
+                      - text: Square One Resources
+                    - generic [ref=e779]:
+                      - img [ref=e781]
+                      - generic [ref=e783]:
+                        - generic [ref=e784]: Zdalnie
+                        - generic [ref=e785]: "+1"
+              - link [ref=e788] [cursor=pointer]:
+                - /url: /pl/job/senior-fullstack-net-developer-antal-warszawa
+                - complementary [ref=e790]:
+                  - generic [ref=e792]:
+                    - heading "Senior Fullstack .Net Developer NOWA" [level=3] [ref=e793]:
+                      - text: Senior Fullstack .Net Developer
+                      - generic [ref=e794]: NOWA
+                    - complementary
+                  - generic [ref=e795]:
+                    - generic [ref=e797]: 20 160 – 28 560 PLN
+                    - generic [ref=e798]:
+                      - generic [ref=e799]: Fullstack
+                      - generic [ref=e800]: JavaScript
+                      - generic [ref=e801]: Praca
+                      - generic [ref=e802]: .NET
+                  - generic [ref=e803]:
+                    - heading "Antal" [level=4] [ref=e804]:
+                      - img [ref=e806]
+                      - text: Antal
+                    - generic [ref=e808]:
+                      - img [ref=e810]
+                      - generic [ref=e813]: Warszawa
+              - link [ref=e816] [cursor=pointer]:
+                - /url: /pl/job/full-stack-engineer-backend-heavy-antal-krakow
+                - complementary [ref=e818]:
+                  - generic [ref=e820]:
+                    - heading "Full Stack Engineer (backend-heavy) NOWA" [level=3] [ref=e821]:
+                      - text: Full Stack Engineer (backend-heavy)
+                      - generic [ref=e822]: NOWA
+                    - complementary
+                  - generic [ref=e823]:
+                    - generic [ref=e825]: 30 240 – 36 960 PLN
+                    - generic [ref=e826]:
+                      - generic [ref=e827]: Fullstack
+                      - generic [ref=e828]: JavaScript
+                      - generic [ref=e829]: Praca
+                      - generic [ref=e830]: Java
+                  - generic [ref=e831]:
+                    - heading "Antal" [level=4] [ref=e832]:
+                      - img [ref=e834]
+                      - text: Antal
+                    - generic [ref=e836]:
+                      - img [ref=e838]
+                      - generic [ref=e841]: Kraków
+              - link [ref=e844] [cursor=pointer]:
+                - /url: /pl/job/senior-fullstack-java-antal-remote
+                - complementary [ref=e846]:
+                  - generic [ref=e848]:
+                    - heading "Senior Fullstack Java NOWA" [level=3] [ref=e849]:
+                      - text: Senior Fullstack Java
+                      - generic [ref=e850]: NOWA
+                    - complementary
+                  - generic [ref=e851]:
+                    - generic [ref=e853]: 23 520 – 26 880 PLN
+                    - generic [ref=e854]:
+                      - generic [ref=e855]: Fullstack
+                      - generic [ref=e856]: JavaScript
+                      - generic [ref=e857]: Praca
+                      - generic [ref=e858]: Java
+                  - generic [ref=e859]:
+                    - heading "Antal" [level=4] [ref=e860]:
+                      - img [ref=e862]
+                      - text: Antal
+                    - generic [ref=e864]:
+                      - img [ref=e866]
+                      - generic [ref=e868]:
+                        - generic [ref=e869]: Zdalnie
+                        - generic [ref=e870]: "+1"
+              - link [ref=e873] [cursor=pointer]:
+                - /url: /pl/job/programista-fullstack-programistka-fullstack-net-angular-astek-polska-remote
+                - complementary [ref=e875]:
+                  - generic [ref=e877]:
+                    - heading "Programista Fullstack / Programistka Fullstack (.NET & Angular)" [level=3] [ref=e878]
+                    - complementary
+                  - generic [ref=e879]:
+                    - generic [ref=e881]: 18 900 – 24 150 PLN
+                    - generic [ref=e882]:
+                      - generic [ref=e883]: Fullstack
+                      - generic [ref=e884]: JavaScript
+                      - generic [ref=e885]: Praca
+                      - generic [ref=e886]: .NET
+                  - generic [ref=e887]:
+                    - heading "ASTEK Polska" [level=4] [ref=e888]:
+                      - img [ref=e890]
+                      - text: ASTEK Polska
+                    - generic [ref=e892]:
+                      - img [ref=e894]
+                      - generic [ref=e897]: Zdalnie
+              - link [ref=e900] [cursor=pointer]:
+                - /url: /pl/job/frontend-developer-angular-camunda-connectis--remote
+                - complementary [ref=e902]:
+                  - generic [ref=e904]:
+                    - heading "Frontend Developer (Angular / Camunda)" [level=3] [ref=e905]
+                    - complementary
+                  - generic [ref=e906]:
+                    - generic [ref=e908]: 19 320 – 21 840 PLN
+                    - generic [ref=e909]:
+                      - generic [ref=e910]: Frontend
+                      - generic [ref=e911]: JavaScript
+                      - generic [ref=e912]: Praca
+                      - generic [ref=e913]: Angular
+                  - generic [ref=e914]:
+                    - heading "Connectis_" [level=4] [ref=e915]:
+                      - img [ref=e917]
+                      - text: Connectis_
+                    - generic [ref=e919]:
+                      - img [ref=e921]
+                      - generic [ref=e924]: Zdalnie
+              - link [ref=e927] [cursor=pointer]:
+                - /url: /pl/job/wykladowca-wykladowczyni-programowanie-grupa-outworking-warszawa
+                - complementary [ref=e929]:
+                  - generic [ref=e931]:
+                    - heading "Wykładowca/Wykładowczyni – Programowanie" [level=3] [ref=e932]
+                    - complementary
+                  - generic [ref=e933]:
+                    - generic [ref=e934]:
+                      - generic [ref=e935]: Sprawdź wynagrodzenie
+                      - img [ref=e937]
+                    - generic [ref=e939]:
+                      - generic [ref=e940]: Backend
+                      - generic [ref=e941]: JavaScript
+                      - generic [ref=e942]: Praca
+                      - generic [ref=e943]: Python
+                  - generic [ref=e944]:
+                    - heading "Grupa Outworking" [level=4] [ref=e945]:
+                      - img [ref=e947]
+                      - text: Grupa Outworking
+                    - generic [ref=e949]:
+                      - img [ref=e951]
+                      - generic [ref=e953]:
+                        - generic [ref=e954]: Warszawa
+                        - generic [ref=e955]: "+4"
+              - link [ref=e958] [cursor=pointer]:
+                - /url: /pl/job/business-analyst-with-tax-experience-green-minds-remote
+                - complementary [ref=e960]:
+                  - generic [ref=e962]:
+                    - heading "Business Analyst with Tax Experience" [level=3] [ref=e963]
+                    - complementary
+                  - generic [ref=e964]:
+                    - generic [ref=e966]: 21 840 – 25 200 PLN
+                    - generic [ref=e967]:
+                      - generic [ref=e968]: Business Analysis
+                      - generic [ref=e969]: JavaScript
+                      - generic [ref=e970]: Praca
+                      - generic [ref=e971]: MS Teams
+                  - generic [ref=e972]:
+                    - heading "Green Minds Sp.zo.o." [level=4] [ref=e973]:
+                      - img [ref=e975]
+                      - text: Green Minds Sp.zo.o.
+                    - generic [ref=e977]:
+                      - img [ref=e979]
+                      - generic [ref=e981]:
+                        - generic [ref=e982]: Zdalnie
+                        - generic [ref=e983]: "+1"
+              - link [ref=e986] [cursor=pointer]:
+                - /url: /pl/job/fullstack-engineer-70-java-30-react-j-labs-software-specialist-cracow
+                - complementary [ref=e988]:
+                  - generic [ref=e990]:
+                    - heading "Fullstack Engineer (70% Java / 30% React)" [level=3] [ref=e991]
+                    - complementary
+                  - generic [ref=e992]:
+                    - generic [ref=e994]: 25 200 – 30 240 PLN
+                    - generic [ref=e995]:
+                      - generic [ref=e996]: Fullstack
+                      - generic [ref=e997]: JavaScript
+                      - generic [ref=e998]: Praca
+                      - generic [ref=e999]: Java
+                  - generic [ref=e1000]:
+                    - heading "j-labs software specialist" [level=4] [ref=e1001]:
+                      - img [ref=e1003]
+                      - text: j-labs software specialist
+                    - generic [ref=e1005]:
+                      - img [ref=e1007]
+                      - generic [ref=e1010]: Cracow
+              - link [ref=e1013] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-smart-topaz-wroclaw
+                - complementary [ref=e1015]:
+                  - generic [ref=e1017]:
+                    - heading "Fullstack Developer" [level=3] [ref=e1018]
+                    - complementary
+                  - generic [ref=e1019]:
+                    - generic [ref=e1021]: 16 000 – 22 000 PLN
+                    - generic [ref=e1022]:
+                      - generic [ref=e1023]: Fullstack
+                      - generic [ref=e1024]: JavaScript
+                      - generic [ref=e1025]: Praca
+                      - generic [ref=e1026]: Node.js
+                  - generic [ref=e1027]:
+                    - heading "Smart Topaz sp. z o.o." [level=4] [ref=e1028]:
+                      - img [ref=e1030]
+                      - text: Smart Topaz sp. z o.o.
+                    - generic [ref=e1032]:
+                      - img [ref=e1034]
+                      - generic [ref=e1037]: Wrocław
+              - link [ref=e1040] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-ka-freelance-syzygy-warszawa
+                - complementary [ref=e1042]:
+                  - generic [ref=e1044]:
+                    - heading "Fullstack Developer/ka (Freelance)" [level=3] [ref=e1045]
+                    - complementary
+                  - generic [ref=e1046]:
+                    - generic [ref=e1048]: 22 680 – 24 360 PLN
+                    - generic [ref=e1049]:
+                      - generic [ref=e1050]: Fullstack
+                      - generic [ref=e1051]: JavaScript
+                      - generic [ref=e1052]: Praca
+                      - generic [ref=e1053]: Node.js
+                  - generic [ref=e1054]:
+                    - heading "SYZYGY" [level=4] [ref=e1055]:
+                      - img [ref=e1057]
+                      - text: SYZYGY
+                    - generic [ref=e1059]:
+                      - img [ref=e1061]
+                      - generic [ref=e1064]: Warszawa
+              - link [ref=e1067] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-angular-java-makeitright-remote
+                - complementary [ref=e1069]:
+                  - generic [ref=e1071]:
+                    - heading "Fullstack Developer Angular + Java" [level=3] [ref=e1072]
+                    - complementary
+                  - generic [ref=e1073]:
+                    - generic [ref=e1075]: 23 520 – 25 200 PLN
+                    - generic [ref=e1076]:
+                      - generic [ref=e1077]: Fullstack
+                      - generic [ref=e1078]: JavaScript
+                      - generic [ref=e1079]: Praca
+                      - generic [ref=e1080]: Angular
+                  - generic [ref=e1081]:
+                    - heading "Makeitright Sp. z o.o." [level=4] [ref=e1082]:
+                      - img [ref=e1084]
+                      - text: Makeitright Sp. z o.o.
+                    - generic [ref=e1086]:
+                      - img [ref=e1088]
+                      - generic [ref=e1091]: Zdalnie
+              - link [ref=e1094] [cursor=pointer]:
+                - /url: /pl/job/ai-project-manager-the-widlarz-group-krakow
+                - complementary [ref=e1096]:
+                  - generic [ref=e1098]:
+                    - heading "AI Project Manager" [level=3] [ref=e1099]
+                    - complementary
+                  - generic [ref=e1100]:
+                    - generic [ref=e1102]: 6 000 – 10 000 PLN
+                    - generic [ref=e1103]:
+                      - generic [ref=e1104]: Project Manager
+                      - generic [ref=e1105]: JavaScript
+                      - generic [ref=e1106]: Praca
+                      - generic [ref=e1107]: Jira
+                  - generic [ref=e1108]:
+                    - heading "The Widlarz Group sp. z o.o." [level=4] [ref=e1109]:
+                      - img [ref=e1111]
+                      - text: The Widlarz Group sp. z o.o.
+                    - generic [ref=e1113]:
+                      - img [ref=e1115]
+                      - generic [ref=e1118]: Kraków
+              - link [ref=e1121] [cursor=pointer]:
+                - /url: /pl/job/lead-fullstack-developer-backend-focused-api-bff-upvanta-remote
+                - complementary [ref=e1123]:
+                  - generic [ref=e1125]:
+                    - heading "Lead Fullstack Developer (Backend focused, API, BFF)" [level=3] [ref=e1126]
+                    - complementary
+                  - generic [ref=e1127]:
+                    - generic [ref=e1129]: 24 360 – 26 040 PLN
+                    - generic [ref=e1130]:
+                      - generic [ref=e1131]: Fullstack
+                      - generic [ref=e1132]: JavaScript
+                      - generic [ref=e1133]: Praca
+                      - generic [ref=e1134]: Cache
+                  - generic [ref=e1135]:
+                    - heading "Upvanta" [level=4] [ref=e1136]:
+                      - img [ref=e1138]
+                      - text: Upvanta
+                    - generic [ref=e1140]:
+                      - img [ref=e1142]
+                      - generic [ref=e1145]: Zdalnie
+              - link [ref=e1148] [cursor=pointer]:
+                - /url: /pl/job/tester-automatyzujacy-antal-warszawa-2
+                - complementary [ref=e1150]:
+                  - generic [ref=e1152]:
+                    - heading "Tester automatyzujący" [level=3] [ref=e1153]
+                    - complementary
+                  - generic [ref=e1154]:
+                    - generic [ref=e1155]:
+                      - generic [ref=e1156]: Sprawdź wynagrodzenie
+                      - img [ref=e1158]
+                    - generic [ref=e1160]:
+                      - generic [ref=e1161]: Testing
+                      - generic [ref=e1162]: JavaScript
+                      - generic [ref=e1163]: Praca
+                      - generic [ref=e1164]: Selenium
+                  - generic [ref=e1165]:
+                    - heading "Antal" [level=4] [ref=e1166]:
+                      - img [ref=e1168]
+                      - text: Antal
+                    - generic [ref=e1170]:
+                      - img [ref=e1172]
+                      - generic [ref=e1175]: Warszawa
+              - link [ref=e1178] [cursor=pointer]:
+                - /url: /pl/job/senior-qa-engineer-edge-one-solutions-remote-1
+                - complementary [ref=e1180]:
+                  - generic [ref=e1182]:
+                    - heading "Senior QA Engineer" [level=3] [ref=e1183]
+                    - complementary
+                  - generic [ref=e1184]:
+                    - generic [ref=e1185]:
+                      - generic [ref=e1186]: Sprawdź wynagrodzenie
+                      - img [ref=e1188]
+                    - generic [ref=e1190]:
+                      - generic [ref=e1191]: Testing
+                      - generic [ref=e1192]: JavaScript
+                      - generic [ref=e1193]: Praca
+                      - generic [ref=e1194]: Java
+                  - generic [ref=e1195]:
+                    - heading "Edge One Solutions Sp. z o.o." [level=4] [ref=e1196]:
+                      - img [ref=e1198]
+                      - text: Edge One Solutions Sp. z o.o.
+                    - generic [ref=e1200]:
+                      - img [ref=e1202]
+                      - generic [ref=e1205]: Zdalnie
+              - link [ref=e1208] [cursor=pointer]:
+                - /url: /pl/job/senior-qa-engineer-euvic-katowice-2
+                - complementary [ref=e1210]:
+                  - generic [ref=e1212]:
+                    - heading "Senior QA Engineer" [level=3] [ref=e1213]
+                    - complementary
+                  - generic [ref=e1214]:
+                    - generic [ref=e1215]:
+                      - generic [ref=e1216]: Sprawdź wynagrodzenie
+                      - img [ref=e1218]
+                    - generic [ref=e1220]:
+                      - generic [ref=e1221]: Testing
+                      - generic [ref=e1222]: JavaScript
+                      - generic [ref=e1223]: Praca
+                      - generic [ref=e1224]: SQL
+                  - generic [ref=e1225]:
+                    - heading "Euvic S.A." [level=4] [ref=e1226]:
+                      - img [ref=e1228]
+                      - text: Euvic S.A.
+                    - generic [ref=e1230]:
+                      - img [ref=e1232]
+                      - generic [ref=e1235]: Katowice
+              - link [ref=e1238] [cursor=pointer]:
+                - /url: /pl/job/middle-senior-full-stack-python-react-engineer-edge-one-solutions-remote
+                - complementary [ref=e1240]:
+                  - generic [ref=e1242]:
+                    - heading "Middle+/Senior Full-Stack (Python + React) Engineer" [level=3] [ref=e1243]
+                    - complementary
+                  - generic [ref=e1244]:
+                    - generic [ref=e1245]:
+                      - generic [ref=e1246]: Sprawdź wynagrodzenie
+                      - img [ref=e1248]
+                    - generic [ref=e1250]:
+                      - generic [ref=e1251]: Fullstack
+                      - generic [ref=e1252]: JavaScript
+                      - generic [ref=e1253]: Praca
+                      - generic [ref=e1254]: React
+                  - generic [ref=e1255]:
+                    - heading "Edge One Solutions Sp. z o.o." [level=4] [ref=e1256]:
+                      - img [ref=e1258]
+                      - text: Edge One Solutions Sp. z o.o.
+                    - generic [ref=e1260]:
+                      - img [ref=e1262]
+                      - generic [ref=e1265]: Zdalnie
+              - link [ref=e1268] [cursor=pointer]:
+                - /url: /pl/job/fullstack-engineer-70-java-30-react-j-labs-software-specialist-cracow
+                - complementary [ref=e1270]:
+                  - generic [ref=e1272]:
+                    - heading "Fullstack Engineer (70% Java / 30% React)" [level=3] [ref=e1273]
+                    - complementary
+                  - generic [ref=e1274]:
+                    - generic [ref=e1276]: 25 200 – 30 240 PLN
+                    - generic [ref=e1277]:
+                      - generic [ref=e1278]: Fullstack
+                      - generic [ref=e1279]: JavaScript
+                      - generic [ref=e1280]: Praca
+                      - generic [ref=e1281]: Java
+                  - generic [ref=e1282]:
+                    - heading "j-labs software specialist" [level=4] [ref=e1283]:
+                      - img [ref=e1285]
+                      - text: j-labs software specialist
+                    - generic [ref=e1287]:
+                      - img [ref=e1289]
+                      - generic [ref=e1292]: Cracow
+              - link [ref=e1295] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-smart-topaz-wroclaw
+                - complementary [ref=e1297]:
+                  - generic [ref=e1299]:
+                    - heading "Fullstack Developer" [level=3] [ref=e1300]
+                    - complementary
+                  - generic [ref=e1301]:
+                    - generic [ref=e1303]: 16 000 – 22 000 PLN
+                    - generic [ref=e1304]:
+                      - generic [ref=e1305]: Fullstack
+                      - generic [ref=e1306]: JavaScript
+                      - generic [ref=e1307]: Praca
+                      - generic [ref=e1308]: Node.js
+                  - generic [ref=e1309]:
+                    - heading "Smart Topaz sp. z o.o." [level=4] [ref=e1310]:
+                      - img [ref=e1312]
+                      - text: Smart Topaz sp. z o.o.
+                    - generic [ref=e1314]:
+                      - img [ref=e1316]
+                      - generic [ref=e1319]: Wrocław
+              - link [ref=e1322] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-ka-freelance-syzygy-warszawa
+                - complementary [ref=e1324]:
+                  - generic [ref=e1326]:
+                    - heading "Fullstack Developer/ka (Freelance)" [level=3] [ref=e1327]
+                    - complementary
+                  - generic [ref=e1328]:
+                    - generic [ref=e1330]: 22 680 – 24 360 PLN
+                    - generic [ref=e1331]:
+                      - generic [ref=e1332]: Fullstack
+                      - generic [ref=e1333]: JavaScript
+                      - generic [ref=e1334]: Praca
+                      - generic [ref=e1335]: Node.js
+                  - generic [ref=e1336]:
+                    - heading "SYZYGY" [level=4] [ref=e1337]:
+                      - img [ref=e1339]
+                      - text: SYZYGY
+                    - generic [ref=e1341]:
+                      - img [ref=e1343]
+                      - generic [ref=e1346]: Warszawa
+              - link [ref=e1349] [cursor=pointer]:
+                - /url: /pl/job/fullstack-developer-angular-java-makeitright-remote
+                - complementary [ref=e1351]:
+                  - generic [ref=e1353]:
+                    - heading "Fullstack Developer Angular + Java" [level=3] [ref=e1354]
+                    - complementary
+                  - generic [ref=e1355]:
+                    - generic [ref=e1357]: 23 520 – 25 200 PLN
+                    - generic [ref=e1358]:
+                      - generic [ref=e1359]: Fullstack
+                      - generic [ref=e1360]: JavaScript
+                      - generic [ref=e1361]: Praca
+                      - generic [ref=e1362]: Angular
+                  - generic [ref=e1363]:
+                    - heading "Makeitright Sp. z o.o." [level=4] [ref=e1364]:
+                      - img [ref=e1366]
+                      - text: Makeitright Sp. z o.o.
+                    - generic [ref=e1368]:
+                      - img [ref=e1370]
+                      - generic [ref=e1373]: Zdalnie
+              - link [ref=e1376] [cursor=pointer]:
+                - /url: /pl/job/ai-project-manager-the-widlarz-group-krakow
+                - complementary [ref=e1378]:
+                  - generic [ref=e1380]:
+                    - heading "AI Project Manager" [level=3] [ref=e1381]
+                    - complementary
+                  - generic [ref=e1382]:
+                    - generic [ref=e1384]: 6 000 – 10 000 PLN
+                    - generic [ref=e1385]:
+                      - generic [ref=e1386]: Project Manager
+                      - generic [ref=e1387]: JavaScript
+                      - generic [ref=e1388]: Praca
+                      - generic [ref=e1389]: Jira
+                  - generic [ref=e1390]:
+                    - heading "The Widlarz Group sp. z o.o." [level=4] [ref=e1391]:
+                      - img [ref=e1393]
+                      - text: The Widlarz Group sp. z o.o.
+                    - generic [ref=e1395]:
+                      - img [ref=e1397]
+                      - generic [ref=e1400]: Kraków
+              - link [ref=e1403] [cursor=pointer]:
+                - /url: /pl/job/lead-fullstack-developer-backend-focused-api-bff-upvanta-remote
+                - complementary [ref=e1405]:
+                  - generic [ref=e1407]:
+                    - heading "Lead Fullstack Developer (Backend focused, API, BFF)" [level=3] [ref=e1408]
+                    - complementary
+                  - generic [ref=e1409]:
+                    - generic [ref=e1411]: 24 360 – 26 040 PLN
+                    - generic [ref=e1412]:
+                      - generic [ref=e1413]: Fullstack
+                      - generic [ref=e1414]: JavaScript
+                      - generic [ref=e1415]: Praca
+                      - generic [ref=e1416]: Cache
+                  - generic [ref=e1417]:
+                    - heading "Upvanta" [level=4] [ref=e1418]:
+                      - img [ref=e1420]
+                      - text: Upvanta
+                    - generic [ref=e1422]:
+                      - img [ref=e1424]
+                      - generic [ref=e1427]: Zdalnie
+              - link [ref=e1430] [cursor=pointer]:
+                - /url: /pl/job/tester-automatyzujacy-antal-warszawa-2
+                - complementary [ref=e1432]:
+                  - generic [ref=e1434]:
+                    - heading "Tester automatyzujący" [level=3] [ref=e1435]
+                    - complementary
+                  - generic [ref=e1436]:
+                    - generic [ref=e1437]:
+                      - generic [ref=e1438]: Sprawdź wynagrodzenie
+                      - img [ref=e1440]
+                    - generic [ref=e1442]:
+                      - generic [ref=e1443]: Testing
+                      - generic [ref=e1444]: JavaScript
+                      - generic [ref=e1445]: Praca
+                      - generic [ref=e1446]: Selenium
+                  - generic [ref=e1447]:
+                    - heading "Antal" [level=4] [ref=e1448]:
+                      - img [ref=e1450]
+                      - text: Antal
+                    - generic [ref=e1452]:
+                      - img [ref=e1454]
+                      - generic [ref=e1457]: Warszawa
+              - link [ref=e1460] [cursor=pointer]:
+                - /url: /pl/job/senior-qa-engineer-edge-one-solutions-remote-1
+                - complementary [ref=e1462]:
+                  - generic [ref=e1464]:
+                    - heading "Senior QA Engineer" [level=3] [ref=e1465]
+                    - complementary
+                  - generic [ref=e1466]:
+                    - generic [ref=e1467]:
+                      - generic [ref=e1468]: Sprawdź wynagrodzenie
+                      - img [ref=e1470]
+                    - generic [ref=e1472]:
+                      - generic [ref=e1473]: Testing
+                      - generic [ref=e1474]: JavaScript
+                      - generic [ref=e1475]: Praca
+                      - generic [ref=e1476]: Java
+                  - generic [ref=e1477]:
+                    - heading "Edge One Solutions Sp. z o.o." [level=4] [ref=e1478]:
+                      - img [ref=e1480]
+                      - text: Edge One Solutions Sp. z o.o.
+                    - generic [ref=e1482]:
+                      - img [ref=e1484]
+                      - generic [ref=e1487]: Zdalnie
+              - link [ref=e1490] [cursor=pointer]:
+                - /url: /pl/job/senior-qa-engineer-euvic-katowice-2
+                - complementary [ref=e1492]:
+                  - generic [ref=e1494]:
+                    - heading "Senior QA Engineer" [level=3] [ref=e1495]
+                    - complementary
+                  - generic [ref=e1496]:
+                    - generic [ref=e1497]:
+                      - generic [ref=e1498]: Sprawdź wynagrodzenie
+                      - img [ref=e1500]
+                    - generic [ref=e1502]:
+                      - generic [ref=e1503]: Testing
+                      - generic [ref=e1504]: JavaScript
+                      - generic [ref=e1505]: Praca
+                      - generic [ref=e1506]: SQL
+                  - generic [ref=e1507]:
+                    - heading "Euvic S.A." [level=4] [ref=e1508]:
+                      - img [ref=e1510]
+                      - text: Euvic S.A.
+                    - generic [ref=e1512]:
+                      - img [ref=e1514]
+                      - generic [ref=e1517]: Katowice
+              - link [ref=e1520] [cursor=pointer]:
+                - /url: /pl/job/middle-senior-full-stack-python-react-engineer-edge-one-solutions-remote
+                - complementary [ref=e1522]:
+                  - generic [ref=e1524]:
+                    - heading "Middle+/Senior Full-Stack (Python + React) Engineer" [level=3] [ref=e1525]
+                    - complementary
+                  - generic [ref=e1526]:
+                    - generic [ref=e1527]:
+                      - generic [ref=e1528]: Sprawdź wynagrodzenie
+                      - img [ref=e1530]
+                    - generic [ref=e1532]:
+                      - generic [ref=e1533]: Fullstack
+                      - generic [ref=e1534]: JavaScript
+                      - generic [ref=e1535]: Praca
+                      - generic [ref=e1536]: React
+                  - generic [ref=e1537]:
+                    - heading "Edge One Solutions Sp. z o.o." [level=4] [ref=e1538]:
+                      - img [ref=e1540]
+                      - text: Edge One Solutions Sp. z o.o.
+                    - generic [ref=e1542]:
+                      - img [ref=e1544]
+                      - generic [ref=e1547]: Zdalnie
+            - generic [ref=e1551] [cursor=pointer]:
+              - paragraph [ref=e1552]: Powiedz nam jak możemy jeszcze lepiej dopasować oferty
+              - button "Oceń wyniki wyszukiwania" [ref=e1553]
+            - generic [ref=e1555]:
+              - paragraph [ref=e1556]:
+                - text: Oceń nasze pomysły i
+                - strong [ref=e1557]: odbierz jeden z 3 prezentów.
+              - link "Zapisz się na rozmowę" [ref=e1558] [cursor=pointer]:
+                - /url: https://nofluffjobs.com/pl/user-research/
+          - generic [ref=e1559]:
+            - heading "Zarobki JAVASCRIPT" [level=2] [ref=e1560]
+            - generic [ref=e1561]:
+              - generic [ref=e1562]:
+                - button "Senior" [ref=e1563] [cursor=pointer]
+                - button "Mid" [ref=e1564] [cursor=pointer]
+                - button "Junior" [ref=e1565] [cursor=pointer]
+              - generic [ref=e1566]:
+                - generic [ref=e1567] [cursor=pointer]:
+                  - img [ref=e1569]
+                  - text: Oceń ten widget
+                - link "Przejdź do pełnej wersji" [ref=e1571] [cursor=pointer]:
+                  - /url: /kalkulator-wynagrodzen/generuj-raport
+            - generic [ref=e1572]:
+              - generic [ref=e1574]:
+                - heading "16 800 - 21 840 PLN" [level=2] [ref=e1575]
+                - paragraph [ref=e1576]:
+                  - img [ref=e1578]
+                  - generic [ref=e1580]: + VAT (B2B) miesięcznie
+                - heading "12 000 - 17 000 PLN" [level=2] [ref=e1581]
+                - paragraph [ref=e1582]:
+                  - img [ref=e1584]
+                  - generic [ref=e1586]: brutto miesięcznie (UoP)
+              - generic [ref=e1589]:
+                - generic [ref=e1590]:
+                  - paragraph [ref=e1591]: Mediana
+                  - generic [ref=e1592]:
+                    - generic [ref=e1593]: Zarobki dla
+                    - button "B2B" [ref=e1594] [cursor=pointer]
+                    - button "UoP" [ref=e1595] [cursor=pointer]
+                - generic [ref=e1596]:
+                  - heading "19 320 PLN" [level=3] [ref=e1597]
+                  - generic [ref=e1598]:
+                    - img [ref=e1600]
+                    - generic [ref=e1603]:
+                      - heading "16 800 PLN" [level=4] [ref=e1604]
+                      - heading "21 840 PLN" [level=4] [ref=e1605]
+                    - img [ref=e1607]
+              - paragraph [ref=e1610]: Dane z ostatnich 6 miesięcy na podstawie median dolnych i górnych widełek wynagrodzeń z ofert pracy na No Fluff Jobs
+      - generic [ref=e1616]:
+        - generic [ref=e1617]:
+          - heading "Otrzymuj dopasowane oferty pracy" [level=1] [ref=e1618]
+          - generic [ref=e1619]:
+            - generic [ref=e1620]:
+              - generic [ref=e1621]: "Twoje kryteria:"
+              - generic [ref=e1622]:
+                - generic [ref=e1623]: Javascript
+                - generic [ref=e1624]: Praca
+            - generic [ref=e1625]:
+              - generic [ref=e1626]:
+                - generic [ref=e1629]:
+                  - textbox "subscription email" [ref=e1630]:
+                    - /placeholder: " "
+                  - generic: Adres e-mail *
+                - button "Subskrybuj" [ref=e1631] [cursor=pointer]
+              - generic [ref=e1635] [cursor=pointer]: Chcę otrzymywać nowe oferty pracy spełniające wybrane kryteria *
+              - generic [ref=e1639] [cursor=pointer]: Chcę otrzymywać informacje o wynagrodzeniach, trendach i innych ofertach IT
+        - generic [ref=e1641]:
+          - heading "Załóż konto lub subskrypcję ofert i skorzystaj z dadatkowych benefitów:" [level=2] [ref=e1642]:
+            - text: Załóż konto lub subskrypcję ofert i skorzystaj z
+            - strong [ref=e1643]: "dadatkowych benefitów:"
+          - article [ref=e1645]:
+            - img "partner logo" [ref=e1647]
+            - heading "100 złotych rabatu na księgowość w inFakcie" [level=3] [ref=e1649]
+        - paragraph [ref=e1650]: W każdej chwili możesz zrezygnować z subskrypcji
+  - generic:
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
+    - img
