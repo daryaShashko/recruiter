@@ -1,0 +1,140 @@
+{
+  "name": "Evaluate Jobs (Ollama)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-0002-0002-0002-000000000001",
+      "name": "From Ingest Pipeline",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [0, 200],
+      "notes": "Connect JustJoin → Evaluate and NoFluffJobs → Evaluate outputs here"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000002",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [220, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:11434/api/chat",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={\n  \"model\": \"llama3.1:latest\",\n  \"stream\": false,\n  \"keep_alive\": 0,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert IT recruiter assistant. Your task is to evaluate job postings and determine if they are a strong match for a Senior Software Engineer profile.\\n\\n**Target Profile:**\\n- Seniority: Senior, Tech Lead, Principal, Solution Architect (NOT Junior or Mid-level)\\n- Primary stack: JavaScript, TypeScript, Node.js, React, PostgreSQL\\n- Location: Gdańsk, Poland OR fully remote\\n- Language: English or Polish job postings are both acceptable\\n\\n**Match Criteria (match: true):**\\n- Position is Senior-level or above (Lead, Principal, Architect, Staff)\\n- Primary backend language is JavaScript/TypeScript/Node.js (not Java, C#, PHP, Ruby as the MAIN stack)\\n- Frontend involves React or similar JS frameworks\\n- Database is PostgreSQL, MongoDB, or similar (not only Oracle/MSSQL)\\n- Location is Gdańsk/Tricity area OR remote/hybrid\\n\\n**Reject Criteria (match: false):**\\n- Position is explicitly Junior, Mid, or Regular level\\n- Primary backend is Java, C#, .NET, PHP, Ruby, Go, Rust (JS/TS is only a minor addition)\\n- If both Node.js AND Java/Go/etc are listed, match: true ONLY if Node.js is listed first or described as primary/main stack; legacy services in other languages are acceptable\\n- Position is NOT in Gdańsk/Tricity and is NOT remote\\n- The posting is clearly spam, a marketing newsletter, or an application confirmation\\n\\n**Response Format:**\\nYou MUST respond ONLY with valid JSON. No markdown, no explanation outside JSON.\\n{\\\"match\\\": true or false, \\\"reason\\\": \\\"One sentence explaining the decision\\\", \\\"url\\\": \\\"the job URL passed in the prompt\\\"}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Job Title: {{ $json.title }}\\nCompany: {{ $json.company }}\\nLocation: {{ $json.location }}\\nSalary: {{ $json.salary }}\\nURL: {{ $json.url }}\\n\\nJob Description:\\n{{ $json.body || $json.jobText || $json.description || 'No description available' }}\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000003",
+      "name": "Ask Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [440, 200],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Extract raw text from Ollama response\nconst raw = item?.message?.content || item?.choices?.[0]?.message?.content || '';\n\nif (!raw) {\n  console.log('[Evaluate] Empty Ollama response for job, skipping');\n  return [];\n}\n\nlet parsed;\ntry {\n  // Strip potential markdown code fences\n  const cleaned = raw.replace(/^```json\\s*/i, '').replace(/```\\s*$/i, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  console.log(`[Evaluate] Failed to parse JSON: ${raw.substring(0, 200)}`);\n  return [];\n}\n\nif (typeof parsed.match !== 'boolean') {\n  console.log(`[Evaluate] Invalid response shape: ${JSON.stringify(parsed)}`);\n  return [];\n}\n\nconsole.log(`[Evaluate] ${parsed.match ? '✅ MATCH' : '❌ skip'} — ${parsed.reason}`);\n\nreturn [{ json: { match: parsed.match, reason: parsed.reason, url: parsed.url } }];"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000004",
+      "name": "Parse Ollama Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "match-condition",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000005",
+      "name": "Match?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-0002-0002-0002-000000000006",
+      "name": "→ Notion + Telegram",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1100, 100],
+      "notes": "P4: connect Notion Create Page node here"
+    },
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-0002-0002-0002-000000000007",
+      "name": "Discard (no match)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1100, 320]
+    },
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-0002-0002-0002-000000000008",
+      "name": "Ollama Error (log)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 380],
+      "notes": "HTTP error from Ollama — item is dropped, pipeline continues"
+    }
+  ],
+  "connections": {
+    "From Ingest Pipeline": {
+      "main": [[{ "node": "Split In Batches", "type": "main", "index": 0 }]]
+    },
+    "Split In Batches": {
+      "main": [[{ "node": "Ask Ollama", "type": "main", "index": 0 }]]
+    },
+    "Ask Ollama": {
+      "main": [[{ "node": "Parse Ollama Response", "type": "main", "index": 0 }]],
+      "error": [[{ "node": "Ollama Error (log)", "type": "main", "index": 0 }]]
+    },
+    "Parse Ollama Response": {
+      "main": [[{ "node": "Match?", "type": "main", "index": 0 }]]
+    },
+    "Match?": {
+      "main": [
+        [{ "node": "→ Notion + Telegram", "type": "main", "index": 0 }],
+        [{ "node": "Discard (no match)",  "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

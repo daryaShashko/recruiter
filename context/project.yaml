@@ -12,7 +12,7 @@ project:
     Collects job offers from JustJoin.it and NoFluffJobs via Playwright,
     evaluates them with a local Ollama LLM, saves matches to Notion,
     and sends Telegram alerts — all triggered daily by GitHub Actions.
-  stage: early_development  # early_development | active | stable | maintenance
+  stage: early_development # early_development | active | stable | maintenance
   version: 0.1.0
 
 goal:
@@ -31,7 +31,7 @@ tech_stack:
     testing: jest 29 + ts-jest 29
   pipeline:
     workflow_engine: n8n (local, --tunnel for public webhook)
-    llm: Ollama — llama3.1:8b (local, no cloud)
+    llm: Ollama — llama3.1:latest (local, no cloud)
   storage:
     database: Notion API (kanban board + dedup source)
   alerts:
@@ -64,16 +64,16 @@ architecture:
       action: Save to Notion + send Telegram alert
       output: "Notion page created, Telegram message sent"
 
-current_phase: P1  # P0 done, P1 in_progress, P2–P6 pending
+current_phase: P2 # P0 done, P1 done, P2 done, P3–P6 pending
 # See context/roadmap.yaml for detailed task status
 
 structure:
-  scraper/:       "TypeScript/Playwright job scraper — ts-node project"
-  n8n/:           "n8n workflow JSONs + Ollama LLM prompts"
-  docs/:          "Architecture diagrams, schemas, agent skill files"
-  docs/agents/:   "AI agent system prompt files (8 agents)"
-  context/:       "THIS — project context manifests (YAML)"
-  .github/:       "GitHub Actions CI/CD workflows"
+  scraper/: "TypeScript/Playwright job scraper — ts-node project"
+  n8n/: "n8n workflow JSONs + Ollama LLM prompts"
+  docs/: "Architecture diagrams, schemas, agent skill files"
+  docs/agents/: "AI agent system prompt files (8 agents)"
+  context/: "THIS — project context manifests (YAML)"
+  .github/: "GitHub Actions CI/CD workflows"
 
 # ============================================================
 # HOW TO USE THIS FILE

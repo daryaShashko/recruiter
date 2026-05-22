@@ -7,8 +7,8 @@
 # Status values: done | in_progress | partial | pending | blocked | skipped
 # ============================================================
 
-current_phase: P1
-current_focus: "P2 COMPLETE (кроме P2-2 GitHub Secret) — webhook pipeline работает, импортирован ingest.json. Готовы к P3 Ollama Evaluation."
+current_phase: P3
+current_focus: "P3 IN PROGRESS — prompt tested (3/3 valid JSON, edge case fixed). Generating evaluate.json for n8n."
 
 phases:
   P0:
@@ -189,10 +189,41 @@ phases:
 
   P3:
     name: "Ollama Evaluation Integration"
-    status: pending
+    status: in_progress
     goal: "Evaluate each job with LLM → { match, reason, url }"
-    note: "System prompt already written at n8n/prompts/evaluator.md"
-    blocked_by: "P2"
+    tasks:
+      P3-1:
+        status: done
+        note: "System prompt in n8n/prompts/evaluator.md — existed, model updated to llama3.1:latest"
+      P3-2:
+        status: done
+        note: "3 manual tests: Senior Node.js Remote → true, Junior Java Warsaw → false, Tech Lead mixed stack → edge case caught and prompt fixed"
+      P3-3:
+        status: done
+        note: "LLM returns valid JSON {match, reason, url} on all 3 test cases"
+      P3-4:
+        status: done
+        note: "Edge case added to prompt: Node.js + Java legacy → match:true if Node.js is primary; legacy services in other langs are acceptable"
+      P3-5:
+        {
+          status: pending,
+          note: "Split In Batches node (batch size 1) after Router",
+        }
+      P3-6:
+        {
+          status: pending,
+          note: "HTTP Request to http://localhost:11434/api/chat",
+        }
+      P3-7: { status: pending, note: "keep_alive: 0 in request body" }
+      P3-8: { status: pending, note: "Fallback for job body field" }
+      P3-9: { status: pending, note: "On Error: Continue on HTTP Request node" }
+      P3-10: { status: pending, note: "Code node: parse Ollama JSON response" }
+      P3-11:
+        {
+          status: pending,
+          note: "IF node: match === true → forward / false → discard",
+        }
+      P3-12: { status: pending, note: "Export to n8n/workflows/evaluate.json" }
 
   P4:
     name: "Notion Database Integration"

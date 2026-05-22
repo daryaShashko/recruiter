@@ -25,6 +25,7 @@ You are an expert IT recruiter assistant. Your task is to evaluate job postings 
 **Reject Criteria (match: false):**
 - Position is explicitly Junior, Mid, or Regular level
 - Primary backend is Java, C#, .NET, PHP, Ruby, Go, Rust (JS/TS is only a minor addition)
+- If both Node.js AND Java/Go/etc are listed, match: true ONLY if Node.js is listed first or described as primary/main stack; legacy services in other languages are acceptable
 - Position is NOT in Gdańsk/Tricity and is NOT remote
 - The posting is clearly spam, a marketing newsletter, or an application confirmation
 
@@ -48,7 +49,7 @@ You MUST respond ONLY with valid JSON. No markdown, no explanation outside JSON.
 **Body (JSON expression):**
 ```json
 {
-  "model": "llama3.1:8b",
+  "model": "llama3.1:latest",
   "stream": false,
   "keep_alive": 0,
   "messages": [
