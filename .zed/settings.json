@@ -1,0 +1,46 @@
+{
+  "context_servers": {
+    "playwright": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@playwright/mcp@latest"]
+      },
+      "settings": {}
+    },
+    "github": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github@latest"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PAT_HERE"
+        }
+      },
+      "settings": {}
+    },
+    "filesystem": {
+      "command": {
+        "path": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem@latest",
+          "/Users/Darya_Shashko/projects/recruiter"
+        ]
+      },
+      "settings": {}
+    },
+    "fetch": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch@latest"]
+      },
+      "settings": {}
+    },
+    "sequential-thinking": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@latest"]
+      },
+      "settings": {}
+    }
+  }
+}

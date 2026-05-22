@@ -1,0 +1,134 @@
+# ============================================================
+# SCRAPER MODULE MANIFEST
+# Describes scraper/ directory: exports, patterns, status, gaps.
+# Update when: new scraper added, interfaces change,
+# new patterns established, known gaps resolved.
+# ============================================================
+
+module: scraper
+path: scraper/
+language: TypeScript 5.5
+runtime: Node.js 20
+entry_point: src/index.ts
+scripts:
+  build: "tsc → dist/"
+  run: "ts-node src/index.ts"
+  test: "jest --testEnvironment=node --timeout=60000"
+  typecheck: "tsc --noEmit"
+
+dependencies:
+  playwright: "^1.45.0"
+  axios: "^1.7.2"
+  dotenv: "^16.4.5"
+  typescript: "^5.5.3"
+  ts-node: "^10.9.2"
+  jest: "^29.7.0"
+  ts-jest: "^29.2.2"
+
+files:
+  src/config.ts:
+    exports: [config, validateConfig]
+    key_values:
+      webhookUrl: "from WEBHOOK_URL env var"
+      scraper.locations: ["gdansk", "gdańsk", "remote", "zdalnie"]
+      scraper.targetStack: ["javascript", "typescript", "node", "react", "postgresql", "postgres"]
+      scraper.rejectStack: ["java", "c#", ".net", "php", "ruby", "go", "rust", "kotlin", "swift"]
+      scraper.targetLevels: ["senior", "lead", "principal", "architect", "staff"]
+      scraper.rejectLevels: ["junior", "mid", "regular", "intern", "trainee"]
+      playwright.headless: true
+      playwright.viewport: "1440x900"
+      playwright.userAgent: "Chrome 126 macOS"
+      playwright.navigationTimeout: 30000
+      playwright.requestTimeout: 15000
+      sender.maxRetries: 3
+      sender.retryDelay: 1000  # doubles each attempt (exponential backoff)
+
+  src/types.ts:
+    exports: [JobOffer, WebhookPayload, EvaluationResult]
+    note: "See context/interfaces.yaml for full field definitions"
+
+  src/index.ts:
+    exports: []  # side-effect entry point
+    pattern: "Promise.allSettled([scrapeJustJoin(), scrapeNoFluffJobs()])"
+    dedup: "deduplicateOffers() — by id using Set<string>"
+    error_handling: "each scraper failure is logged, others continue"
+    exit_codes:
+      0: "success"
+      1: "config validation failed OR webhook send failed"
+
+  src/sender.ts:
+    exports: [sendToWebhook]
+    signature: "(jobs: JobOffer[], source: string) => Promise<void>"
+    payload_shape: "WebhookPayload { jobs, meta: { source, count, sentAt } }"
+    retry: "3 attempts, exponential backoff starting at 1000ms"
+    timeout: "15000ms per request"
+    throws: "Error if all retries exhausted"
+
+  src/scrapers/justjoin.ts:
+    exports: [scrapeJustJoin]
+    signature: "() => Promise<JobOffer[]>"
+    base_url: "https://justjoin.it"
+    api_endpoint: "https://api.justjoin.it/v2/user-panel/offers"
+    method: "GET (intercepted via page.on('response'))"
+    navigation_url: "https://justjoin.it/job-offers/all-locations/javascript?orderBy=DESC&sortBy=newest"
+    response_path: "json.data ?? json.offers ?? json"
+    id_format: "justjoin_{raw.slug ?? raw.id}"
+    status: scaffolded
+    known_gaps:
+      - "P1-6: XHR endpoint URL needs DevTools verification — may differ from suspected"
+      - "P1-8: Location filter (Gdańsk) not yet applied to API URL params"
+      - "body field: falls back to title if API doesn't return full description"
+    never_throws: true  # catches internally, returns [] on failure
+
+  src/scrapers/nofluffjobs.ts:
+    exports: [scrapeNoFluffJobs]
+    signature: "() => Promise<JobOffer[]>"
+    base_url: "https://nofluffjobs.com"
+    api_endpoint: "https://nofluffjobs.com/api/search/posting"
+    method: "POST (intercepted via page.on('response'))"
+    navigation_url: "https://nofluffjobs.com/pl/praca/javascript?criteria=seniority=senior,lead"
+    response_path: "json.postings ?? json.items ?? json.data ?? json"
+    id_format: "nofluffjobs_{raw.id}"
+    status: scaffolded
+    known_gaps:
+      - "P1-11: XHR endpoint URL needs DevTools verification"
+      - "P1-13: Location filter (Gdańsk) not yet applied"
+      - "P1-15: company field is EMPTY STRING — search API doesn't include company name"
+    never_throws: true
+
+  src/utils/browser.ts:
+    exports: [openPage, closeBrowser]
+    openPage_returns: "{ page: Page, context: BrowserContext }"
+    fingerprint:
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126"
+      viewport: "1440x900"
+      headless: true
+    note: "Always close context in finally block after scraping"
+
+playwright_contract:
+  method: "XHR interception — page.on('response', handler)"
+  never_use: "DOM selectors (page.$, page.locator)"
+  never_use_reason: "Cloudflare blocks headless patterns; DOM breaks on UI changes"
+  wait_strategy: "page.goto(url, { waitUntil: 'networkidle' }) + waitForTimeout(3000)"
+  lifecycle: "openPage() in scraper → context.close() in finally"
+
+scraper_output_contract:
+  - "Each scraper function returns Promise<JobOffer[]>"
+  - "On any error: log to console, return [] (never throw)"
+  - "id prefix must match source: 'justjoin_...' or 'nofluffjobs_...'"
+  - "scrapedAt is ISO string set at normalization time"
+  - "All string fields are non-null (use fallbacks)"
+
+output:
+  format: WebhookPayload
+  destination: "WEBHOOK_URL env var (via sender.ts)"
+  artifact_path: "scraper/output/ (uploaded by GitHub Actions)"
+
+# ============================================================
+# SYNC RULE
+# Update this file when:
+# - New scraper added (new file entry)
+# - known_gaps resolved (change status)
+# - config.ts values change
+# - scraper contract changes (output shape, error handling)
+# ============================================================

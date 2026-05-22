@@ -1,0 +1,83 @@
+name: Context Freshness Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-context-sync:
+    name: Check context YAML is in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Get changed files
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Changed files:"
+          echo "$CHANGED"
+
+      - name: Check interfaces.yaml sync
+        run: |
+          CHANGED="${{ steps.changed.outputs.changed_files }}"
+          if echo "$CHANGED" | grep -q "scraper/src/types.ts"; then
+            if ! echo "$CHANGED" | grep -q "context/interfaces.yaml"; then
+              echo "::warning file=scraper/src/types.ts::types.ts changed but context/interfaces.yaml was not updated. Run: update context/interfaces.yaml to reflect new/changed interfaces."
+            fi
+          fi
+
+      - name: Check scraper module sync
+        run: |
+          CHANGED="${{ steps.changed.outputs.changed_files }}"
+          if echo "$CHANGED" | grep -q "scraper/src/config.ts"; then
+            if ! echo "$CHANGED" | grep -q "context/modules/scraper.yaml"; then
+              echo "::warning file=scraper/src/config.ts::config.ts changed but context/modules/scraper.yaml was not updated."
+            fi
+          fi
+
+      - name: Check n8n module sync
+        run: |
+          CHANGED="${{ steps.changed.outputs.changed_files }}"
+          if echo "$CHANGED" | grep -q "n8n/prompts/evaluator.md"; then
+            if ! echo "$CHANGED" | grep -q "context/modules/n8n.yaml"; then
+              echo "::warning file=n8n/prompts/evaluator.md::evaluator.md changed but context/modules/n8n.yaml was not updated."
+            fi
+          fi
+          if echo "$CHANGED" | grep -q "n8n/workflows/"; then
+            if ! echo "$CHANGED" | grep -q "context/modules/n8n.yaml"; then
+              echo "::warning::n8n workflow changed but context/modules/n8n.yaml was not updated."
+            fi
+          fi
+
+      - name: Check CI module sync
+        run: |
+          CHANGED="${{ steps.changed.outputs.changed_files }}"
+          if echo "$CHANGED" | grep -q ".github/workflows/"; then
+            if ! echo "$CHANGED" | grep -q "context/modules/ci.yaml"; then
+              echo "::warning::.github/workflows changed but context/modules/ci.yaml was not updated."
+            fi
+          fi
+
+      - name: Check env.yaml sync
+        run: |
+          CHANGED="${{ steps.changed.outputs.changed_files }}"
+          if echo "$CHANGED" | grep -q ".env.example"; then
+            if ! echo "$CHANGED" | grep -q "context/env.yaml"; then
+              echo "::warning file=.env.example::.env.example changed but context/env.yaml was not updated."
+            fi
+          fi
+
+      - name: Summary
+        run: |
+          echo "Context sync check complete."
+          echo "See warnings above (if any) — these are non-blocking on early stage."
+          echo "Refer to context/SYNC_PROTOCOL.md for the full sync rules."

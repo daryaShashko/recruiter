@@ -1,0 +1,113 @@
+# ============================================================
+# CI/CD MODULE MANIFEST
+# Describes GitHub Actions workflows and CI/CD setup.
+# Update when: new workflow added, steps change,
+# secrets added/removed, runner requirements change.
+# ============================================================
+
+module: ci_cd
+path: .github/workflows/
+platform: GitHub Actions
+runner: ubuntu-latest
+free_tier:
+  public_repo: unlimited minutes
+  private_repo: "500 min/month"
+  estimated_usage: "~8-12 min/run × 30 days = ~300-360 min/month"
+  conclusion: "Fine for private repo on free tier"
+
+workflows:
+  scraper.yml:
+    path: .github/workflows/scraper.yml
+    status: exists
+    purpose: "Run Playwright scraper daily, send results to n8n webhook"
+    triggers:
+      schedule: "cron: '0 8 * * *' (08:00 UTC = 10:00 Warsaw time)"
+      manual: "workflow_dispatch with dry_run input (true|false)"
+    job:
+      name: "Scrape Job Boards"
+      runner: ubuntu-latest
+      timeout: 15 minutes
+      working_directory: scraper/
+    steps:
+      - { name: "Checkout", action: "actions/checkout@v4" }
+      - { name: "Setup Node.js 20", action: "actions/setup-node@v4", cache: "npm", cache_path: "scraper/package-lock.json" }
+      - { name: "Install deps", run: "npm ci" }
+      - { name: "Install Playwright Chromium", run: "npx playwright install chromium --with-deps" }
+      - { name: "Run scraper", run: "npm run scrape", env: { WEBHOOK_URL: "${{ secrets.WEBHOOK_URL }}", DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}" } }
+      - { name: "Upload artifact", action: "actions/upload-artifact@v4", path: "scraper/output/", retention: "7 days", if: always }
+    secrets_used: [WEBHOOK_URL]
+    known_gaps:
+      - "No concurrency group — parallel runs possible if manual trigger used"
+      - "No unit test step"
+      - "No Telegram notification on failure"
+
+  test.yml:
+    path: .github/workflows/test.yml
+    status: not_created  # Pending improvement
+    purpose: "Run unit tests on every PR and push to main"
+    triggers:
+      - "pull_request"
+      - "push to main"
+    job:
+      runner: ubuntu-latest
+      timeout: 5 minutes
+      working_directory: scraper/
+    steps:
+      - { name: "Checkout", action: "actions/checkout@v4" }
+      - { name: "Setup Node.js 20", action: "actions/setup-node@v4", cache: "npm", cache_path: "scraper/package-lock.json" }
+      - { name: "Install deps", run: "npm ci" }
+      - { name: "Typecheck", run: "npm run typecheck" }
+      - { name: "Unit tests", run: "npm test" }
+    note: "No Playwright install needed — unit tests mock browser responses"
+
+  context-check.yml:
+    path: .github/workflows/context-check.yml
+    status: exists  # Created as part of SYNC system
+    purpose: "Warn on PR if context YAML files are stale after code changes"
+    triggers: [pull_request]
+
+pending_improvements:
+  concurrency_group:
+    add_to: scraper.yml
+    yaml: |
+      concurrency:
+        group: scraper
+        cancel-in-progress: true
+    reason: "Prevent duplicate runs if manual trigger overlaps with scheduled run"
+
+  failure_notification:
+    description: "Send Telegram alert when scraper workflow fails"
+    options:
+      - "Add step at end of scraper.yml: if failure → curl Telegram API"
+      - "Or: n8n Error Trigger watches for failed executions"
+    preferred: "n8n Error Trigger (keeps CI workflow simple)"
+
+  dry_run_webhook_guard:
+    description: "Explicit check in code: if DRY_RUN=true, log but skip POST"
+    status: "handled in scraper code via DRY_RUN env var check in sender.ts"
+
+playwright_ci_requirements:
+  - "Must run: npx playwright install chromium --with-deps (system deps required on ubuntu)"
+  - "Only chromium — not full 'npx playwright install' (saves ~500MB, ~2 min)"
+  - "Use cache-dependency-path pointing to scraper/package-lock.json"
+  - "Job timeout: 15 minutes (scraping + Playwright startup = ~5-10 min)"
+
+secrets_management:
+  principle: "Secrets ONLY via env: ${{ secrets.NAME }} — never hardcoded"
+  required_in_github:
+    - WEBHOOK_URL
+  not_needed_in_ci:
+    - NOTION_TOKEN
+    - TELEGRAM_BOT_TOKEN
+    - NOTION_DB_ID
+    - TELEGRAM_CHAT_ID
+  local_dev: ".env file (gitignored)"
+
+# ============================================================
+# SYNC RULE
+# Update this file when:
+# - New workflow created → add entry, set status: exists
+# - Workflow steps change → update steps list
+# - New secret required → add to secrets_management
+# - Pending improvement implemented → move to workflows section
+# ============================================================

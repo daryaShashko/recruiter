@@ -1,0 +1,115 @@
+# ============================================================
+# ROADMAP STATUS MANIFEST
+# Current phase/task completion state.
+# Update this file when: task completed, phase starts/ends,
+# new tasks discovered, priorities change.
+# ============================================================
+# Status values: done | in_progress | partial | pending | blocked | skipped
+# ============================================================
+
+current_phase: P1
+current_focus: "Verify XHR endpoints via DevTools (P1-6, P1-11)"
+
+phases:
+  P0:
+    name: Project Bootstrap
+    status: done
+    tasks:
+      P0-1: { status: done, note: "README.md created" }
+      P0-2: { status: done, note: "Architecture and phases documented" }
+      P0-3: { status: done, note: "Directory structure: /scraper, /n8n, /docs" }
+      P0-4: { status: done, note: ".gitignore (node_modules, .env, playwright state)" }
+      P0-5: { status: done, note: ".env.example with all variables" }
+
+  P1:
+    name: "Scraper — GitHub Actions + Playwright"
+    status: in_progress
+    goal: "POST clean JobOffer[] array to n8n webhook"
+
+    sub_phases:
+      "1.1 Infrastructure":
+        P1-1: { status: done, note: "tsconfig.json + package.json in /scraper" }
+        P1-2: { status: done, note: "playwright, typescript, dotenv, axios installed" }
+        P1-3: { status: done, note: "src/config.ts — all params, locations, stacks, seniority" }
+        P1-4: { status: done, note: "src/types.ts — JobOffer, WebhookPayload, EvaluationResult" }
+        P1-5: { status: done, note: "src/utils/browser.ts — Playwright helper with fingerprints" }
+
+      "1.2 JustJoin.it":
+        P1-6:
+          status: in_progress
+          note: "TODO — verify api.justjoin.it XHR endpoint via DevTools. Suspected: GET /v2/user-panel/offers"
+          blocker: "Need to manually inspect Network tab to confirm endpoint URL and response shape"
+        P1-7: { status: done, note: "XHR intercept scaffolded in src/scrapers/justjoin.ts" }
+        P1-8: { status: partial, note: "URL params exist (page, perPage, sortBy) but location filter not yet added" }
+        P1-9: { status: pending }
+        P1-10: { status: pending }
+
+      "1.3 NoFluffJobs":
+        P1-11:
+          status: in_progress
+          note: "TODO — verify nofluffjobs.com/api/search/posting via DevTools. Suspected POST endpoint."
+          blocker: "Same as P1-6 — needs manual DevTools inspection"
+        P1-12: { status: done, note: "XHR intercept scaffolded in src/scrapers/nofluffjobs.ts" }
+        P1-13: { status: partial, note: "Seniority filter in URL, but location filter missing" }
+        P1-14: { status: pending }
+        P1-15:
+          status: partial
+          note: "Normalized to JobOffer, but company field is empty string (known gap — API doesn't return it)"
+
+      "1.4 Orchestrator + Sender":
+        P1-16: { status: done, note: "src/index.ts — Promise.allSettled for parallel scrapers" }
+        P1-17: { status: done, note: "deduplicateOffers() in index.ts — dedup by id using Set" }
+        P1-18: { status: done, note: "src/sender.ts — POST with 3 retries + exponential backoff" }
+        P1-19: { status: done, note: "Logging in place: counts collected/removed/sent" }
+        P1-20: { status: pending, note: "Test against mock server or httpbin.org" }
+
+      "1.5 GitHub Actions":
+        P1-21: { status: done, note: ".github/workflows/scraper.yml — cron 0 8 * * *" }
+        P1-22: { status: done, note: "All steps: checkout → npm ci → playwright install → scrape" }
+        P1-23: { status: done, note: "WEBHOOK_URL via GitHub Secret" }
+        P1-24: { status: done, note: "workflow_dispatch with dry_run boolean input" }
+        P1-25: { status: done, note: "npx playwright install chromium --with-deps" }
+        P1-26: { status: done, note: "upload-artifact: scraper/output/ → 7 days retention" }
+
+  P2:
+    name: "n8n Webhook Pipeline"
+    status: pending
+    goal: "Receive scraper payload, normalize, route by source"
+    blocked_by: "P1 must be complete and tested first"
+
+  P3:
+    name: "Ollama Evaluation Integration"
+    status: pending
+    goal: "Evaluate each job with LLM → { match, reason, url }"
+    note: "System prompt already written at n8n/prompts/evaluator.md"
+    blocked_by: "P2"
+
+  P4:
+    name: "Notion Database Integration"
+    status: pending
+    goal: "Save matches to Notion with dedup by URL"
+    note: "Schema defined at docs/notion-schema.md"
+    blocked_by: "P3"
+
+  P5:
+    name: "Telegram Bot"
+    status: pending
+    goal: "Alerts for new jobs + manual /check <url> command"
+    blocked_by: "P4"
+
+  P6:
+    name: "E2E Hardening & Monitoring"
+    status: pending
+    goal: "System runs unattended for 30+ days"
+    blocked_by: "P5"
+
+known_blockers:
+  - "P1-6/P1-11: XHR endpoints must be verified via DevTools before tests can pass"
+  - "P1-15: nofluffjobs company field is empty — may need detail page fetch"
+  - "P2+: requires n8n running locally with --tunnel for webhook access"
+
+# ============================================================
+# SYNC RULE
+# Update this file when any task status changes.
+# Orchestrator reads this file to report current project state.
+# ============================================================

@@ -1,0 +1,132 @@
+# ============================================================
+# ARCHITECTURE DECISIONS RECORD (ADR) LOG
+# Captures all significant architecture decisions.
+# Update this file when: new design decision made,
+# existing decision revisited or reversed.
+# ============================================================
+
+decisions:
+  ADR-001:
+    title: "XHR interception instead of DOM parsing"
+    status: accepted
+    date: "2024-07"
+    context: >
+      Job boards (JustJoin.it, NoFluffJobs) use Cloudflare WAF.
+      Direct HTTP requests return 403. DOM selectors break on every UI redesign.
+    decision: "Use Playwright page.on('response') to intercept internal XHR/Fetch API calls"
+    rationale:
+      - "Cloudflare doesn't block a real browser with fingerprints"
+      - "XHR responses are clean JSON — no parsing needed"
+      - "Resilient to frontend UI changes as long as the API contract holds"
+    consequences:
+      positive:
+        - "No Cloudflare 403"
+        - "Clean structured JSON output"
+        - "Resilient to UI redesigns"
+      negative:
+        - "API endpoint must be discovered manually via DevTools"
+        - "Endpoint URL may change silently — need monitoring"
+        - "Requires full browser launch (slower, more memory)"
+    implementation: "scraper/src/scrapers/*.ts — page.on('response', handler)"
+
+  ADR-002:
+    title: "Local Ollama instead of cloud LLM API"
+    status: accepted
+    date: "2024-07"
+    context: >
+      Need LLM evaluation of job descriptions.
+      Cloud APIs (OpenAI, Anthropic) have rate limits, costs, and privacy concerns.
+    decision: "Use locally hosted Ollama with llama3.1:8b model"
+    rationale:
+      - "No rate limits — evaluate as many jobs as needed"
+      - "Zero API cost"
+      - "Job descriptions are private/sensitive data"
+      - "keep_alive: 0 prevents VRAM leak between requests"
+    consequences:
+      positive:
+        - "Unlimited requests"
+        - "No cost"
+        - "Data privacy"
+      negative:
+        - "Requires local machine with sufficient RAM/GPU"
+        - "n8n and Ollama must run on the same machine"
+        - "Model quality lower than GPT-4 — prompt must be very explicit"
+        - "Cold start time if keep_alive: 0 is set"
+    implementation: "n8n/prompts/evaluator.md + n8n evaluate.json HTTP Request node"
+
+  ADR-003:
+    title: "Notion as primary job storage and Kanban board"
+    status: accepted
+    date: "2024-07"
+    context: >
+      Need persistent storage for matched jobs + a UI for manual review workflow.
+      Setting up a separate database (Postgres, etc.) adds infra complexity.
+    decision: "Use Notion API as the job offer database"
+    rationale:
+      - "Zero infrastructure — no database to maintain"
+      - "Built-in Kanban view for manual review"
+      - "URL-based deduplication works via Notion Query API"
+      - "Free tier sufficient for personal use"
+    consequences:
+      positive:
+        - "No extra infra"
+        - "Built-in UI + mobile app"
+        - "API dedup query is reliable"
+      negative:
+        - "Notion API rate limit: 3 requests/second"
+        - "Not suitable for analytics or bulk queries"
+        - "Schema changes require manual Notion DB updates"
+    implementation: "n8n notion.json workflow + docs/notion-schema.md"
+
+  ADR-004:
+    title: "Webhook responds immediately, processes asynchronously"
+    status: accepted
+    date: "2024-07"
+    context: >
+      Ollama evaluation takes 10-30 seconds per job.
+      With 50-100 jobs, total processing can exceed 30 minutes.
+      HTTP webhooks typically have 30-60s timeout — the scraper would see a timeout error.
+    decision: "n8n Webhook node responds 200 OK immediately before starting the processing chain"
+    rationale:
+      - "Scraper sender.ts has 15s timeout on the POST — would fail otherwise"
+      - "Processing and delivery are separate concerns"
+      - "Simpler error handling: scraper only cares about delivery, not evaluation"
+    consequences:
+      positive:
+        - "Scraper never times out"
+        - "Clean separation: delivery vs. evaluation"
+      negative:
+        - "No immediate feedback if Ollama or Notion fails"
+        - "Errors visible only in n8n execution logs"
+    implementation: "RespondToWebhook node placed BEFORE evaluation chain in n8n workflow"
+
+  ADR-005:
+    title: "GitHub Actions as scraper runtime (not local cron)"
+    status: accepted
+    date: "2024-07"
+    context: >
+      Scraper needs to run daily at a fixed time without user intervention.
+      Running locally requires the machine to be on. A server adds cost.
+    decision: "Use GitHub Actions free tier with scheduled workflow"
+    rationale:
+      - "Free for public repos, ~500 min/month for private (more than enough)"
+      - "Zero infrastructure"
+      - "Playwright works on ubuntu-latest runner"
+      - "Easy secret management via GitHub Secrets"
+    consequences:
+      positive:
+        - "Fully automated, machine-independent"
+        - "Free"
+        - "Built-in artifact storage for debug"
+      negative:
+        - "Runner has 15-min job timeout"
+        - "n8n webhook must be publicly accessible (requires --tunnel)"
+        - "No direct access to Ollama from runner (Ollama runs locally)"
+    implementation: ".github/workflows/scraper.yml"
+
+# ============================================================
+# SYNC RULE
+# When Architect makes a new decision → add ADR here.
+# When a decision is reversed → change status to 'superseded',
+# add 'superseded_by: ADR-XXX', keep the old record.
+# ============================================================

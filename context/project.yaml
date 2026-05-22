@@ -1,0 +1,84 @@
+# ============================================================
+# PROJECT CONTEXT MANIFEST
+# Single source of truth for project-level metadata.
+# Update this file when: tech stack changes, new phase starts,
+# new integration added, project goal evolves.
+# ============================================================
+
+project:
+  name: ai-recruiter-pipeline
+  description: >
+    Automated IT job scraper with LLM evaluation.
+    Collects job offers from JustJoin.it and NoFluffJobs via Playwright,
+    evaluates them with a local Ollama LLM, saves matches to Notion,
+    and sends Telegram alerts — all triggered daily by GitHub Actions.
+  stage: early_development  # early_development | active | stable | maintenance
+  version: 0.1.0
+
+goal:
+  user: Senior IT professional (Senior/Tech Lead/Solution Architect)
+  stack: JavaScript, TypeScript, Node.js, React, PostgreSQL
+  location: Gdańsk, Poland OR fully remote EU
+  outcome: Find matching jobs without manual scrolling, reviewed daily via Notion Kanban
+
+tech_stack:
+  scraper:
+    language: TypeScript 5.5
+    runtime: Node.js 20
+    browser_automation: Playwright 1.45
+    http_client: axios 1.7
+    runner: ts-node 10.9
+    testing: jest 29 + ts-jest 29
+  pipeline:
+    workflow_engine: n8n (local, --tunnel for public webhook)
+    llm: Ollama — llama3.1:8b (local, no cloud)
+  storage:
+    database: Notion API (kanban board + dedup source)
+  alerts:
+    bot: Telegram Bot API
+  ci_cd:
+    platform: GitHub Actions (ubuntu-latest, free tier)
+    schedule: "0 8 * * * (08:00 UTC = 10:00 Warsaw)"
+
+architecture:
+  # Full diagram: see docs/architecture.md
+  data_flow:
+    - step: 1
+      from: GitHub Actions (ubuntu runner)
+      action: Run Playwright scraper
+      output: "JobOffer[] array"
+    - step: 2
+      from: scraper/src/sender.ts
+      action: POST WebhookPayload to n8n
+      output: "{ jobs: JobOffer[], meta: {...} }"
+    - step: 3
+      from: n8n Webhook
+      action: Normalize + deduplicate + split per job
+      output: "individual JobOffer items"
+    - step: 4
+      from: n8n HTTP Request
+      action: Evaluate each job with Ollama (llama3.1:8b)
+      output: "{ match: boolean, reason: string, url: string }"
+    - step: 5
+      from: n8n IF node (match === true)
+      action: Save to Notion + send Telegram alert
+      output: "Notion page created, Telegram message sent"
+
+current_phase: P1  # P0 done, P1 in_progress, P2–P6 pending
+# See context/roadmap.yaml for detailed task status
+
+structure:
+  scraper/:       "TypeScript/Playwright job scraper — ts-node project"
+  n8n/:           "n8n workflow JSONs + Ollama LLM prompts"
+  docs/:          "Architecture diagrams, schemas, agent skill files"
+  docs/agents/:   "AI agent system prompt files (8 agents)"
+  context/:       "THIS — project context manifests (YAML)"
+  .github/:       "GitHub Actions CI/CD workflows"
+
+# ============================================================
+# HOW TO USE THIS FILE
+# Load this file at the start of EVERY session.
+# It tells you: what the project does, current phase,
+# what files exist, what tech stack is used.
+# Then load only the module YAML relevant to your task.
+# ============================================================

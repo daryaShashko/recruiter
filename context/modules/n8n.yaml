@@ -1,0 +1,164 @@
+# ============================================================
+# n8n MODULE MANIFEST
+# Describes n8n workflows, Ollama config, Notion/Telegram mapping.
+# Update when: workflow created/changed, prompt updated,
+# new node added, Notion schema changes.
+# ============================================================
+
+module: n8n
+path: n8n/
+type: local_workflow_engine
+run_command: "npx n8n start --tunnel"
+api_base: "http://localhost:5678"
+webhook_base: "https://{hash}.hooks.n8n.cloud"
+
+workflows:
+  ingest:
+    file: n8n/workflows/ingest.json
+    status: not_created  # Phase P2
+    phase: P2
+    webhook_path: "/webhook/jobs/ingest"
+    method: POST
+    trigger: "scraper/src/sender.ts POST request"
+    nodes_sequence:
+      - name: Webhook
+        type: n8n-nodes-base.webhook
+        config: "method: POST, path: jobs/ingest"
+      - name: Respond to Webhook
+        type: n8n-nodes-base.respondToWebhook
+        config: "responseCode: 200, responseBody: {status: 'received'}"
+        note: "MUST come BEFORE processing chain — avoids scraper timeout"
+      - name: Normalize Jobs
+        type: n8n-nodes-base.code
+        language: JavaScript
+        logic: "map $json.body.jobs → ensure all JobOffer fields present"
+      - name: Route by Source
+        type: n8n-nodes-base.switch
+        routes: [justjoin, nofluffjobs, linkedin, manual]
+        fallback: "log and discard unknown source"
+
+  evaluate:
+    file: n8n/workflows/evaluate.json
+    status: not_created  # Phase P3
+    phase: P3
+    nodes_sequence:
+      - name: Split In Batches
+        type: n8n-nodes-base.splitInBatches
+        config: "batchSize: 1"
+      - name: Evaluate with Ollama
+        type: n8n-nodes-base.httpRequest
+        config:
+          method: POST
+          url: "http://localhost:11434/api/chat"
+          on_error: "Continue (using error output)"
+      - name: Parse LLM Response
+        type: n8n-nodes-base.code
+        logic: "JSON.parse(response.message.content) with try/catch"
+      - name: Filter Matches
+        type: n8n-nodes-base.if
+        condition: "{{ $json.match }} === true"
+
+  notion:
+    file: n8n/workflows/notion.json
+    status: not_created  # Phase P4
+    phase: P4
+    nodes_sequence:
+      - name: Check Duplicate
+        type: n8n-nodes-base.notion
+        operation: "getAll (filter: URL equals $json.url)"
+      - name: Skip If Exists
+        type: n8n-nodes-base.if
+        condition: "{{ $json.results.length }} === 0"
+      - name: Create Job Page
+        type: n8n-nodes-base.notion
+        operation: "create"
+        database: "{{ $env.NOTION_DB_ID }}"
+      - name: Send Alert
+        type: n8n-nodes-base.telegram
+        operation: sendMessage
+
+  telegram_trigger:
+    file: n8n/workflows/telegram-trigger.json
+    status: not_created  # Phase P5
+    phase: P5
+    nodes_sequence:
+      - name: Telegram Trigger
+        type: n8n-nodes-base.telegramTrigger
+      - name: Parse Command
+        type: n8n-nodes-base.code
+        logic: "extract URL from '/check https://...' command"
+      - name: Fetch Job Page
+        type: n8n-nodes-base.httpRequest
+        note: "Fetch HTML, extract text, pass to evaluate flow"
+      - name: "(reuses evaluate + notion flow)"
+
+ollama:
+  endpoint: "http://localhost:11434/api/chat"
+  model: "llama3.1:8b"
+  request_template:
+    model: "llama3.1:8b"
+    stream: false
+    keep_alive: 0  # MANDATORY — prevents VRAM leak between requests
+    messages:
+      - role: system
+        content: "see n8n/prompts/evaluator.md"
+      - role: user
+        content: |
+          Job Title: {{ $json.title }}
+          Company: {{ $json.company }}
+          Location: {{ $json.location }}
+          Salary: {{ $json.salary }}
+          URL: {{ $json.url }}
+
+          Job Description:
+          {{ $json.body || $json.jobText || $json.description || 'No description available' }}
+  response_parsing:
+    path: "response.message.content"
+    expected: "JSON string: { match: boolean, reason: string, url: string }"
+    parse_in: "n8n Code node with try/catch"
+    fallback_on_error: "{ match: false, reason: 'Parse error', url: $json.url }"
+
+evaluator_prompt:
+  file: n8n/prompts/evaluator.md
+  status: written
+  model_notes:
+    - "llama3.1:8b responds well to explicit role-playing ('You are an expert IT recruiter')"
+    - "Must include 'respond ONLY with valid JSON' — model tends to add explanation"
+    - "Body truncation to ~1500 chars recommended (8k context window)"
+    - "keep_alive: 0 on every request is mandatory"
+
+notion_field_mapping:
+  Title: "{{ $json.title }}"
+  Company: "{{ $json.company }}"
+  URL: "{{ $json.url }}"
+  Source: "{{ $json.source }}"
+  Match_Reason: "{{ $json.reason }}"
+  Salary: "{{ $json.salary }}"
+  Status: "New"
+  Location: "{{ $json.location }}"
+  Tags: "{{ $json.tags }}"
+  Scraped_At: "{{ $json.scrapedAt }}"
+  dedup_key: URL  # Notion is queried by URL before insert
+
+telegram_alert_format: |
+  🟢 *{{ $json.title }}* @ {{ $json.company }}
+  💰 {{ $json.salary || 'No salary info' }}
+  📍 {{ $json.source }} | {{ $json.location }}
+  🔗 {{ $json.url }}
+
+  _{{ $json.reason }}_
+
+error_workflow:
+  trigger: "Error Trigger node (separate workflow)"
+  action: "Send Telegram message"
+  format: "❌ Workflow failed: {{ $workflow.name }} — {{ $json.message }}"
+  note: "Add to every workflow in n8n"
+
+# ============================================================
+# SYNC RULE
+# Update this file when:
+# - New n8n workflow created → update status to 'created'
+# - Ollama model changed → update model field
+# - Evaluator prompt changed → note it here
+# - Notion schema changes → update field_mapping
+# ============================================================

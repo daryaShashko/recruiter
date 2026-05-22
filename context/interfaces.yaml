@@ -1,0 +1,106 @@
+# ============================================================
+# TYPESCRIPT INTERFACES MANIFEST
+# Source of truth for all TypeScript interfaces/types.
+# Update this file when: types.ts changes.
+# Source file: scraper/src/types.ts
+# ============================================================
+
+interfaces:
+  JobOffer:
+    file: scraper/src/types.ts
+    description: >
+      Unified job offer. ALL scrapers must normalize output to this shape.
+      Never extends this interface — add optional fields instead.
+    fields:
+      id:
+        type: string
+        required: true
+        format: "{source}_{slug|id}"
+        examples: ["justjoin_senior-nodejs-dev-abc123", "nofluffjobs_abc456def"]
+        rule: "id prefix MUST match the source field value"
+      title:
+        type: string
+        required: true
+        example: "Senior Node.js Developer"
+      company:
+        type: string
+        required: true
+        known_gap: "nofluffjobs company is empty string — search API doesn't return it"
+      url:
+        type: string
+        required: true
+        note: "PRIMARY KEY for Notion deduplication — must be the canonical job page URL"
+      body:
+        type: string
+        required: true
+        fallback: "Use title if API doesn't return description (scrapers do this)"
+        note: "Truncate to ~1500 chars before sending to Ollama (8k context window)"
+      source:
+        type: "'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual'"
+        required: true
+      location:
+        type: string
+        required: false
+        values: ["city name", "Remote", "Unknown"]
+      salary:
+        type: string
+        required: false
+        format: "'{from}–{to} {currency}'"
+        examples: ["15000–20000 PLN", "120–160 EUR/day (B2B)"]
+      tags:
+        type: "string[]"
+        required: false
+        note: "Lowercase tech stack tags from job posting"
+      scrapedAt:
+        type: string
+        required: true
+        format: ISO 8601
+        set_at: normalization time in scraper
+
+  WebhookPayload:
+    file: scraper/src/types.ts
+    description: "Envelope sent by sender.ts to n8n webhook"
+    fields:
+      jobs:
+        type: "JobOffer[]"
+        required: true
+      meta.source:
+        type: string
+        required: true
+        value: "'scraper-combined' (from index.ts)"
+      meta.count:
+        type: number
+        required: true
+        note: "Same as jobs.length"
+      meta.sentAt:
+        type: string
+        required: true
+        format: ISO 8601
+
+  EvaluationResult:
+    file: scraper/src/types.ts
+    description: "LLM response from Ollama — parsed in n8n Code node"
+    fields:
+      match:
+        type: boolean
+        required: true
+      reason:
+        type: string
+        required: true
+        constraint: "ONE sentence only"
+      url:
+        type: string
+        required: true
+        note: "Echoed from the user message — used for traceability"
+    critical_notes:
+      - "Ollama MUST return ONLY this JSON — no markdown, no explanation outside JSON"
+      - "Parse from: response.message.content (n8n HTTP Request response)"
+      - "Add try/catch in n8n Code node — Ollama may wrap in markdown code blocks"
+      - "If parsing fails, default to { match: false, reason: 'Parse error', url: $json.url }"
+
+# ============================================================
+# SYNC RULE
+# If scraper/src/types.ts changes → update this file.
+# Then check if docs/agents/developer.md or
+# docs/agents/n8n-specialist.md reference these types.
+# ============================================================
