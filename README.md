@@ -20,7 +20,7 @@ Telegram (ручная ссылка)  ──────────────
 
 - [x] **PHASE 0** — Project bootstrap ✅
 - [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅
-- [ ] **PHASE 2** — n8n Webhook pipeline 🔄
+- [x] **PHASE 2** — n8n Webhook pipeline ✅
 - [ ] **PHASE 3** — Ollama evaluation integration
 - [ ] **PHASE 4** — Notion database integration
 - [ ] **PHASE 5** — Telegram bot trigger
@@ -99,9 +99,9 @@ Telegram (ручная ссылка)  ──────────────
 
 #### 2.3 — Препроцессинг
 - [x] `P2-7` Добавить узел Code (JS): нормализовать массив → `$json.body.map(...)`, обеспечить наличие полей `url`, `body`, `source`
-- [ ] `P2-8` Добавить узел Switch: роутинг по `source` (justjoin / nofluffjobs / linkedin / manual)
-- [ ] `P2-9` Добавить fallback-ветку для неизвестных источников (логировать, не падать)
-- [ ] `P2-10` Экспортировать JSON-конфиг воркфлоу в `/n8n/workflows/ingest.json`
+- [x] `P2-8` Добавить узел Switch: роутинг по `source` (justjoin / nofluffjobs / linkedin / manual)
+- [x] `P2-9` Добавить fallback-ветку для неизвестных источников (логировать, не падать)
+- [x] `P2-10` Экспортировать JSON-конфиг воркфлоу в `/n8n/workflows/ingest.json`
 
 ---
 

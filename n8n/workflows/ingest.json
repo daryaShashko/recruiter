@@ -1,0 +1,101 @@
+{
+  "name": "Ingest Jobs",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jobs/ingest",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook Ingest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\n// Accept: { jobs: [...] } or bare array\nconst raw = Array.isArray(body?.jobs) ? body.jobs\n          : Array.isArray(body)       ? body\n          : [];\n\nif (raw.length === 0) {\n  console.log('[Ingest] Empty jobs array — nothing to process');\n  return [];\n}\n\nconsole.log(`[Ingest] Normalizing ${raw.length} jobs`);\n\nreturn raw.map(job => ({\n  json: {\n    id:        job.id        || '',\n    title:     job.title     || '',\n    company:   job.company   || '',\n    url:       job.url       || '',\n    body:      job.body      || job.jobText || job.description || '',\n    source:    job.source    || 'unknown',\n    location:  job.location  || '',\n    salary:    job.salary    || '',\n    tags:      Array.isArray(job.tags) ? job.tags : [],\n    scrapedAt: job.scrapedAt || new Date().toISOString(),\n  }\n}));"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Normalize & Split",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 200]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.source }}",
+        "rules": {
+          "rules": [
+            { "value2": "justjoin",    "output": 0 },
+            { "value2": "nofluffjobs", "output": 1 },
+            { "value2": "manual",      "output": 2 }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Router by Source",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "JustJoin → Evaluate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, -60]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "NoFluffJobs → Evaluate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 100]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "Manual / Telegram → Evaluate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const job = $input.first().json;\nconsole.log(`[Ingest] Unknown source: \"${job.source}\" — url: ${job.url}`);\nreturn [{ json: job }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000007",
+      "name": "Unknown Source (log & pass)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Ingest": {
+      "main": [[{ "node": "Normalize & Split", "type": "main", "index": 0 }]]
+    },
+    "Normalize & Split": {
+      "main": [[{ "node": "Router by Source", "type": "main", "index": 0 }]]
+    },
+    "Router by Source": {
+      "main": [
+        [{ "node": "JustJoin → Evaluate",          "type": "main", "index": 0 }],
+        [{ "node": "NoFluffJobs → Evaluate",        "type": "main", "index": 0 }],
+        [{ "node": "Manual / Telegram → Evaluate",  "type": "main", "index": 0 }],
+        [{ "node": "Unknown Source (log & pass)",   "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

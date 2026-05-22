@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "P2 IN PROGRESS — P2-7 done. Next: P2-8 Switch node by source, P2-9 fallback."
+current_focus: "P2 COMPLETE (кроме P2-2 GitHub Secret) — webhook pipeline работает, импортирован ingest.json. Готовы к P3 Ollama Evaluation."
 
 phases:
   P0:
@@ -153,7 +153,7 @@ phases:
 
   P2:
     name: "n8n Webhook Pipeline"
-    status: in_progress
+    status: done
     goal: "Receive scraper payload, normalize, route by source"
     tasks:
       P2-1:
@@ -161,7 +161,7 @@ phases:
         note: "n8n running on localhost:5678; localtunnel with fixed subdomain: npx localtunnel --port 5678 --subdomain ai-recruiter → https://ai-recruiter.loca.lt"
       P2-2:
         status: pending
-        note: "GitHub Secret WEBHOOK_URL must be set to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
+        note: "GitHub Secret WEBHOOK_URL must be set to https://ai-recruiter.loca.lt/webhook/jobs/ingest — non-blocking for P3"
       P2-3:
         status: done
         note: "curl POST https://ai-recruiter.loca.lt/ → 404 (n8n alive, no handler yet — expected). Bypass-Tunnel-Reminder header added to sender.ts"
@@ -178,16 +178,14 @@ phases:
         status: done
         note: "Code node: normalizes body.jobs array, ensures all JobOffer fields present"
       P2-8:
-        {
-          status: pending,
-          note: "Switch node: route by source (justjoin/nofluffjobs)",
-        }
-      P2-9: { status: pending, note: "Fallback branch for unknown sources" }
+        status: done
+        note: "Switch node: justjoin/nofluffjobs/manual → 3 outputs + fallback output 3"
+      P2-9:
+        status: done
+        note: "Unknown Source node (Code): logs source + url, passes item through without crashing"
       P2-10:
-        {
-          status: pending,
-          note: "Export workflow JSON to /n8n/workflows/ingest.json",
-        }
+        status: done
+        note: "Exported to n8n/workflows/ingest.json"
 
   P3:
     name: "Ollama Evaluation Integration"
