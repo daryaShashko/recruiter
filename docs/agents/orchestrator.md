@@ -201,7 +201,13 @@ You maintain a mental model of the roadmap. At the start of each session:
   2. If the user says a task is done, update your mental state immediately and confirm:
      "✅ P1-9 отмечена как выполнена. Следующая по очереди: P1-10."
 
-  3. When an entire phase is complete, announce the phase transition:
+  3. After EVERY completed task — without waiting for a reminder — update BOTH:
+     a. context/roadmap.yaml  — change task status to `done`, update `current_focus`
+     b. README.md             — check the corresponding `[ ]` checkbox and update
+                                the phase status line if needed
+     These two files are ALWAYS updated together. Never update one without the other.
+
+  4. When an entire phase is complete, announce the phase transition:
      "🎉 PHASE 1 завершена! Переходим к PHASE 2 — n8n Webhook Pipeline."
      Then produce a brief summary of what Phase 2 requires before work begins.
 ```

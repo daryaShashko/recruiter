@@ -19,7 +19,7 @@ Telegram (ручная ссылка)  ──────────────
 ## Roadmap
 
 - [x] **PHASE 0** — Project bootstrap ✅
-- [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅ *(core done, unit tests pending)*
+- [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅
 - [ ] **PHASE 2** — n8n Webhook pipeline
 - [ ] **PHASE 3** — Ollama evaluation integration
 - [ ] **PHASE 4** — Notion database integration
@@ -44,7 +44,7 @@ Telegram (ручная ссылка)  ──────────────
 ### PHASE 1 — Scraper: GitHub Actions + Playwright
 > Цель: обойти Cloudflare и получить чистый массив вакансий с агрегаторов.  
 > Выход: POST на n8n Webhook с `[{ id, title, company, url, body, source, salary? }]`  
-> **Статус: core DONE — dry-run 2026-05-22: 210 офферов (JJ 199 + NFJ 11) ✅**
+> **Статус: DONE — dry-run 2026-05-22: 210 офферов (JJ 199 + NFJ 11), unit-тесты 31/31 ✅**
 
 #### 1.1 — Инфраструктура скрапера
 - [x] `P1-1` Инициализировать TypeScript-проект в `/scraper` (`tsconfig.json`, `package.json`)
@@ -57,8 +57,8 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P1-6` Исследовать XHR/Fetch-трафик JustJoin.it DevTools → найти эндпоинт отдачи JSON
 - [x] `P1-7` Написать `src/scrapers/justjoin.ts` — перехват API-ответа через `page.on('response', ...)`
 - [x] `P1-8` Добавить параметры фильтрации в URL запроса (city: Gdańsk, category: JavaScript)
-- [ ] `P1-9` Написать unit-тест: mock `page.on('response')` с fixture из реального API *(integration тест есть, unit-mock нет)*
-- [ ] `P1-10` Обработать edge-case: пустой список, таймаут, изменение структуры ответа
+- [x] `P1-9` Написать unit-тест: `tests/justjoin.unit.test.ts` — 19 тестов без сети (extractSalary, extractLocation, matchesPreFilter, normalizeOffer)
+- [x] `P1-10` Обработать edge-case: пустой `employmentTypes[]`, отсутствие `requiredSkills`, unknown/expert `experienceLevel`
 
 #### 1.3 — Скрапер NoFluffJobs
 - [x] `P1-11` Исследовать структуру ответа NoFluffJobs → **NFJ переехал на Angular SSR** (2026-05); реализован SSR-экстрактор из `<script id="serverApp-state">`
@@ -72,7 +72,7 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P1-17` Дедупликация на уровне скрапера: убрать дубли по `id` перед отправкой
 - [x] `P1-18` Написать `src/sender.ts` — POST на Webhook с retry (3 попытки, exponential backoff)
 - [x] `P1-19` Добавить логирование: сколько вакансий собрано / отправлено / упало с ошибкой
-- [ ] `P1-20` Протестировать отправку на mock-сервер (или `httpbin.org`)
+- [x] `P1-20` Протестировать отправку на mock-сервер: `tests/sender.test.ts` — 4 теста с `jest.mock(axios)`
 
 #### 1.5 — GitHub Actions Workflow
 - [x] `P1-21` Создать `.github/workflows/scraper.yml` — триггер `schedule: cron('0 8 * * *')`
@@ -198,8 +198,11 @@ recruiter/
 │   │   └── utils/
 │   │       └── browser.ts       # Playwright хелпер
 │   ├── tests/
-│   │   ├── justjoin.test.ts
-│   │   └── nofluffjobs.test.ts
+│   │   ├── justjoin.test.ts          # live integration
+│   │   ├── justjoin.unit.test.ts     # unit, no network
+│   │   ├── nofluffjobs.test.ts       # live integration
+│   │   ├── nofluffjobs.unit.test.ts  # unit, no network
+│   │   └── sender.test.ts            # unit, jest.mock(axios)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── .env.example
