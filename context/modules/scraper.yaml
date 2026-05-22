@@ -31,9 +31,12 @@ files:
     key_values:
       webhookUrl: "from WEBHOOK_URL env var"
       scraper.locations: ["gdansk", "gdańsk", "remote", "zdalnie"]
-      scraper.targetStack: ["javascript", "typescript", "node", "react", "postgresql", "postgres"]
-      scraper.rejectStack: ["java", "c#", ".net", "php", "ruby", "go", "rust", "kotlin", "swift"]
-      scraper.targetLevels: ["senior", "lead", "principal", "architect", "staff"]
+      scraper.targetStack:
+        ["javascript", "typescript", "node", "react", "postgresql", "postgres"]
+      scraper.rejectStack:
+        ["java", "c#", ".net", "php", "ruby", "go", "rust", "kotlin", "swift"]
+      scraper.targetLevels:
+        ["senior", "lead", "principal", "architect", "staff"]
       scraper.rejectLevels: ["junior", "mid", "regular", "intern", "trainee"]
       playwright.headless: true
       playwright.viewport: "1440x900"
@@ -41,14 +44,14 @@ files:
       playwright.navigationTimeout: 30000
       playwright.requestTimeout: 15000
       sender.maxRetries: 3
-      sender.retryDelay: 1000  # doubles each attempt (exponential backoff)
+      sender.retryDelay: 1000 # doubles each attempt (exponential backoff)
 
   src/types.ts:
     exports: [JobOffer, WebhookPayload, EvaluationResult]
     note: "See context/interfaces.yaml for full field definitions"
 
   src/index.ts:
-    exports: []  # side-effect entry point
+    exports: [] # side-effect entry point
     pattern: "Promise.allSettled([scrapeJustJoin(), scrapeNoFluffJobs()])"
     dedup: "deduplicateOffers() — by id using Set<string>"
     error_handling: "each scraper failure is logged, others continue"
@@ -68,33 +71,53 @@ files:
     exports: [scrapeJustJoin]
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://justjoin.it"
-    api_endpoint: "https://api.justjoin.it/v2/user-panel/offers"
+    api_endpoint: "https://justjoin.it/api/candidate-api/offers" # verified via DevTools 2025-05
     method: "GET (intercepted via page.on('response'))"
-    navigation_url: "https://justjoin.it/job-offers/all-locations/javascript?orderBy=DESC&sortBy=newest"
-    response_path: "json.data ?? json.offers ?? json"
-    id_format: "justjoin_{raw.slug ?? raw.id}"
-    status: scaffolded
+    navigation_url: "https://justjoin.it/job-offers/all-locations/javascript?orderBy=descending&sortBy=publishedAt"
+    response_path: "json.data"
+    id_format: "justjoin_{raw.slug}"
+    status: implemented
+    salary_source: "employmentTypes[] — prefer currency=PLN + currencySource=original + type=b2b + unit=Month"
+    location_logic: "workplaceType=remote → 'Remote'; locations[].city contains Gdańsk → 'Gdańsk'; else primary city"
+    body_strategy: "buildBody() — synthetic from title + experienceLevel + requiredSkills + niceToHaveSkills + locations"
+    pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
     known_gaps:
-      - "P1-6: XHR endpoint URL needs DevTools verification — may differ from suspected"
-      - "P1-8: Location filter (Gdańsk) not yet applied to API URL params"
-      - "body field: falls back to title if API doesn't return full description"
-    never_throws: true  # catches internally, returns [] on failure
+      - "No body text in list API — Ollama evaluates from structured fields only"
+      - "Pagination not implemented — only first batch (~100 offers) is captured"
+    never_throws: true # catches internally, returns [] on failure
 
   src/scrapers/nofluffjobs.ts:
     exports: [scrapeNoFluffJobs]
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://nofluffjobs.com"
-    api_endpoint: "https://nofluffjobs.com/api/search/posting"
-    method: "POST (intercepted via page.on('response'))"
-    navigation_url: "https://nofluffjobs.com/pl/praca/javascript?criteria=seniority=senior,lead"
-    response_path: "json.postings ?? json.items ?? json.data ?? json"
-    id_format: "nofluffjobs_{raw.id}"
-    status: scaffolded
+    api_endpoint: "https://nofluffjobs.com/api/search/posting" # verified via DevTools 2025-05
+    method: "POST (intercepted via page.on('response') for page 1; page.evaluate fetch for pages 2+)"
+    navigation_url: "https://nofluffjobs.com/pl/praca/javascript"
+    response_path: "json.postings" # confirmed — top-level key in API response
+    id_format: "nofluffjobs_{raw.reference}" # reference is stable across location variants; raw.id is NOT unique
+    status: implemented
+    pagination:
+      mechanism: "page 1 via XHR intercept; pages 2..totalPages via page.evaluate fetch (reuses browser session/cookies)"
+      page_param: "body.page (integer, 1-based)"
+      total_pages_field: "json.totalPages"
+      safety_cap: 50
+      inter_page_delay_ms: 300
+    api_response_shape: # verified via DevTools 2025-05
+      totalPages: number
+      totalCount: number # includes all location variants of each job
+      divs: number # unique job postings count (before location expansion); use this for expected batch size
+      postings: RawNoFluffPosting[]
+      rawSearch: string
+      criteriaSearch: object
+      salaryMatchBlock: object
+    salary_logic: "extractSalary() — requires disclosedAt=VISIBLE; returns 'from–to CURRENCY TYPE/mo'"
+    location_logic: "location.fullyRemote → 'Remote'; places[].city contains Gdańsk → 'Gdańsk'; else first non-provinceOnly city"
+    body_strategy: "buildBody() — synthetic from title + company + category + seniority + technology + tags + locations"
+    pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
+    dedup: "deduplicateByReference() — same job appears once per location; keeps remote > Gdańsk > first seen"
     known_gaps:
-      - "P1-11: XHR endpoint URL needs DevTools verification"
-      - "P1-13: Location filter (Gdańsk) not yet applied"
-      - "P1-15: company field is EMPTY STRING — search API doesn't include company name"
-    never_throws: true
+      - "No full job description in list API — LLM evaluates from structured fields only"
+    never_throws: true # catches internally, returns [] on failure
 
   src/utils/browser.ts:
     exports: [openPage, closeBrowser]

@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P1
-current_focus: "Verify XHR endpoints via DevTools (P1-6, P1-11)"
+current_focus: "Verify NoFluffJobs XHR endpoint via DevTools (P1-11). JustJoin done."
 
 phases:
   P0:
@@ -36,13 +36,14 @@ phases:
 
       "1.2 JustJoin.it":
         P1-6:
-          status: in_progress
-          note: "TODO — verify api.justjoin.it XHR endpoint via DevTools. Suspected: GET /v2/user-panel/offers"
-          blocker: "Need to manually inspect Network tab to confirm endpoint URL and response shape"
-        P1-7: { status: done, note: "XHR intercept scaffolded in src/scrapers/justjoin.ts" }
-        P1-8: { status: partial, note: "URL params exist (page, perPage, sortBy) but location filter not yet added" }
-        P1-9: { status: pending }
-        P1-10: { status: pending }
+          status: done
+          note: "Verified: GET justjoin.it/api/candidate-api/offers — response shape confirmed (json.data[])"
+        P1-7: { status: done, note: "XHR intercept updated with correct path — page.on('response') checks JUSTJOIN_API_PATH" }
+        P1-8:
+          status: done
+          note: "Location filter implemented via matchesPreFilter(): workplaceType=remote OR locations[].city contains Gdańsk"
+        P1-9: { status: pending, note: "Unit tests needed — mock page.on('response') with fixture from real API" }
+        P1-10: { status: pending, note: "Edge cases: empty data[], missing employmentTypes, unknown experienceLevel" }
 
       "1.3 NoFluffJobs":
         P1-11:

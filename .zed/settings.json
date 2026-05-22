@@ -12,7 +12,7 @@
         "path": "npx",
         "args": ["-y", "@modelcontextprotocol/server-github@latest"],
         "env": {
-          "GITHUB_PERSONAL_ACCESS_TOKEN": "$GITHUB_PERSONAL_ACCESS_TOKEN",
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "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",
         },
       },
       "settings": {},
@@ -23,7 +23,7 @@
         "args": [
           "-y",
           "@modelcontextprotocol/server-filesystem@latest",
-          "$PROJECT_ROOT",
+          "/Users/Darya_Shashko/projects/recruiter",
         ],
       },
       "settings": {},

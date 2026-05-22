@@ -1,5 +1,5 @@
-import { Browser, BrowserContext, Page, chromium } from 'playwright';
-import { config } from '../config';
+import { Browser, BrowserContext, Page, chromium } from "playwright";
+import { config } from "../config";
 
 let browser: Browser | null = null;
 
@@ -12,14 +12,14 @@ export async function getBrowser(): Promise<Browser> {
     browser = await chromium.launch({
       headless: config.playwright.headless,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
       ],
     });
   }
@@ -34,25 +34,32 @@ export async function createContext(): Promise<BrowserContext> {
   const context = await b.newContext({
     userAgent: config.playwright.userAgent,
     viewport: config.playwright.viewport,
-    locale: 'en-US',
-    timezoneId: 'Europe/Warsaw',
+    locale: "en-US",
+    timezoneId: "Europe/Warsaw",
     // Mimic real browser headers
     extraHTTPHeaders: {
-      'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
+      "Accept-Language": "en-US,en;q=0.9,pl;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
       Accept:
-        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"macOS"',
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Sec-Ch-Ua":
+        '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Platform": '"macOS"',
     },
   });
 
   // Mask WebDriver fingerprint
+  // This callback runs in the browser context where `navigator` is a global.
+  // Cast via globalThis to avoid TS2304 (lib: ES2022 has no DOM types).
   await context.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en', 'pl'] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nav: any = (globalThis as any).navigator;
+    Object.defineProperty(nav, "webdriver", { get: () => undefined });
+    Object.defineProperty(nav, "plugins", { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(nav, "languages", {
+      get: () => ["en-US", "en", "pl"],
+    });
   });
 
   return context;
@@ -71,7 +78,10 @@ export async function closeBrowser(): Promise<void> {
 /**
  * Open a new page in a fresh context with anti-detection measures.
  */
-export async function openPage(): Promise<{ page: Page; context: BrowserContext }> {
+export async function openPage(): Promise<{
+  page: Page;
+  context: BrowserContext;
+}> {
   const context = await createContext();
   const page = await context.newPage();
 
