@@ -339,6 +339,25 @@ phases:
     goal: "System runs unattended for 30+ days"
     blocked_by: "P5"
 
+post_poc_improvements:
+  description: "Улучшения после завершения POC (P0-P6). Не блокируют запуск."
+  IMPROVE-1:
+    title: "Telegram: убрать n8n-брендинг"
+    note: "Заменить Telegram-узел на HTTP Request к api.telegram.org/sendMessage — footer исчезнет"
+    priority: HIGH
+  IMPROVE-2:
+    title: "Telegram: улучшить формат сообщения"
+    note: "HTML parse_mode, секции: вакансия / зарплата / локация / причина матча. Читабельный вид."
+    priority: HIGH
+  IMPROVE-3:
+    title: "Company research: Ollama из текста вакансии"
+    note: "Второй Ollama-вызов после match:true — аутсорс/продукт, размер команды, культура. Без доп. запросов."
+    priority: MEDIUM
+  IMPROVE-4:
+    title: "Company research: scrape сайта компании"
+    note: "HTTP GET company-domain/about → текст → Ollama summarize → секция в Telegram-сообщении"
+    priority: LOW
+
 known_blockers:
   - "P2-2: GitHub Secret WEBHOOK_URL needs manual update to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
   - "localtunnel subdomain may be taken on restart — fallback: npx localtunnel --port 5678 (dynamic URL, update Secret accordingly)"
