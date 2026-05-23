@@ -58,28 +58,19 @@
       "position": [660, 200]
     },
     {
-      "parameters": {},
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "KmuD32xms1YHxDNQ",
+          "mode": "id"
+        },
+        "options": {}
+      },
       "id": "a1b2c3d4-0001-0001-0001-000000000004",
-      "name": "NoOp: JustJoin → Evaluate",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [880, -60]
-    },
-    {
-      "parameters": {},
-      "id": "a1b2c3d4-0001-0001-0001-000000000005",
-      "name": "NoOp: NoFluffJobs → Evaluate",
-      "type": "n8n-nodes-base.noOp",
+      "name": "Execute Workflow: Evaluate",
+      "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [880, 100]
-    },
-    {
-      "parameters": {},
-      "id": "a1b2c3d4-0001-0001-0001-000000000006",
-      "name": "NoOp: Manual → Evaluate",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [880, 260]
     },
     {
       "parameters": {
@@ -108,11 +99,9 @@
     },
     "Switch: Route by Source": {
       "main": [
-        [{ "node": "NoOp: JustJoin → Evaluate", "type": "main", "index": 0 }],
-        [
-          { "node": "NoOp: NoFluffJobs → Evaluate", "type": "main", "index": 0 }
-        ],
-        [{ "node": "NoOp: Manual → Evaluate", "type": "main", "index": 0 }],
+        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
+        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
+        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
         [{ "node": "Code: Unknown Source", "type": "main", "index": 0 }]
       ]
     }

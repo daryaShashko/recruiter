@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P3
-current_focus: "P3 IN PROGRESS — prompt tested (3/3 valid JSON, edge case fixed). Generating evaluate.json for n8n."
+current_focus: "P3 COMPLETE — Ollama evaluation pipeline working end-to-end. Ready for P4 Notion integration."
 
 phases:
   P0:
@@ -189,48 +189,72 @@ phases:
 
   P3:
     name: "Ollama Evaluation Integration"
-    status: in_progress
+    status: done
     goal: "Evaluate each job with LLM → { match, reason, url }"
     tasks:
       P3-1:
-        status: done
-        note: "System prompt in n8n/prompts/evaluator.md — existed, model updated to llama3.1:latest"
+        {
+          status: done,
+          note: "System prompt in n8n/prompts/evaluator.md — model updated to llama3.1:latest",
+        }
       P3-2:
-        status: done
-        note: "3 manual tests: Senior Node.js Remote → true, Junior Java Warsaw → false, Tech Lead mixed stack → edge case caught and prompt fixed"
+        {
+          status: done,
+          note: "3 manual tests: Senior Node.js Remote → true, Junior Java Warsaw → false, Tech Lead mixed stack → edge case caught",
+        }
       P3-3:
-        status: done
-        note: "LLM returns valid JSON {match, reason, url} on all 3 test cases"
+        {
+          status: done,
+          note: "LLM returns valid JSON {match, reason, url} on all test cases",
+        }
       P3-4:
-        status: done
-        note: "Edge case added to prompt: Node.js + Java legacy → match:true if Node.js is primary; legacy services in other langs are acceptable"
+        {
+          status: done,
+          note: "Edge case: Node.js + Java legacy → match:true if Node.js is primary",
+        }
       P3-5:
         {
-          status: pending,
-          note: "Split In Batches node (batch size 1) after Router",
+          status: done,
+          note: "Split In Batches (size 1) before Ollama HTTP call",
         }
       P3-6:
         {
-          status: pending,
-          note: "HTTP Request to http://localhost:11434/api/chat",
+          status: done,
+          note: "HTTP Request: POST localhost:11434/api/chat, timeout 120s",
         }
-      P3-7: { status: pending, note: "keep_alive: 0 in request body" }
-      P3-8: { status: pending, note: "Fallback for job body field" }
-      P3-9: { status: pending, note: "On Error: Continue on HTTP Request node" }
-      P3-10: { status: pending, note: "Code node: parse Ollama JSON response" }
+      P3-7:
+        { status: done, note: "keep_alive: 0 in Code: Build Ollama Payload" }
+      P3-8:
+        {
+          status: done,
+          note: "Fallback: body || jobText || description || 'No description'",
+        }
+      P3-9:
+        {
+          status: done,
+          note: "onError: continueErrorOutput on HTTP Request: Ask Ollama",
+        }
+      P3-10:
+        {
+          status: done,
+          note: "Code: Parse Ollama Response — strips fences, validates boolean, preserves all job fields",
+        }
       P3-11:
         {
-          status: pending,
-          note: "IF node: match === true → forward / false → discard",
+          status: done,
+          note: "IF: Match? → true (Notion+Telegram) / false (Discard)",
         }
-      P3-12: { status: pending, note: "Export to n8n/workflows/evaluate.json" }
+      P3-12:
+        {
+          status: done,
+          note: "Exported n8n/workflows/evaluate.json; ingest.json fixed with Respond to Webhook",
+        }
 
   P4:
     name: "Notion Database Integration"
     status: pending
     goal: "Save matches to Notion with dedup by URL"
     note: "Schema defined at docs/notion-schema.md"
-    blocked_by: "P3"
 
   P5:
     name: "Telegram Bot"
