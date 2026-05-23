@@ -7,8 +7,8 @@
 # Status values: done | in_progress | partial | pending | blocked | skipped
 # ============================================================
 
-current_phase: P5
-current_focus: "P5 IN PROGRESS — P5-1..P5-4 done. Next: P5-5..P5-10 — Telegram /check <url> trigger (separate workflow)."
+current_phase: P6
+current_focus: "P6 IN PROGRESS — все задачи P6-1..P6-7 открыты."
 
 phases:
   P0:
@@ -286,7 +286,7 @@ phases:
 
   P5:
     name: "Telegram Bot"
-    status: in_progress
+    status: done
     goal: "Alerts for new jobs + manual /check <url> command"
     tasks:
       P5-1:
@@ -306,34 +306,65 @@ phases:
           note: "Tested: message received, Notion record created, dedup verified",
         }
       P5-5:
-        { status: pending, note: "Telegram Trigger node (separate workflow)" }
+        {
+          status: done,
+          note: "Telegram Trigger node added (separate workflow)",
+        }
       P5-6:
         {
-          status: pending,
+          status: done,
           note: "Command parser: /check https://... → extract URL",
         }
-      P5-7: { status: pending, note: "HTTP Request: fetch job page by URL" }
+      P5-7: { status: done, note: "HTTP Request: fetch job page by URL" }
       P5-8:
         {
-          status: pending,
-          note: "Connect to evaluation flow (Ollama → IF → Notion)",
+          status: done,
+          note: "Connected to evaluation flow (Ollama → IF → Notion)",
         }
       P5-9:
         {
-          status: pending,
+          status: done,
           note: "Reply in Telegram: match:true → added / match:false → reason",
         }
       P5-10:
         {
-          status: pending,
-          note: "Export to n8n/workflows/telegram-trigger.json",
+          status: done,
+          note: "Exported to n8n/workflows/telegram-trigger.json",
         }
 
   P6:
     name: "E2E Hardening & Monitoring"
-    status: pending
+    status: in_progress
     goal: "System runs unattended for 30+ days"
-    blocked_by: "P5"
+    blocked_by: NONE
+    tasks:
+      P6-1:
+        {
+          status: pending,
+          note: "E2E test: scraper → Webhook → Ollama mock → Notion verification",
+        }
+      P6-2:
+        {
+          status: pending,
+          note: "GitHub Actions scraper-health-check job (dry-run, no Notion)",
+        }
+      P6-3:
+        {
+          status: pending,
+          note: "Telegram alert on GitHub Actions workflow failure",
+        }
+      P6-4: { status: pending, note: "Alert when scraper returns 0 vacancies" }
+      P6-5:
+        {
+          status: pending,
+          note: "User-Agent and viewport rotation in Playwright",
+        }
+      P6-6: { status: pending, note: "Scraper update procedure documentation" }
+      P6-7:
+        {
+          status: pending,
+          note: "7-day monitoring review → /docs/post-mortem.md",
+        }
 
 post_poc_improvements:
   description: "Улучшения после завершения POC (P0-P6). Не блокируют запуск."

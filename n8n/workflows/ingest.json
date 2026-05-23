@@ -31,13 +31,72 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-meta-count",
+              "leftValue": "={{ $json.body.meta.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "check-jobs-length",
+              "leftValue": "={{ ($json.body.jobs ?? []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "IF: Zero jobs check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [768, 896]
+    },
+    {
+      "parameters": {
+        "chatId": "270408820",
+        "text": "=⚠️ *AI Recruiter* — 0 вакансий\nИсточник: {{ $json.body.meta.source }}\n{{ new Date().toISOString() }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Telegram: Zero Jobs Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [992, 1120],
+      "credentials": {
+        "telegramApi": {
+          "id": "AELRiJlX0Uggd98o",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
         "jsCode": "const body = $input.first().json.body;\n\n// Accept: { jobs: [...] } or bare array\nconst raw = Array.isArray(body?.jobs) ? body.jobs\n          : Array.isArray(body)       ? body\n          : [];\n\nif (raw.length === 0) {\n  console.log('[Ingest] Empty jobs array — nothing to process');\n  return [];\n}\n\nconsole.log(`[Ingest] Normalizing ${raw.length} jobs`);\n\nreturn raw.map(job => ({\n  json: {\n    id:        job.id        || '',\n    title:     job.title     || '',\n    company:   job.company   || '',\n    url:       job.url       || '',\n    body:      job.body      || job.jobText || job.description || '',\n    source:    job.source    || 'unknown',\n    location:  job.location  || '',\n    salary:    job.salary    || '',\n    tags:      Array.isArray(job.tags) ? job.tags : [],\n    scrapedAt: job.scrapedAt || new Date().toISOString(),\n  }\n}));"
       },
       "id": "57c3b74e-9be3-4085-9613-e967c7be9842",
       "name": "Code: Normalize Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [768, 896]
+      "position": [992, 896]
     },
     {
       "parameters": {
@@ -64,7 +123,7 @@
       "name": "Switch: Route by Source",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [992, 896]
+      "position": [1216, 896]
     },
     {
       "parameters": {
@@ -74,7 +133,7 @@
       "name": "Code: Unknown Source",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1200, 1104]
+      "position": [1440, 1104]
     },
     {
       "parameters": {
@@ -97,7 +156,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [1248, 784],
+      "position": [1472, 784],
       "id": "afa2ced7-d4a4-464b-87f5-0562e1470f6a",
       "name": "Call 'Evaluate Jobs (Ollama)'"
     }
@@ -117,6 +176,24 @@
     },
     "Respond to Webhook: 200": {
       "main": [
+        [
+          {
+            "node": "IF: Zero jobs check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Zero jobs check": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Zero Jobs Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Code: Normalize Jobs",
@@ -179,7 +256,7 @@
     "executionTimeout": -1,
     "availableInMCP": false
   },
-  "versionId": "d15ef93d-ca1c-442c-99d0-279c8963127d",
+  "versionId": "e2f3a4b5-c6d7-4901-e2f3-a4b5c6d78901",
   "meta": {
     "instanceId": "2d52eb4e1d8f10688843293ed40eb83b197e5be24f9908ddbc177b2265ad30ce"
   },

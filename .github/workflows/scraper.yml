@@ -3,7 +3,8 @@ name: AI Recruiter Scraper
 on:
   # Run daily at 08:00 UTC (10:00 Warsaw time)
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 8 * * *" # daily scrape
+    - cron: "0 9 * * 1" # Monday health check
   # Allow manual trigger for debugging
   workflow_dispatch:
     inputs:
@@ -21,6 +22,7 @@ jobs:
     name: Scrape Job Boards
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 8 * * *'
 
     steps:
       - name: Checkout repository
@@ -56,3 +58,50 @@ jobs:
           path: output/
           retention-days: 7
           if-no-files-found: ignore
+
+      # P6-3: Send Telegram alert when any previous step fails
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="❌ AI Recruiter scraper failed%0ARun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # P6-2: Weekly health check — runs unit tests in DRY_RUN mode (no webhook call)
+  scraper-health-check:
+    name: Scraper Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Runs on Monday 09:00 UTC schedule, or manually via workflow_dispatch
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 * * 1'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Install dependencies
+        working-directory: scraper
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: scraper
+        run: npx playwright install chromium --with-deps
+
+      # DRY_RUN=true is set here to ensure no webhook is called even if tests
+      # exercise code paths that read the env var
+      - name: Run unit tests
+        working-directory: scraper
+        env:
+          DRY_RUN: "true"
+        run: npm test

@@ -147,7 +147,7 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### PHASE 5 — Telegram Bot 🔄
+### PHASE 5 — Telegram Bot ✅
 > Цель: получать алерты о новых вакансиях и поддерживать ручной ввод ссылок.
 
 #### 5.1 — Алерты о новых вакансиях
@@ -157,16 +157,16 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P5-4` Протестировать: сообщение пришло, Notion запись создана, дедуп работает ✅
 
 #### 5.2 — Ручной триггер из Telegram
-- [ ] `P5-5` Добавить Telegram Trigger узел в n8n (отдельный воркфлоу)
-- [ ] `P5-6` Написать парсер команды: `/check https://...` → извлечь URL
-- [ ] `P5-7` Добавить HTTP Request: загрузить страницу вакансии по URL
-- [ ] `P5-8` Подключить к тому же evaluation-потоку (Ollama → IF → Notion)
-- [ ] `P5-9` Отправить ответ в Telegram: `✅ match: true — добавлено` или `❌ match: false — {reason}`
-- [ ] `P5-10` Экспортировать конфиг в `/n8n/workflows/telegram-trigger.json`
+- [x] `P5-5` Добавить Telegram Trigger узел в n8n (отдельный воркфлоу)
+- [x] `P5-6` Написать парсер команды: `/check https://...` → извлечь URL
+- [x] `P5-7` Добавить HTTP Request: загрузить страницу вакансии по URL
+- [x] `P5-8` Подключить к тому же evaluation-потоку (Ollama → IF → Notion)
+- [x] `P5-9` Отправить ответ в Telegram: `✅ match: true — добавлено` или `❌ match: false — {reason}`
+- [x] `P5-10` Экспортировать конфиг в `/n8n/workflows/telegram-trigger.json`
 
 ---
 
-### PHASE 6 — E2E Hardening & Monitoring
+### PHASE 6 — E2E Hardening & Monitoring 🔄
 > Цель: система работает без ручного вмешательства ≥ 30 дней.
 
 - [ ] `P6-1` Написать E2E-тест: запустить скрапер → Webhook → Ollama mock → проверить Notion
