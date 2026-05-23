@@ -1,0 +1,257 @@
+{
+  "name": "Notify",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "369747f7-ebec-8017-8843-e71fe805e3de",
+          "mode": "list",
+          "cachedResultName": "AI Recruiter Board",
+          "cachedResultUrl": "https://www.notion.so/369747f7ebec80178843e71fe805e3de"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Name|title",
+              "title": "={{ $json.title }}"
+            },
+            {
+              "key": "Company|rich_text",
+              "textContent": "={{ $json.company}}"
+            },
+            {
+              "key": "URL|url",
+              "urlValue": "={{ $json.url }}"
+            },
+            {
+              "key": "Source|select",
+              "selectValue": "={{ $json.source }}"
+            },
+            {
+              "key": "Match Reason|rich_text",
+              "textContent": "={{ $json.reason }}"
+            },
+            {
+              "key": "Salary|rich_text",
+              "textContent": "={{ $json.salary }}"
+            },
+            {
+              "key": "Status|select"
+            },
+            {
+              "key": "Location|rich_text",
+              "textContent": "={{ $json.location }}"
+            },
+            {
+              "key": "Scraped At|date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [272, 32],
+      "id": "fcb97adf-1190-482b-a7f4-8f4d96483530",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "m7tXgSbJizPV6bkb",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const notionResult = $input.first().json;\nconst job = $('Code: Parse Ollama Response').first().json;\n\n// Если Notion вернул результаты — вакансия уже есть\nconst exists = notionResult.id !== undefined;\n\nreturn [{\n  json: { ...job, alreadyExists: exists }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-192, 112],
+      "id": "d29fbdc9-dbc1-49f7-972c-ea6794a7c92a",
+      "name": "Code: Dedup Check"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [272, 192],
+      "id": "9554a5ea-6645-4531-ac03-5ea1ec6dd41a",
+      "name": "NoOp: Skip duplicate"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "369747f7-ebec-8017-8843-e71fe805e3de",
+          "mode": "list",
+          "cachedResultName": "AI Recruiter Board",
+          "cachedResultUrl": "https://www.notion.so/369747f7ebec80178843e71fe805e3de"
+        },
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "URL|url",
+              "condition": "equals",
+              "urlValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-368, 112],
+      "id": "a334ace8-faf5-4ebd-9acb-aeb534cdbd70",
+      "name": "Get many database pages",
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "m7tXgSbJizPV6bkb",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "506f391c-3a99-4f91-a07f-db849d30fe6f",
+              "leftValue": "={{ $json.alreadyExists }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [0, 96],
+      "id": "3663e962-1f7e-4634-ab5e-7dab54772580",
+      "name": "IF: Not exists"
+    },
+    {
+      "parameters": {
+        "chatId": "270408820",
+        "text": "=🟢 *{{ $json.title }}* @ {{ $json.company }} 💰 {{ $json.salary || 'не указана' }} 📍 {{ $json.source }} | {{ $json.location || 'не указано' }} 🔗 {{ $json.url }}  _{{ $json.reason }}_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [272, -112],
+      "id": "1c54b156-096f-4598-80df-23a22a163290",
+      "name": "Sent message with vacancy",
+      "webhookId": "925bed30-2315-4464-8955-512809f76ad1",
+      "credentials": {
+        "telegramApi": {
+          "id": "AELRiJlX0Uggd98o",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-560, 112],
+      "id": "f812cdee-c744-4620-a307-055f170720b6",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code: Dedup Check": {
+      "main": [
+        [
+          {
+            "node": "IF: Not exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "Code: Dedup Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Not exists": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sent message with vacancy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Skip duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "acad367f-ceee-4425-b91e-cb562ac0af9b",
+  "meta": {
+    "instanceId": "2d52eb4e1d8f10688843293ed40eb83b197e5be24f9908ddbc177b2265ad30ce"
+  },
+  "id": "p34AeKxkJtwaZfH7",
+  "tags": []
+}
