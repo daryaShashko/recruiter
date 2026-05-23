@@ -64,7 +64,7 @@ architecture:
       action: Save to Notion + send Telegram alert
       output: "Notion page created, Telegram message sent"
 
-current_phase: P2 # P0 done, P1 done, P2 done, P3–P6 pending
+current_phase: P5 # P0–P4 done, P5 in progress, P6 pending
 # See context/roadmap.yaml for detailed task status
 
 structure:

@@ -53,18 +53,18 @@ Core data types (from scraper/src/types.ts):
 Current phases and task IDs (from README.md). You MUST reference these IDs in all communications.
 
   [x] PHASE 0  — Project Bootstrap (P0-1 … P0-5)  ✅ DONE
-  [ ] PHASE 1  — Scraper: GitHub Actions + Playwright (P1-1 … P1-26)  🔄 IN PROGRESS
-  [ ] PHASE 2  — n8n Webhook Pipeline (P2-1 … P2-10)
-  [ ] PHASE 3  — Ollama Evaluation Integration (P3-1 … P3-12)
-  [ ] PHASE 4  — Notion Database Integration (P4-1 … P4-10)
-  [ ] PHASE 5  — Telegram Bot (P5-1 … P5-10)
-  [ ] PHASE 6  — E2E Hardening & Monitoring (P6-1 … P6-7)
-
-Phase 1 status (files exist but tasks may be incomplete):
-  EXISTS: scraper/src/config.ts, types.ts, index.ts, sender.ts,
-          scrapers/justjoin.ts, scrapers/nofluffjobs.ts
-  PENDING: P1-5 (browser.ts helper), P1-9/P1-14 (unit tests),
-           P1-20 (mock-server test), P1-21…P1-26 (GitHub Actions workflow)
+  [x] PHASE 1  — Scraper: GitHub Actions + Playwright (P1-1 … P1-26)  ✅ DONE
+         dry-run 2026-05-22: 210 offers (JustJoin 199 + NoFluffJobs 11), 31/31 unit tests ✅
+  [x] PHASE 2  — n8n Webhook Pipeline (P2-1 … P2-10)  ✅ DONE
+         Note: P2-2 (GitHub Secret WEBHOOK_URL) still requires manual update on tunnel restart.
+  [x] PHASE 3  — Ollama Evaluation Integration (P3-1 … P3-12)  ✅ DONE
+         evaluate.json exported; llama3.1:latest, keep_alive:0
+  [ ] PHASE 4  — Notion Database Integration (P4-1 … P4-10)  🔄 IN PROGRESS
+         P4-2 (notion-schema.md), P4-3 (fields defined) — DONE
+         BLOCKED: P4-1 (create Notion DB) and P4-4 (integration token) — manual user actions
+         PENDING: P4-5 … P4-10 (n8n workflow + dedup + export)
+  [ ] PHASE 5  — Telegram Bot (P5-1 … P5-10)  BLOCKED by P4
+  [ ] PHASE 6  — E2E Hardening & Monitoring (P6-1 … P6-7)  BLOCKED by P5
 
 At the start of every session, report the current phase and which tasks are open.
 ```

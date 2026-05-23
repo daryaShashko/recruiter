@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P5
-current_focus: "P5 IN PROGRESS — Telegram alerts. Need: bot token, chat ID."
+current_focus: "P5 IN PROGRESS — Telegram alerts. P5-2/P5-3 in progress (Send Message node + message format). P4-10 pending (export notion.json)."
 
 phases:
   P0:
@@ -252,15 +252,86 @@ phases:
 
   P4:
     name: "Notion Database Integration"
-    status: pending
+    status: done
     goal: "Save matches to Notion with dedup by URL"
-    note: "Schema defined at docs/notion-schema.md"
+    tasks:
+      P4-1: { status: done, note: "Notion Database AI Recruiter Board created" }
+      P4-2:
+        { status: done, note: "docs/notion-schema.md created with full schema" }
+      P4-3:
+        {
+          status: done,
+          note: "Fields defined: Title, Company, URL, Source, Match Reason, Salary, Status, Location, Tags, Scraped At",
+        }
+      P4-4:
+        {
+          status: done,
+          note: "Notion Integration Token created, added to .env and n8n",
+        }
+      P4-5: { status: done, note: "n8n: Notion Query node for dedup by URL" }
+      P4-6:
+        { status: done, note: "n8n: IF exists → skip / not exists → create" }
+      P4-7:
+        {
+          status: done,
+          note: "Dedup verified: same vacancy sent twice → 1 Notion record",
+        }
+      P4-8: { status: done, note: "n8n: Notion Create Page with all fields" }
+      P4-9: { status: done, note: "Error handling: 400/401 from Notion API" }
+      P4-10:
+        {
+          status: pending,
+          note: "Export workflow to n8n/workflows/notion.json — TODO",
+        }
 
   P5:
     name: "Telegram Bot"
-    status: pending
+    status: in_progress
     goal: "Alerts for new jobs + manual /check <url> command"
-    blocked_by: "P4"
+    tasks:
+      P5-1:
+        {
+          status: done,
+          note: "Telegram Bot created via @BotFather, token saved",
+        }
+      P5-2:
+        {
+          status: in_progress,
+          note: "Telegram Send Message node in n8n — in progress",
+        }
+      P5-3:
+        {
+          status: in_progress,
+          note: "Message format: title, company, salary, source, url, reason",
+        }
+      P5-4:
+        {
+          status: pending,
+          note: "Test: send test vacancy → get Telegram message",
+        }
+      P5-5:
+        { status: pending, note: "Telegram Trigger node (separate workflow)" }
+      P5-6:
+        {
+          status: pending,
+          note: "Command parser: /check https://... → extract URL",
+        }
+      P5-7: { status: pending, note: "HTTP Request: fetch job page by URL" }
+      P5-8:
+        {
+          status: pending,
+          note: "Connect to evaluation flow (Ollama → IF → Notion)",
+        }
+      P5-9:
+        {
+          status: pending,
+          note: "Reply in Telegram: match:true → added / match:false → reason",
+        }
+      P5-10:
+        {
+          status: pending,
+          note: "Export to n8n/workflows/telegram-trigger.json",
+        }
 
   P6:
     name: "E2E Hardening & Monitoring"

@@ -23,7 +23,7 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 2** — n8n Webhook pipeline ✅
 - [x] **PHASE 3** — Ollama evaluation integration ✅
 - [x] **PHASE 4** — Notion database integration ✅
-- [ ] **PHASE 5** — Telegram bot trigger 🔄
+- [ ] **PHASE 5** — Telegram bot 🔄
 - [ ] **PHASE 6** — E2E hardening & monitoring
 
 ---
@@ -41,7 +41,7 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### PHASE 1 — Scraper: GitHub Actions + Playwright
+### PHASE 1 — Scraper: GitHub Actions + Playwright ✅
 > Цель: обойти Cloudflare и получить чистый массив вакансий с агрегаторов.  
 > Выход: POST на n8n Webhook с `[{ id, title, company, url, body, source, salary? }]`  
 > **Статус: DONE — dry-run 2026-05-22: 210 офферов (JJ 199 + NFJ 11), unit-тесты 31/31 ✅**
@@ -84,12 +84,12 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### PHASE 2 — n8n Webhook Pipeline
+### PHASE 2 — n8n Webhook Pipeline ✅
 > Цель: принять массив от скрапера, подготовить к оценке LLM.
 
 #### 2.1 — Туннель и доступность
 - [x] `P2-1` Запустить n8n с туннелем: `npx localtunnel --port 5678 --subdomain ai-recruiter` → `https://ai-recruiter.loca.lt`
-- [ ] `P2-2` Зафиксировать Webhook URL в GitHub Secret (`WEBHOOK_URL` = `https://ai-recruiter.loca.lt/webhook/jobs/ingest`)
+- [ ] `P2-2` Зафиксировать Webhook URL в GitHub Secret (`WEBHOOK_URL` = `https://ai-recruiter.loca.lt/webhook/jobs/ingest`) *(требует ручного обновления при перезапуске туннеля)*
 - [x] `P2-3` Проверить доступность туннеля: `curl -X POST https://ai-recruiter.loca.lt/` → 404 (n8n жив); `Bypass-Tunnel-Reminder: true` добавлен в `sender.ts`
 
 #### 2.2 — Webhook Node
@@ -105,55 +105,55 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### PHASE 3 — Ollama Evaluation Integration
+### PHASE 3 — Ollama Evaluation Integration ✅
 > Цель: прогнать каждую вакансию через LLM, получить `{ match, reason, url }`.
 
 #### 3.1 — Промпт и формат
-- [ ] `P3-1` Написать и зафиксировать system-промпт в `/n8n/prompts/evaluator.md`
-- [ ] `P3-2` Протестировать промпт вручную через Ollama CLI: 3 вакансии (2 плохих, 1 хорошая)
-- [ ] `P3-3` Убедиться, что LLM всегда возвращает валидный JSON (`match`, `reason`, `url`)
-- [ ] `P3-4` Задокументировать edge-cases промпта (нет стека в описании, смешанный стек)
+- [x] `P3-1` Написать и зафиксировать system-промпт в `/n8n/prompts/evaluator.md`
+- [x] `P3-2` Протестировать промпт вручную через Ollama CLI: 3 вакансии (Senior Node.js Remote → true, Junior Java Warsaw → false, Tech Lead mixed → edge case)
+- [x] `P3-3` Убедиться, что LLM всегда возвращает валидный JSON (`match`, `reason`, `url`)
+- [x] `P3-4` Задокументировать edge-cases промпта (Node.js + Java legacy → match:true если Node.js первичный)
 
 #### 3.2 — n8n Loop + HTTP Request к Ollama
-- [ ] `P3-5` Добавить узел Split In Batches (batch size: 1) после Webhook-препроцессинга
-- [ ] `P3-6` Настроить HTTP Request к `http://localhost:11434/api/chat`: model, messages, stream: false
-- [ ] `P3-7` Добавить `"keep_alive": 0` в тело запроса для освобождения VRAM после каждой вакансии
-- [ ] `P3-8` Прописать фоллбэк для тела вакансии: `$json.body || $json.jobText || $json.description || ""`
-- [ ] `P3-9` Установить `On Error: Continue (using error output)` на HTTP Request узле
-- [ ] `P3-10` Добавить узел Code: распарсить JSON-ответ Ollama, извлечь `match` и `reason`
-- [ ] `P3-11` Добавить узел IF: `match === true` → следующий шаг / `match === false` → discard
-- [ ] `P3-12` Экспортировать конфиг в `/n8n/workflows/evaluate.json`
+- [x] `P3-5` Добавить узел Split In Batches (batch size: 1) после Webhook-препроцессинга
+- [x] `P3-6` Настроить HTTP Request к `http://localhost:11434/api/chat`: model, messages, stream: false
+- [x] `P3-7` Добавить `"keep_alive": 0` в тело запроса для освобождения VRAM после каждой вакансии
+- [x] `P3-8` Прописать фоллбэк для тела вакансии: `$json.body || $json.jobText || $json.description || "No description"`
+- [x] `P3-9` Установить `On Error: Continue (using error output)` на HTTP Request узле
+- [x] `P3-10` Добавить узел Code: распарсить JSON-ответ Ollama, извлечь `match` и `reason`; поддерживает markdown-fences, сохраняет все поля вакансии
+- [x] `P3-11` Добавить узел IF: `match === true` → Notion+Telegram / `match === false` → Discard
+- [x] `P3-12` Экспортировать конфиг в `/n8n/workflows/evaluate.json`
 
 ---
 
-### PHASE 4 — Notion Database Integration
+### PHASE 4 — Notion Database Integration ✅
 > Цель: сохранять валидные вакансии в Notion и дедуплицировать по URL.
 
 #### 4.1 — Структура базы в Notion
-- [ ] `P4-1` Создать Notion Database: `AI Recruiter Board` (канбан-вид)
-- [ ] `P4-2` Описать схему в `/docs/notion-schema.md`: поля, типы, возможные статусы
-- [ ] `P4-3` Задать поля: `Title` (title), `Company` (text), `URL` (url), `Source` (select), `Match Reason` (text), `Salary` (text), `Status` (select: New / Review / Applied / Rejected), `Scraped At` (date)
-- [ ] `P4-4` Создать Notion Integration Token, добавить в `.env` и GitHub Secrets
+- [x] `P4-1` Создать Notion Database: `AI Recruiter Board` (канбан-вид)
+- [x] `P4-2` Описать схему в `/docs/notion-schema.md`: поля, типы, возможные статусы
+- [x] `P4-3` Задать поля: `Title`, `Company`, `URL` (dedup), `Source`, `Match Reason`, `Salary`, `Status`, `Location`, `Tags`, `Scraped At`
+- [x] `P4-4` Создать Notion Integration Token, добавить в `.env` и GitHub Secrets
 
 #### 4.2 — Дедупликация
-- [ ] `P4-5` Добавить узел Notion (Query): найти запись с `URL == $json.url`
-- [ ] `P4-6` Добавить узел IF: запись существует → skip / не существует → create
-- [ ] `P4-7` Протестировать дедупликацию: отправить одну вакансию дважды → в Notion одна запись
+- [x] `P4-5` Добавить узел Notion (Query): найти запись с `URL == $json.url`
+- [x] `P4-6` Добавить узел IF: запись существует → skip / не существует → create
+- [x] `P4-7` Протестировать дедупликацию: отправить одну вакансию дважды → в Notion одна запись
 
 #### 4.3 — Запись в Notion
-- [ ] `P4-8` Добавить узел Notion (Create Page): заполнить все поля из `$json`
-- [ ] `P4-9` Обработать ошибку 400/401 от Notion API (логировать, не падать)
+- [x] `P4-8` Добавить узел Notion (Create Page): заполнить все поля из `$json`
+- [x] `P4-9` Обработать ошибку 400/401 от Notion API (логировать, не падать)
 - [ ] `P4-10` Экспортировать конфиг в `/n8n/workflows/notion.json`
 
 ---
 
-### PHASE 5 — Telegram Bot
+### PHASE 5 — Telegram Bot 🔄
 > Цель: получать алерты о новых вакансиях и поддерживать ручной ввод ссылок.
 
 #### 5.1 — Алерты о новых вакансиях
-- [ ] `P5-1` Создать Telegram Bot через @BotFather, сохранить токен в `.env`
-- [ ] `P5-2` Добавить узел Telegram (Send Message) после записи в Notion
-- [ ] `P5-3` Оформить сообщение: `🟢 *{title}* @ {company}\n💰 {salary}\n📍 {source}\n🔗 {url}\n\n_{reason}_`
+- [x] `P5-1` Создать Telegram Bot через @BotFather, сохранить токен в `.env`
+- [ ] `P5-2` Добавить узел Telegram (Send Message) после записи в Notion  *(в процессе)*
+- [ ] `P5-3` Оформить сообщение: `🟢 *{title}* @ {company}\n💰 {salary}\n📍 {source}\n🔗 {url}\n\n_{reason}_`  *(в процессе)*
 - [ ] `P5-4` Протестировать: отправить тестовую вакансию → получить сообщение в Telegram
 
 #### 5.2 — Ручной триггер из Telegram
@@ -185,39 +185,42 @@ Telegram (ручная ссылка)  ──────────────
 recruiter/
 ├── .github/
 │   └── workflows/
-│       └── scraper.yml          # GitHub Actions: ежедневный запуск
+│       └── scraper.yml          # GitHub Actions: ежедневный запуск в 08:00 UTC
 ├── scraper/
 │   ├── src/
 │   │   ├── config.ts
 │   │   ├── types.ts
 │   │   ├── index.ts             # Точка входа
-│   │   ├── sender.ts            # POST на webhook
+│   │   ├── sender.ts            # POST на webhook с retry
 │   │   ├── scrapers/
-│   │   │   ├── justjoin.ts
-│   │   │   └── nofluffjobs.ts
+│   │   │   ├── justjoin.ts      # XHR-перехват API
+│   │   │   └── nofluffjobs.ts   # SSR-экстрактор (Angular, 2026-05)
 │   │   └── utils/
-│   │       └── browser.ts       # Playwright хелпер
+│   │       └── browser.ts       # Playwright хелпер с fingerprints
 │   ├── tests/
+│   │   ├── justjoin.unit.test.ts     # unit, без сети (19 тестов)
+│   │   ├── nofluffjobs.unit.test.ts  # unit, без сети
 │   │   ├── justjoin.test.ts          # live integration
-│   │   ├── justjoin.unit.test.ts     # unit, no network
 │   │   ├── nofluffjobs.test.ts       # live integration
-│   │   ├── nofluffjobs.unit.test.ts  # unit, no network
-│   │   └── sender.test.ts            # unit, jest.mock(axios)
+│   │   └── sender.test.ts            # unit, jest.mock(axios) (4 теста)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── .env.example
 ├── n8n/
 │   ├── workflows/
-│   │   ├── ingest.json          # Webhook + препроцессинг
-│   │   ├── evaluate.json        # Ollama evaluation loop
-│   │   ├── notion.json          # Дедупликация + запись
-│   │   └── telegram-trigger.json
+│   │   ├── ingest.json          # Webhook + нормализация + роутинг по source
+│   │   └── evaluate.json        # Split → Ollama → IF match → [Notion/Telegram]
 │   └── prompts/
-│       └── evaluator.md         # System-промпт для LLM
+│       └── evaluator.md         # System-промпт для llama3.1:latest
 ├── docs/
 │   ├── architecture.md
-│   ├── notion-schema.md
-│   └── post-mortem.md
+│   ├── notion-schema.md         # Схема Notion Database (P4)
+│   └── agents/                  # Промпты AI-агентов
+├── context/                     # Контекстные манифесты для агентов
+│   ├── project.yaml
+│   ├── roadmap.yaml
+│   ├── interfaces.yaml
+│   └── modules/
 ├── .gitignore
 ├── .env.example
 └── README.md
@@ -229,12 +232,12 @@ recruiter/
 
 | Переменная | Где используется | Описание |
 |---|---|---|
-| `WEBHOOK_URL` | GitHub Actions, scraper | URL n8n Webhook (туннель) |
-| `NOTION_TOKEN` | n8n | Notion Integration Secret |
-| `NOTION_DB_ID` | n8n | ID базы данных в Notion |
-| `TELEGRAM_BOT_TOKEN` | n8n | Токен Telegram Bot |
-| `TELEGRAM_CHAT_ID` | n8n | ID чата для алертов |
-| `OLLAMA_HOST` | n8n | URL Ollama (default: localhost:11434) |
+| `WEBHOOK_URL` | GitHub Actions, scraper | URL n8n Webhook (туннель localtunnel) |
+| `NOTION_TOKEN` | n8n | Notion Integration Secret *(P4)* |
+| `NOTION_DB_ID` | n8n | ID базы данных в Notion *(P4)* |
+| `TELEGRAM_BOT_TOKEN` | n8n | Токен Telegram Bot *(P5)* |
+| `TELEGRAM_CHAT_ID` | n8n | ID чата для алертов *(P5)* |
+| `OLLAMA_HOST` | n8n | URL Ollama (default: `http://localhost:11434`) |
 
 ---
 
@@ -243,7 +246,7 @@ recruiter/
 | Проблема | Симптом | Решение |
 |---|---|---|
 | Cloudflare WAF | 403 / 0 bytes | Playwright с browser fingerprint, перехват XHR вместо прямых запросов |
-| Email false positives | Системные письма в ветке рассылок | Негативная lookahead-regex в Switch node |
-| LinkedIn anti-scraping | Редирект на auth | Парсинг текста прямо из email-тела |
+| NoFluffJobs SSR (2026-05) | Нет XHR с данными | SSR-экстрактор из `<script id="serverApp-state">` |
+| localtunnel subdomain занят | `--subdomain ai-recruiter` недоступен | Запустить без `--subdomain`, обновить `WEBHOOK_URL` в GitHub Secrets |
 | Cloud LLM rate limits | 429 Too Many Requests | Локальная Ollama без лимитов + `keep_alive: 0` |
-| VRAM утечка | Ollama не освобождает память | `"keep_alive": 0` в каждом запросе |
+| VRAM утечка в Ollama | Память не освобождается | `"keep_alive": 0` в каждом запросе к `/api/chat` |
