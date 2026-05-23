@@ -95,9 +95,9 @@
           "cachedResultName": "Notify"
         },
         "workflowInputs": {
-          "mappingMode": "defineBelow",
+          "mappingMode": "passThrough",
           "value": {},
-          "matchingColumns": [""],
+          "matchingColumns": [],
           "schema": [],
           "attemptToConvertTypes": false,
           "convertFieldsToString": true

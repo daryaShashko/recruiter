@@ -65,7 +65,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const notionResult = $input.first().json;\nconst job = $('Code: Parse Ollama Response').first().json;\n\n// Если Notion вернул результаты — вакансия уже есть\nconst exists = notionResult.id !== undefined;\n\nreturn [{\n  json: { ...job, alreadyExists: exists }\n}];\n"
+        "jsCode": "const notionResult = $input.first().json;\nconst job = $('When Executed by Another Workflow').first().json;\n\n// \u0415\u0441\u043b\u0438 Notion \u0432\u0435\u0440\u043d\u0443\u043b \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u044b \u2014 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0443\u0436\u0435 \u0435\u0441\u0442\u044c\nconst exists = notionResult.id !== undefined;\n\nreturn [{\n  json: { ...job, alreadyExists: exists }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

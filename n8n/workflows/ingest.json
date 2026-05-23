@@ -86,7 +86,7 @@
           "cachedResultName": "Evaluate Jobs (Ollama)"
         },
         "workflowInputs": {
-          "mappingMode": "defineBelow",
+          "mappingMode": "passThrough",
           "value": {},
           "matchingColumns": [],
           "schema": [],

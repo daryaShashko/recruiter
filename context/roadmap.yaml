@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P5
-current_focus: "P5 IN PROGRESS — Telegram alerts. P5-2/P5-3 in progress (Send Message node + message format). P4-10 pending (export notion.json)."
+current_focus: "P5 IN PROGRESS — P5-1..P5-4 done. Next: P5-5..P5-10 — Telegram /check <url> trigger (separate workflow)."
 
 phases:
   P0:
@@ -280,8 +280,8 @@ phases:
       P4-9: { status: done, note: "Error handling: 400/401 from Notion API" }
       P4-10:
         {
-          status: pending,
-          note: "Export workflow to n8n/workflows/notion.json — TODO",
+          status: done,
+          note: "Notion logic merged into n8n/workflows/notify.json — exported",
         }
 
   P5:
@@ -294,20 +294,16 @@ phases:
           status: done,
           note: "Telegram Bot created via @BotFather, token saved",
         }
-      P5-2:
-        {
-          status: in_progress,
-          note: "Telegram Send Message node in n8n — in progress",
-        }
+      P5-2: { status: done, note: "Telegram Send Message node in notify.json" }
       P5-3:
         {
-          status: in_progress,
+          status: done,
           note: "Message format: title, company, salary, source, url, reason",
         }
       P5-4:
         {
-          status: pending,
-          note: "Test: send test vacancy → get Telegram message",
+          status: done,
+          note: "Tested: message received, Notion record created, dedup verified",
         }
       P5-5:
         { status: pending, note: "Telegram Trigger node (separate workflow)" }
