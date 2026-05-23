@@ -86,8 +86,12 @@ async function main(): Promise<void> {
   );
 
   if (deduplicated.length === 0) {
-    console.warn("No offers to send. Exiting.");
-    return;
+    process.stderr.write(
+      "ERROR: 0 job offers collected after deduplication.\n" +
+        "Possible causes: scraper API broken, site structure changed, or network issues.\n",
+    );
+    await closeBrowser();
+    process.exit(1);
   }
 
   if (IS_DRY_RUN) {

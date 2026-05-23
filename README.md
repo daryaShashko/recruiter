@@ -23,8 +23,8 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 2** — n8n Webhook pipeline ✅
 - [x] **PHASE 3** — Ollama evaluation integration ✅
 - [x] **PHASE 4** — Notion database integration ✅
-- [ ] **PHASE 5** — Telegram bot 🔄
-- [ ] **PHASE 6** — E2E hardening & monitoring
+- [x] **PHASE 5** — Telegram bot ✅
+- [ ] **PHASE 6** — E2E hardening & monitoring 🔄
 
 ---
 
@@ -169,13 +169,13 @@ Telegram (ручная ссылка)  ──────────────
 ### PHASE 6 — E2E Hardening & Monitoring 🔄
 > Цель: система работает без ручного вмешательства ≥ 30 дней.
 
-- [ ] `P6-1` Написать E2E-тест: запустить скрапер → Webhook → Ollama mock → проверить Notion
-- [ ] `P6-2` Добавить GitHub Actions job: `scraper-health-check` — тестовый прогон без отправки в Notion
-- [ ] `P6-3` Добавить алерт в Telegram при падении GitHub Actions workflow (через webhook уведомление)
-- [ ] `P6-4` Добавить алерт при 0 вакансий в ответе скрапера (возможно, структура сайта изменилась)
-- [ ] `P6-5` Добавить ротацию User-Agent и viewport в Playwright (защита от детектирования)
-- [ ] `P6-6` Описать процедуру обновления скрапера при изменении API агрегатора
-- [ ] `P6-7` Провести итоговое review: 7 дней мониторинга → зафиксировать результат в `/docs/post-mortem.md`
+- [x] `P6-1` E2E-тест: `scraper/tests/e2e.test.ts` — mock HTTP-сервер на случайном порту, POST `/webhook/jobs/ingest`, проверка payload ✅
+- [x] `P6-2` GitHub Actions job `scraper-health-check`: каждый понедельник 09:00 UTC, `npm test` с `DRY_RUN=true` ✅
+- [x] `P6-3` Telegram-алерт при падении GitHub Actions: `if: failure()` → `curl api.telegram.org/sendMessage` ✅
+- [x] `P6-4` Алерт при 0 вакансий: `process.exit(1)` + `closeBrowser()` + `stderr` → GH Actions видит failure → Telegram ✅
+- [x] `P6-5` Ротация User-Agent + viewport: `pickRandom(USER_AGENTS/VIEWPORTS)` в `browser.ts`, consistent `Sec-Ch-Ua` ✅
+- [x] `P6-6` Документация: `docs/scraper-update-guide.md` — диагностика, JustJoin API, NFJ SSR, чеклист деплоя ✅
+- [ ] `P6-7` Шаблон `docs/post-mortem.md` создан с dry-run данными; финальные данные — после 7 дней production 🕐
 
 ---
 

@@ -8,7 +8,7 @@
 # ============================================================
 
 current_phase: P6
-current_focus: "P6 IN PROGRESS — все задачи P6-1..P6-7 открыты."
+current_focus: "P6 IN PROGRESS — 6/7 done. P6-7 ждёт 7 дней production-мониторинга."
 
 phases:
   P0:
@@ -340,30 +340,38 @@ phases:
     tasks:
       P6-1:
         {
-          status: pending,
-          note: "E2E test: scraper → Webhook → Ollama mock → Notion verification",
+          status: done,
+          note: "scraper/tests/e2e.test.ts — real Node.js mock HTTP server, POSTs to /webhook/jobs/ingest, asserts payload shape",
         }
       P6-2:
         {
-          status: pending,
-          note: "GitHub Actions scraper-health-check job (dry-run, no Notion)",
+          status: done,
+          note: "scraper-health-check job in .github/workflows/scraper.yml — Monday 09:00 UTC cron, runs npm test with DRY_RUN=true",
         }
       P6-3:
         {
-          status: pending,
-          note: "Telegram alert on GitHub Actions workflow failure",
+          status: done,
+          note: "Notify Telegram on failure step in scraper.yml — if: failure() → curl api.telegram.org/sendMessage с ссылкой на run",
         }
-      P6-4: { status: pending, note: "Alert when scraper returns 0 vacancies" }
+      P6-4:
+        {
+          status: done,
+          note: "index.ts: process.stderr.write + closeBrowser() + process.exit(1) при 0 вакансий — GH Actions видит failure, срабатывает Telegram-алерт",
+        }
       P6-5:
         {
-          status: pending,
-          note: "User-Agent and viewport rotation in Playwright",
+          status: done,
+          note: "browser.ts: pickRandom(USER_AGENTS) + pickRandom(VIEWPORTS) на каждый createContext(). Sec-Ch-Ua, Sec-Ch-Ua-Platform consistent с UA.",
         }
-      P6-6: { status: pending, note: "Scraper update procedure documentation" }
+      P6-6:
+        {
+          status: done,
+          note: "docs/scraper-update-guide.md — полная процедура: диагностика, JustJoin API update, NFJ SSR STORE_KEY update, чеклист деплоя",
+        }
       P6-7:
         {
-          status: pending,
-          note: "7-day monitoring review → /docs/post-mortem.md",
+          status: partial,
+          note: "docs/post-mortem.md создан как шаблон с dry-run данными (2026-05-22). Финальные данные заполнить после 7 дней production.",
         }
 
 post_poc_improvements:
