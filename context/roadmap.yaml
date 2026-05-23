@@ -7,8 +7,8 @@
 # Status values: done | in_progress | partial | pending | blocked | skipped
 # ============================================================
 
-current_phase: P4
-current_focus: "P4 IN PROGRESS — Notion integration. Need: NOTION_TOKEN, NOTION_DB_ID, create database in Notion."
+current_phase: P5
+current_focus: "P5 IN PROGRESS — Telegram alerts. Need: bot token, chat ID."
 
 phases:
   P0:
