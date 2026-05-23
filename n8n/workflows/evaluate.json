@@ -11,29 +11,18 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
+        "jsCode": "const job = $input.first().json;\n\nconst systemPrompt = `You are an expert IT recruiter assistant. Evaluate job postings for a Senior Software Engineer.\n\nTarget Profile: Senior/Lead/Architect, JS/TS/Node.js/React/PostgreSQL, Gdańsk OR remote.\n\nMatch if: Senior-level, Node.js/TS primary backend, Gdańsk or remote.\nReject if: Junior/Mid, primary backend Java/C#/.NET/PHP/Ruby/Go, not Gdańsk and not remote.\nIf Node.js + Java legacy both listed: match true ONLY if Node.js is listed first or described as primary.\n\nRespond ONLY with valid JSON, no markdown:\n{\"match\": true or false, \"reason\": \"one sentence\", \"url\": \"job url\"}`;\n\nconst userContent = [\n  `Job Title: ${job.title}`,\n  `Company: ${job.company}`,\n  `Location: ${job.location || 'Not specified'}`,\n  `Salary: ${job.salary || 'Not specified'}`,\n  `URL: ${job.url}`,\n  '',\n  'Job Description:',\n  job.body || 'No description available'\n].join('\\n');\n\nreturn [{\n  json: {\n    ...job,\n    ollamaBody: {\n      model: 'llama3.1:latest',\n      stream: false,\n      keep_alive: 0,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user',   content: userContent }\n      ]\n    }\n  }\n}];"
       },
       "id": "b2c3d4e5-0002-0002-0002-000000000002",
-      "name": "Split In Batches",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
+      "name": "Code: Build Ollama Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [220, 200]
     },
     {
       "parameters": {
-        "jsCode": "const job = $input.first().json;\n\nconst systemPrompt = `You are an expert IT recruiter assistant. Your task is to evaluate job postings and determine if they are a strong match for a Senior Software Engineer profile.\n\n**Target Profile:**\n- Seniority: Senior, Tech Lead, Principal, Solution Architect (NOT Junior or Mid-level)\n- Primary stack: JavaScript, TypeScript, Node.js, React, PostgreSQL\n- Location: Gdańsk, Poland OR fully remote\n- Language: English or Polish job postings are both acceptable\n\n**Match Criteria (match: true):**\n- Position is Senior-level or above (Lead, Principal, Architect, Staff)\n- Primary backend language is JavaScript/TypeScript/Node.js\n- Frontend involves React or similar JS frameworks\n- Database is PostgreSQL, MongoDB, or similar (not only Oracle/MSSQL)\n- Location is Gdańsk/Tricity area OR remote/hybrid\n\n**Reject Criteria (match: false):**\n- Position is explicitly Junior, Mid, or Regular level\n- Primary backend is Java, C#, .NET, PHP, Ruby, Go, Rust (JS/TS is only a minor addition)\n- If both Node.js AND Java/Go are listed: match true ONLY if Node.js is listed first or described as primary; legacy services in other languages are acceptable\n- Position is NOT in Gdańsk/Tricity and is NOT remote\n- The posting is clearly spam or an application confirmation\n\n**Response Format:**\nYou MUST respond ONLY with valid JSON. No markdown, no explanation outside JSON.\n{\"match\": true or false, \"reason\": \"One sentence\", \"url\": \"the job URL\"}`;\n\nconst userContent = [\n  `Job Title: ${job.title}`,\n  `Company: ${job.company}`,\n  `Location: ${job.location || 'Not specified'}`,\n  `Salary: ${job.salary || 'Not specified'}`,\n  `URL: ${job.url}`,\n  '',\n  'Job Description:',\n  job.body || job.jobText || job.description || 'No description available'\n].join('\\n');\n\nreturn [{\n  json: {\n    ...job,\n    ollamaBody: {\n      model: 'llama3.1:latest',\n      stream: false,\n      keep_alive: 0,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user',   content: userContent  }\n      ]\n    }\n  }\n}];"
-      },
-      "id": "b2c3d4e5-0002-0002-0002-000000000009",
-      "name": "Code: Build Ollama Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [440, 200]
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "http://localhost:11434/api/chat",
+        "url": "http://127.0.0.1:11434/api/chat",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.ollamaBody }}",
@@ -45,18 +34,18 @@
       "name": "HTTP Request: Ask Ollama",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [660, 200],
+      "position": [440, 200],
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "const ollamaResp = $input.first().json;\nconst raw = ollamaResp?.message?.content || '';\n\n// Retrieve original job fields from the node that built the payload\nconst job = $('Code: Build Ollama Payload').first().json;\n\nif (!raw) {\n  console.log('[Evaluate] Empty Ollama response, skipping');\n  return [];\n}\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  console.log(`[Evaluate] JSON parse error: ${raw.substring(0, 200)}`);\n  return [];\n}\n\nif (typeof parsed.match !== 'boolean') {\n  console.log(`[Evaluate] Unexpected shape: ${JSON.stringify(parsed)}`);\n  return [];\n}\n\nconsole.log(`[Evaluate] ${parsed.match ? '✅ MATCH' : '❌ skip'} — ${parsed.reason}`);\n\nreturn [{\n  json: {\n    id:        job.id,\n    title:     job.title,\n    company:   job.company,\n    url:       job.url,\n    body:      job.body,\n    source:    job.source,\n    location:  job.location,\n    salary:    job.salary,\n    tags:      job.tags,\n    scrapedAt: job.scrapedAt,\n    match:     parsed.match,\n    reason:    parsed.reason,\n  }\n}];"
+        "jsCode": "const ollamaResp = $input.first().json;\nconst raw = ollamaResp?.message?.content || '';\nconst job = $('Code: Build Ollama Payload').first().json;\n\nif (!raw) {\n  console.log('[Evaluate] Empty Ollama response');\n  return [];\n}\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  console.log(`[Evaluate] Parse error: ${raw.substring(0, 200)}`);\n  return [];\n}\n\nif (typeof parsed.match !== 'boolean') {\n  console.log(`[Evaluate] Bad shape: ${JSON.stringify(parsed)}`);\n  return [];\n}\n\nconsole.log(`[Evaluate] ${parsed.match ? '✅ MATCH' : '❌ skip'} — ${parsed.reason}`);\n\nreturn [{\n  json: {\n    id: job.id, title: job.title, company: job.company,\n    url: job.url, source: job.source, location: job.location,\n    salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,\n    match: parsed.match, reason: parsed.reason\n  }\n}];"
       },
       "id": "b2c3d4e5-0002-0002-0002-000000000004",
       "name": "Code: Parse Ollama Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 200]
+      "position": [660, 200]
     },
     {
       "parameters": {
@@ -71,10 +60,7 @@
               "id": "match-true",
               "leftValue": "={{ $json.match }}",
               "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
+              "operator": { "type": "boolean", "operation": "equals" }
             }
           ],
           "combinator": "and"
@@ -85,7 +71,7 @@
       "name": "IF: Match?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1100, 200]
+      "position": [880, 200]
     },
     {
       "parameters": {},
@@ -93,30 +79,19 @@
       "name": "NoOp: → Notion + Telegram",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1320, 80]
+      "position": [1100, 80]
     },
     {
       "parameters": {},
       "id": "b2c3d4e5-0002-0002-0002-000000000007",
-      "name": "NoOp: Discard (no match)",
+      "name": "NoOp: Discard",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1320, 320]
-    },
-    {
-      "parameters": {},
-      "id": "b2c3d4e5-0002-0002-0002-000000000008",
-      "name": "NoOp: Ollama Error",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [880, 400]
+      "position": [1100, 320]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "Split In Batches", "type": "main", "index": 0 }]]
-    },
-    "Split In Batches": {
       "main": [
         [{ "node": "Code: Build Ollama Payload", "type": "main", "index": 0 }]
       ]
@@ -129,8 +104,7 @@
     "HTTP Request: Ask Ollama": {
       "main": [
         [{ "node": "Code: Parse Ollama Response", "type": "main", "index": 0 }]
-      ],
-      "error": [[{ "node": "NoOp: Ollama Error", "type": "main", "index": 0 }]]
+      ]
     },
     "Code: Parse Ollama Response": {
       "main": [[{ "node": "IF: Match?", "type": "main", "index": 0 }]]
@@ -138,12 +112,10 @@
     "IF: Match?": {
       "main": [
         [{ "node": "NoOp: → Notion + Telegram", "type": "main", "index": 0 }],
-        [{ "node": "NoOp: Discard (no match)", "type": "main", "index": 0 }]
+        [{ "node": "NoOp: Discard", "type": "main", "index": 0 }]
       ]
     }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": { "executionOrder": "v1" }
 }

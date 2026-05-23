@@ -7,8 +7,8 @@
 # Status values: done | in_progress | partial | pending | blocked | skipped
 # ============================================================
 
-current_phase: P3
-current_focus: "P3 COMPLETE — Ollama evaluation pipeline working end-to-end. Ready for P4 Notion integration."
+current_phase: P4
+current_focus: "P4 IN PROGRESS — Notion integration. Need: NOTION_TOKEN, NOTION_DB_ID, create database in Notion."
 
 phases:
   P0:

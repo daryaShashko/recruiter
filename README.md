@@ -21,8 +21,8 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 0** — Project bootstrap ✅
 - [x] **PHASE 1** — Scraper (GitHub Actions + Playwright) ✅
 - [x] **PHASE 2** — n8n Webhook pipeline ✅
-- [ ] **PHASE 3** — Ollama evaluation integration
-- [ ] **PHASE 4** — Notion database integration
+- [x] **PHASE 3** — Ollama evaluation integration ✅
+- [ ] **PHASE 4** — Notion database integration 🔄
 - [ ] **PHASE 5** — Telegram bot trigger
 - [ ] **PHASE 6** — E2E hardening & monitoring
 
