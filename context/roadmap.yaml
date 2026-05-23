@@ -353,6 +353,20 @@ post_poc_improvements:
     title: "Company research: scrape сайта компании"
     note: "HTTP GET company-domain/about → текст → Ollama summarize → секция в Telegram-сообщении"
     priority: LOW
+  IMPROVE-5:
+    title: "Universal manual intake via Telegram"
+    note: >
+      Пользователь шлёт боту любой текст или ссылку.
+      IF URL → HTTP GET страница → extract body text.
+      IF текст (LinkedIn сообщение, копипаст) → использовать как есть.
+      Wrap в JobOffer { source: manual } → evaluate → notify.
+      Отдельные источники: Gmail Trigger (n8n), LinkedIn (требует auth — сложно).
+    priority: HIGH
+    sources:
+      - Любой текст / сообщение от рекрутера из LinkedIn
+      - Прямая ссылка на корпоративный карьер-сайт (HTTP GET)
+      - Gmail письмо (отдельный Gmail Trigger воркфлоу)
+      - LinkedIn URL (проблема авторизации — решать отдельно)
 
 known_blockers:
   - "P2-2: GitHub Secret WEBHOOK_URL needs manual update to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
