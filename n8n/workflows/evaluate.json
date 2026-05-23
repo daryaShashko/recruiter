@@ -3,21 +3,21 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "b2c3d4e5-0002-0002-0002-000000000001",
+      "id": "249ba695-a85b-4eec-a507-8e2fda156c26",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [0, 200]
+      "position": [-1680, 944]
     },
     {
       "parameters": {
-        "jsCode": "const job = $input.first().json;\n\nconst systemPrompt = `You are an expert IT recruiter assistant. Evaluate job postings for a Senior Software Engineer.\n\nTarget Profile: Senior/Lead/Architect, JS/TS/Node.js/React/PostgreSQL, Gdańsk OR remote.\n\nMatch if: Senior-level, Node.js/TS primary backend, Gdańsk or remote.\nReject if: Junior/Mid, primary backend Java/C#/.NET/PHP/Ruby/Go, not Gdańsk and not remote.\nIf Node.js + Java legacy both listed: match true ONLY if Node.js is listed first or described as primary.\n\nRespond ONLY with valid JSON, no markdown:\n{\"match\": true or false, \"reason\": \"one sentence\", \"url\": \"job url\"}`;\n\nconst userContent = [\n  `Job Title: ${job.title}`,\n  `Company: ${job.company}`,\n  `Location: ${job.location || 'Not specified'}`,\n  `Salary: ${job.salary || 'Not specified'}`,\n  `URL: ${job.url}`,\n  '',\n  'Job Description:',\n  job.body || 'No description available'\n].join('\\n');\n\nreturn [{\n  json: {\n    ...job,\n    ollamaBody: {\n      model: 'llama3.1:latest',\n      stream: false,\n      keep_alive: 0,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user',   content: userContent }\n      ]\n    }\n  }\n}];"
+        "jsCode": "const job = $input.first().json;\n\nconst systemPrompt = `You are an expert IT recruiter assistant. Evaluate job postings for a Senior Software Engineer.\n\nTarget Profile: Senior/Lead/Architect, JS/TS/Node.js/React/PostgreSQL, Gdańsk OR remote.\n\nMatch if: Senior-level, Node.js/TS primary backend, Gdańsk or remote.\nReject if: Junior/Mid, primary backend Java/C#/.NET/PHP/Ruby/Go, not Gdańsk and not remote.\nIf Node.js + Java legacy both listed: match true ONLY if Node.js is listed first or described as primary.\n\nRespond ONLY with valid JSON, no markdown:\n{\"match\": true or false, \"reason\": \"one sentence\", \"url\": \"job url\"}`;\n\nconst userContent = [\n  `Job Title: ${job.title}`,\n  `Company: ${job.company}`,\n  `Location: ${job.location || 'Not specified'}`,\n  `Salary: ${job.salary || 'Not specified'}`,\n  `URL: ${job.url}`,\n  '',\n  'Job Description:',\n  job.body || 'No description available'\n].join('\\n');\n\nreturn [{\n  json: {\n    ...job,\n    ollamaBody: {\n      model: 'llama3.1:latest',\n      stream: false,\n      keep_alive: 0,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user',   content: userContent }\n      ]\n    }\n  }\n}];\n"
       },
-      "id": "b2c3d4e5-0002-0002-0002-000000000002",
+      "id": "dfc97430-4503-46a7-8ae4-4bec34aab8da",
       "name": "Code: Build Ollama Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 200]
+      "position": [-1456, 944]
     },
     {
       "parameters": {
@@ -30,22 +30,22 @@
           "timeout": 120000
         }
       },
-      "id": "b2c3d4e5-0002-0002-0002-000000000003",
+      "id": "e8985b37-754a-40ec-8fff-4bb704ebbac7",
       "name": "HTTP Request: Ask Ollama",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [440, 200],
+      "position": [-1232, 944],
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "const ollamaResp = $input.first().json;\nconst raw = ollamaResp?.message?.content || '';\nconst job = $('Code: Build Ollama Payload').first().json;\n\nif (!raw) {\n  console.log('[Evaluate] Empty Ollama response');\n  return [];\n}\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  console.log(`[Evaluate] Parse error: ${raw.substring(0, 200)}`);\n  return [];\n}\n\nif (typeof parsed.match !== 'boolean') {\n  console.log(`[Evaluate] Bad shape: ${JSON.stringify(parsed)}`);\n  return [];\n}\n\nconsole.log(`[Evaluate] ${parsed.match ? '✅ MATCH' : '❌ skip'} — ${parsed.reason}`);\n\nreturn [{\n  json: {\n    id: job.id, title: job.title, company: job.company,\n    url: job.url, source: job.source, location: job.location,\n    salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,\n    match: parsed.match, reason: parsed.reason\n  }\n}];"
+        "jsCode": "const ollamaResp = $input.first().json;\nconst raw = ollamaResp?.message?.content || '';\nconst job = $('Code: Build Ollama Payload').first().json;\n\nif (!raw) {\n  console.log('[Evaluate] Empty Ollama response');\n  return [];\n}\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  console.log(`[Evaluate] Parse error: ${raw.substring(0, 200)}`);\n  return [];\n}\n\nif (typeof parsed.match !== 'boolean') {\n  console.log(`[Evaluate] Bad shape: ${JSON.stringify(parsed)}`);\n  return [];\n}\n\nconsole.log(`[Evaluate] ${parsed.match ? '✅ MATCH' : '❌ skip'} — ${parsed.reason}`);\n\nreturn [{\n  json: {\n    id: job.id, title: job.title, company: job.company,\n    url: job.url, source: job.source, location: job.location,\n    salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,\n    match: parsed.match, reason: parsed.reason\n  }\n}];\n"
       },
-      "id": "b2c3d4e5-0002-0002-0002-000000000004",
+      "id": "788e8037-a845-4a1f-b513-03fa217e7640",
       "name": "Code: Parse Ollama Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 200]
+      "position": [-1024, 944]
     },
     {
       "parameters": {
@@ -53,69 +53,145 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
               "id": "match-true",
               "leftValue": "={{ $json.match }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
         },
         "options": {}
       },
-      "id": "b2c3d4e5-0002-0002-0002-000000000005",
+      "id": "d36160ca-a224-46a1-8f65-4d34763eaef1",
       "name": "IF: Match?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [880, 200]
+      "position": [-800, 944]
     },
     {
       "parameters": {},
-      "id": "b2c3d4e5-0002-0002-0002-000000000006",
-      "name": "NoOp: → Notion + Telegram",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [1100, 80]
-    },
-    {
-      "parameters": {},
-      "id": "b2c3d4e5-0002-0002-0002-000000000007",
+      "id": "afac79a4-5e19-480c-bfd7-75fd4206d5f3",
       "name": "NoOp: Discard",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1100, 320]
+      "position": [-576, 1056]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "p34AeKxkJtwaZfH7",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/p34AeKxkJtwaZfH7",
+          "cachedResultName": "Notify"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [""],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [-592, 848],
+      "id": "fdffce35-c6c7-436b-b295-dbb4198b3049",
+      "name": "Call 'Notify'"
     }
   ],
+  "pinData": {},
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Code: Build Ollama Payload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Code: Build Ollama Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Code: Build Ollama Payload": {
       "main": [
-        [{ "node": "HTTP Request: Ask Ollama", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "HTTP Request: Ask Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "HTTP Request: Ask Ollama": {
       "main": [
-        [{ "node": "Code: Parse Ollama Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Code: Parse Ollama Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Code: Parse Ollama Response": {
-      "main": [[{ "node": "IF: Match?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "IF: Match?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF: Match?": {
       "main": [
-        [{ "node": "NoOp: → Notion + Telegram", "type": "main", "index": 0 }],
-        [{ "node": "NoOp: Discard", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Call 'Notify'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Discard",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "active": false,
-  "settings": { "executionOrder": "v1" }
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "6e33873b-1ed4-4233-bcdb-1021539df21a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2d52eb4e1d8f10688843293ed40eb83b197e5be24f9908ddbc177b2265ad30ce"
+  },
+  "id": "KmuD32xms1YHxDNQ",
+  "tags": []
 }

@@ -8,11 +8,12 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "id": "328b7d51-1f89-4de6-9d7f-1de6248a451d",
       "name": "Webhook: POST /jobs/ingest",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 200]
+      "position": [320, 896],
+      "webhookId": "0b77b897-54ea-4f81-8c75-a4d0cc4da3bb"
     },
     {
       "parameters": {
@@ -22,21 +23,21 @@
           "responseCode": 200
         }
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000009",
+      "id": "5a8a767c-6447-4140-a424-9036fed23c2b",
       "name": "Respond to Webhook: 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [220, 200]
+      "position": [544, 896]
     },
     {
       "parameters": {
         "jsCode": "const body = $input.first().json.body;\n\n// Accept: { jobs: [...] } or bare array\nconst raw = Array.isArray(body?.jobs) ? body.jobs\n          : Array.isArray(body)       ? body\n          : [];\n\nif (raw.length === 0) {\n  console.log('[Ingest] Empty jobs array — nothing to process');\n  return [];\n}\n\nconsole.log(`[Ingest] Normalizing ${raw.length} jobs`);\n\nreturn raw.map(job => ({\n  json: {\n    id:        job.id        || '',\n    title:     job.title     || '',\n    company:   job.company   || '',\n    url:       job.url       || '',\n    body:      job.body      || job.jobText || job.description || '',\n    source:    job.source    || 'unknown',\n    location:  job.location  || '',\n    salary:    job.salary    || '',\n    tags:      Array.isArray(job.tags) ? job.tags : [],\n    scrapedAt: job.scrapedAt || new Date().toISOString(),\n  }\n}));"
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "id": "57c3b74e-9be3-4085-9613-e967c7be9842",
       "name": "Code: Normalize Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 200]
+      "position": [768, 896]
     },
     {
       "parameters": {
@@ -44,70 +45,144 @@
         "value1": "={{ $json.source }}",
         "rules": {
           "rules": [
-            { "value2": "justjoin", "output": 0 },
-            { "value2": "nofluffjobs", "output": 1 },
-            { "value2": "manual", "output": 2 }
+            {
+              "value2": "justjoin"
+            },
+            {
+              "value2": "nofluffjobs",
+              "output": 1
+            },
+            {
+              "value2": "manual",
+              "output": 2
+            }
           ]
         },
         "fallbackOutput": 3
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "id": "a84d0ead-389f-4042-962b-b4397aa5ff27",
       "name": "Switch: Route by Source",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [660, 200]
+      "position": [992, 896]
+    },
+    {
+      "parameters": {
+        "jsCode": "const job = $input.first().json;\nconsole.log(`[Ingest] Unknown source: \"${job.source}\" — url: ${job.url}`);\nreturn [{ json: job }];"
+      },
+      "id": "6df8cc8d-4fd9-421f-8b87-b36a4fa79919",
+      "name": "Code: Unknown Source",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 1104]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "KmuD32xms1YHxDNQ",
-          "mode": "id"
+          "mode": "list",
+          "cachedResultUrl": "/workflow/KmuD32xms1YHxDNQ",
+          "cachedResultName": "Evaluate Jobs (Ollama)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000004",
-      "name": "Execute Workflow: Evaluate",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
-      "position": [880, 100]
-    },
-    {
-      "parameters": {
-        "jsCode": "const job = $input.first().json;\nconsole.log(`[Ingest] Unknown source: \"${job.source}\" — url: ${job.url}`);\nreturn [{ json: job }];"
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000007",
-      "name": "Code: Unknown Source",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [880, 420]
+      "typeVersion": 1.3,
+      "position": [1248, 784],
+      "id": "afa2ced7-d4a4-464b-87f5-0562e1470f6a",
+      "name": "Call 'Evaluate Jobs (Ollama)'"
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook: POST /jobs/ingest": {
       "main": [
-        [{ "node": "Respond to Webhook: 200", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Respond to Webhook: 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Respond to Webhook: 200": {
-      "main": [[{ "node": "Code: Normalize Jobs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Normalize Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Normalize Jobs": {
       "main": [
-        [{ "node": "Switch: Route by Source", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Switch: Route by Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Switch: Route by Source": {
       "main": [
-        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
-        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
-        [{ "node": "Execute Workflow: Evaluate", "type": "main", "index": 0 }],
-        [{ "node": "Code: Unknown Source", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Call 'Evaluate Jobs (Ollama)'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Evaluate Jobs (Ollama)'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Evaluate Jobs (Ollama)'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Unknown Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "d15ef93d-ca1c-442c-99d0-279c8963127d",
+  "meta": {
+    "instanceId": "2d52eb4e1d8f10688843293ed40eb83b197e5be24f9908ddbc177b2265ad30ce"
+  },
+  "id": "IkYMp9SlgFnWqU7I",
+  "tags": []
 }
