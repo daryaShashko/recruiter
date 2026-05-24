@@ -205,6 +205,45 @@ decisions:
         - "Notify still keeps dedup guard, resulting in duplicate protection at two layers"
     implementation: "n8n/workflows/evaluate.json, scraper/src/config.ts, context/modules/n8n.yaml"
 
+  ADR-009:
+    title: "Split In Batches relocated from evaluate to ingest; evaluate = pure single-item sub-workflow"
+    status: accepted
+    date: "2026-05"
+    context: >
+      evaluate.json contained Split In Batches (size 1) with a loopback architecture.
+      ingest.json called evaluate via three parallel Switch outputs (justjoin/nofluffjobs/unknown),
+      each creating a separate executeWorkflow execution with its own Split context.
+      With one item per execution, Split's output[1] (Done) fired immediately after the first item,
+      sending that item to NOOP:Done instead of the evaluation chain. Result: only 1 in N items
+      was evaluated, the rest were silently dropped.
+    decision: >
+      Move Split In Batches (size 1) into ingest.json, placed after Code: Normalize Jobs and
+      before Switch: Route by Source. evaluate.json becomes a pure single-item sub-workflow
+      with no Split and no loopbacks. Switch is kept in ingest (after Split) for future
+      per-source evaluate routing extensibility. waitForSubWorkflow: true on Call 'Evaluate'
+      ensures ingest waits for each item before advancing the loop.
+    rationale:
+      - "Loopback Split pattern only works within a single execution — not across executeWorkflow calls"
+      - "Placing Split in the caller (ingest) keeps the loop context stable across all items"
+      - "evaluate as single-item sub-workflow is simpler, testable, and has no hidden state"
+      - "Switch after Split preserves routing capability without creating parallel fan-out"
+      - "waitForSubWorkflow: true prevents concurrent Ollama calls (VRAM pressure)"
+    consequences:
+      positive:
+        - "All items reliably processed — NOOP:Done bug eliminated"
+        - "evaluate is stateless and easy to test in isolation"
+        - "Switch extensible: add LinkedIn → new output → new evaluate sub-workflow"
+        - "Single dedup location (evaluate, pre-LLM) — no duplicate Notion API calls"
+      negative:
+        - "evaluate can no longer be called with a batch — must always receive 1 item"
+        - "Loop management responsibility shifts to ingest (slightly more complex ingest)"
+    implementation: >
+      n8n/workflows/ingest.json (Split + Switch + loopback),
+      n8n/workflows/evaluate.json (pure single-item, no Split),
+      n8n/workflows/notify.json (simplified, dedup removed),
+      context/modules/n8n.yaml (updated workflow descriptions)
+    supersedes: "Part of ADR-008 (Split In Batches placement)"
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

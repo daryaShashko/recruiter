@@ -9,24 +9,7 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [
-        -1744,
-        944
-      ]
-    },
-    {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "f4d4abf4-72c1-4d6c-b4e4-5b6f6332aa11",
-      "name": "Split In Batches: 1",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        -1520,
-        944
-      ]
+      "position": [-1300, 500]
     },
     {
       "parameters": {
@@ -56,10 +39,7 @@
       "name": "Notion: Find Existing URL",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
-      "position": [
-        -1296,
-        944
-      ],
+      "position": [-1080, 500],
       "alwaysOutputData": true,
       "credentials": {
         "notionApi": {
@@ -96,10 +76,15 @@
       "name": "IF: Already in Notion?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [
-        -1072,
-        944
-      ]
+      "position": [-860, 500]
+    },
+    {
+      "parameters": {},
+      "id": "6a3eb193-4f31-4d04-b64b-fb0d58d0a9f8",
+      "name": "NoOp: Skip Duplicate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-640, 700]
     },
     {
       "parameters": {
@@ -109,10 +94,7 @@
       "name": "Code: Build Ollama Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -848,
-        944
-      ]
+      "position": [-640, 500]
     },
     {
       "parameters": {
@@ -129,10 +111,7 @@
       "name": "HTTP Request: Ask Ollama",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        -624,
-        944
-      ],
+      "position": [-400, 500],
       "onError": "continueErrorOutput"
     },
     {
@@ -143,10 +122,7 @@
       "name": "Code: Parse Ollama Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -416,
-        944
-      ]
+      "position": [-180, 500]
     },
     {
       "parameters": {
@@ -176,10 +152,7 @@
       "name": "IF: Match?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        -192,
-        944
-      ]
+      "position": [40, 500]
     },
     {
       "parameters": {
@@ -204,23 +177,9 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [
-        16,
-        848
-      ],
+      "position": [260, 380],
       "id": "fdffce35-c6c7-436b-b295-dbb4198b3049",
       "name": "Call 'Notify'"
-    },
-    {
-      "parameters": {},
-      "id": "6a3eb193-4f31-4d04-b64b-fb0d58d0a9f8",
-      "name": "NoOp: Skip Duplicate",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -848,
-        1072
-      ]
     },
     {
       "parameters": {},
@@ -228,21 +187,7 @@
       "name": "NoOp: Discard Non-Match",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        16,
-        1040
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "0c38c8f5-f9d2-4251-a2a3-d267e2f89314",
-      "name": "NoOp: Done",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -1296,
-        1136
-      ]
+      "position": [260, 620]
     }
   ],
   "pinData": {},
@@ -251,25 +196,7 @@
       "main": [
         [
           {
-            "node": "Split In Batches: 1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split In Batches: 1": {
-      "main": [
-        [
-          {
             "node": "Notion: Find Existing URL",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "NoOp: Done",
             "type": "main",
             "index": 0
           }
@@ -350,39 +277,6 @@
         [
           {
             "node": "NoOp: Discard Non-Match",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call 'Notify'": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches: 1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "NoOp: Skip Duplicate": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches: 1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "NoOp: Discard Non-Match": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches: 1",
             "type": "main",
             "index": 0
           }

@@ -15,67 +15,116 @@ webhook_base: "https://{hash}.hooks.n8n.cloud"
 workflows:
   ingest:
     file: n8n/workflows/ingest.json
-    status: not_created  # Phase P2
+    status: created
     phase: P2
     webhook_path: "/webhook/jobs/ingest"
     method: POST
     trigger: "scraper/src/sender.ts POST request"
+    last_updated: "2026-05-24"
+    architecture_note: >
+      Split In Batches (size 1) lives here — after Normalize, before Switch.
+      This ensures single-item processing before routing.
+      Switch output[0..2] → Call 'Evaluate Jobs (Ollama)'.
+      Switch fallback → Code: Unknown Source → Call 'Evaluate'.
+      Call 'Evaluate' loopback → Split In Batches (loop until all items done).
+      waitForSubWorkflow: true on Call 'Evaluate' — ingest waits per item.
     nodes_sequence:
       - name: Webhook
         type: n8n-nodes-base.webhook
         config: "method: POST, path: jobs/ingest"
       - name: Respond to Webhook
         type: n8n-nodes-base.respondToWebhook
-        config: "responseCode: 200, responseBody: {status: 'received'}"
+        config: "responseCode: 200, responseBody: {ok: true}"
         note: "MUST come BEFORE processing chain — avoids scraper timeout"
+      - name: IF Zero jobs check
+        type: n8n-nodes-base.if
+        condition: "meta.count == 0 OR jobs.length == 0"
+        on_true: "Telegram: Zero Jobs Alert (end)"
       - name: Normalize Jobs
         type: n8n-nodes-base.code
         language: JavaScript
         logic: "map $json.body.jobs → ensure all JobOffer fields present"
-      - name: Route by Source
+      - name: Split In Batches
+        type: n8n-nodes-base.splitInBatches
+        config: "batchSize: 1"
+        note: "KEY: splitting happens HERE in ingest, NOT inside evaluate"
+      - name: Switch Route by Source
         type: n8n-nodes-base.switch
-        routes: [justjoin, nofluffjobs, linkedin, manual]
-        fallback: "log and discard unknown source"
+        routes:
+          0: justjoin → Call 'Evaluate Jobs (Ollama)'
+          1: nofluffjobs → Call 'Evaluate Jobs (Ollama)'
+          2: manual → Call 'Evaluate Jobs (Ollama)'
+          3: fallback → Code Unknown Source → Call 'Evaluate Jobs (Ollama)'
+        note: "Extensible: add new source → new output → new evaluate sub-workflow"
+      - name: Call Evaluate Jobs Ollama
+        type: n8n-nodes-base.executeWorkflow
+        target_workflow: evaluate.json
+        config: "waitForSubWorkflow: true"
+        loopback: "output → Split In Batches (continues loop)"
 
   evaluate:
     file: n8n/workflows/evaluate.json
     status: created
     phase: P3
+    last_updated: "2026-05-24"
+    architecture_note: >
+      Pure single-item sub-workflow. Receives exactly 1 JobOffer item from ingest.
+      No Split In Batches inside (was removed — caused NOOP:DONE bug).
+      No loopbacks. Linear flow with two exit branches.
+      Dedup happens HERE (pre-LLM) — single source of truth for deduplication.
     nodes_sequence:
+      - name: Execute Workflow Trigger
+        type: n8n-nodes-base.executeWorkflowTrigger
+        note: "Receives 1 item from ingest via Call 'Evaluate Jobs (Ollama)'"
+      - name: Notion Find Existing URL
+        type: n8n-nodes-base.notion
+        operation: "getAll (filter: URL equals $json.url, limit: 1)"
+        note: "Pre-LLM dedup — avoids wasting Ollama compute on known URLs"
+      - name: IF Already in Notion
+        type: n8n-nodes-base.if
+        condition: "!!$json.id === true  (Notion returned a record)"
+        on_true: "NoOp: Skip Duplicate (end)"
+        on_false: "Code: Build Ollama Payload"
       - name: Build Ollama Payload
         type: n8n-nodes-base.code
-        config: "process all input items via $input.all() (no $input.first() fan-in)"
+        config: "builds ollamaBody with system prompt inline + job fields"
       - name: Ask Ollama
         type: n8n-nodes-base.httpRequest
         config:
           method: POST
-          url: "http://localhost:11434/api/chat"
+          url: "http://127.0.0.1:11434/api/chat"
+          timeout: 300000
           on_error: "Continue (using error output)"
       - name: Parse Ollama Response
         type: n8n-nodes-base.code
-        logic: "parse linked current item via $('Code: Build Ollama Payload').item; fallback to match=false on empty/invalid response"
-      - name: Filter Matches
+        logic: "strip markdown fences, JSON.parse, validate match:boolean, fallback to match=false"
+      - name: IF Match
         type: n8n-nodes-base.if
-        condition: "{{ $json.match }} === true"
+        condition: "$json.match === true"
+        on_true: "Call 'Notify'"
+        on_false: "NoOp: Discard Non-Match (end)"
 
-  notion:
-    file: n8n/workflows/notion.json
-    status: not_created  # Phase P4
+  notify:
+    file: n8n/workflows/notify.json
+    status: created
     phase: P4
+    last_updated: "2026-05-24"
+    architecture_note: >
+      Pure notification sub-workflow. Called only for match=true items.
+      No dedup here — dedup is exclusively in evaluate (pre-LLM).
+      Sequential: Notion Create → Telegram (ensures page exists before alert).
     nodes_sequence:
-      - name: Check Duplicate
+      - name: When Executed by Another Workflow
+        type: n8n-nodes-base.executeWorkflowTrigger
+        note: "Receives 1 matched JobOffer item from evaluate"
+      - name: Notion Create Page
         type: n8n-nodes-base.notion
-        operation: "getAll (filter: URL equals $json.url)"
-      - name: Skip If Exists
-        type: n8n-nodes-base.if
-        condition: "{{ $json.results.length }} === 0"
-      - name: Create Job Page
-        type: n8n-nodes-base.notion
-        operation: "create"
-        database: "{{ $env.NOTION_DB_ID }}"
-      - name: Send Alert
+        operation: create
+        database: AI Recruiter Board
+        fields: [Name, Company, URL, Source, Match Reason, Salary, Status=New, Location, Tags, Scraped At]
+      - name: Telegram Send Alert
         type: n8n-nodes-base.telegram
-        operation: sendMessage
+        note: "Fires after Notion create (sequential, not parallel)"
 
   telegram_trigger:
     file: n8n/workflows/telegram-trigger.json

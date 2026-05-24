@@ -12,7 +12,7 @@
       "name": "Webhook: POST /jobs/ingest",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [320, 896],
+      "position": [320, 500],
       "webhookId": "0b77b897-54ea-4f81-8c75-a4d0cc4da3bb"
     },
     {
@@ -27,7 +27,7 @@
       "name": "Respond to Webhook: 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [544, 896]
+      "position": [544, 500]
     },
     {
       "parameters": {
@@ -66,7 +66,7 @@
       "name": "IF: Zero jobs check",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [768, 896]
+      "position": [768, 500]
     },
     {
       "parameters": {
@@ -80,7 +80,7 @@
       "name": "Telegram: Zero Jobs Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [992, 1120],
+      "position": [992, 720],
       "credentials": {
         "telegramApi": {
           "id": "AELRiJlX0Uggd98o",
@@ -96,7 +96,18 @@
       "name": "Code: Normalize Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [992, 896]
+      "position": [992, 500]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "cc11dd22-ee33-4444-5555-666677778888",
+      "name": "Split In Batches: 1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1216, 500]
     },
     {
       "parameters": {
@@ -105,7 +116,8 @@
         "rules": {
           "rules": [
             {
-              "value2": "justjoin"
+              "value2": "justjoin",
+              "output": 0
             },
             {
               "value2": "nofluffjobs",
@@ -123,7 +135,7 @@
       "name": "Switch: Route by Source",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [1216, 896]
+      "position": [1440, 500]
     },
     {
       "parameters": {
@@ -133,7 +145,7 @@
       "name": "Code: Unknown Source",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1440, 1104]
+      "position": [1660, 700]
     },
     {
       "parameters": {
@@ -152,13 +164,23 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": true
         },
-        "options": {}
+        "options": {
+          "waitForSubWorkflow": true
+        }
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [1472, 784],
+      "position": [1880, 500],
       "id": "afa2ced7-d4a4-464b-87f5-0562e1470f6a",
       "name": "Call 'Evaluate Jobs (Ollama)'"
+    },
+    {
+      "parameters": {},
+      "id": "ff99ee88-dd77-4444-3333-222211110000",
+      "name": "NoOp: All Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 720]
     }
   ],
   "pinData": {},
@@ -207,7 +229,25 @@
       "main": [
         [
           {
+            "node": "Split In Batches: 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches: 1": {
+      "main": [
+        [
+          {
             "node": "Switch: Route by Source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: All Done",
             "type": "main",
             "index": 0
           }
@@ -240,6 +280,28 @@
         [
           {
             "node": "Code: Unknown Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Unknown Source": {
+      "main": [
+        [
+          {
+            "node": "Call 'Evaluate Jobs (Ollama)'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Evaluate Jobs (Ollama)'": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches: 1",
             "type": "main",
             "index": 0
           }
