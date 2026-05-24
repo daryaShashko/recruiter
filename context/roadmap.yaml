@@ -10,6 +10,52 @@
 current_phase: P6
 current_focus: "P6 IN PROGRESS — 6/7 done. P6-7 ждёт 7 дней production-мониторинга."
 
+poc_backlog:
+  POC-1:
+    status: pending
+    title: "Incremental ingestion by cursor date"
+    goal: "Не обрабатывать повторно старые вакансии и снижать нагрузку на Ollama/API"
+    place_in_data_flow: "scraper -> webhook ingress filter -> evaluate"
+    summary: >
+      Ввести cursor-based фильтрацию: хранить last_successful_run_at
+      (или first_seen_at/high-watermark) и передавать дальше только новые/обновлённые вакансии
+      с момента последнего успешного цикла.
+    assumptions:
+      - "Запуск webhook примерно 1 раз в день"
+      - "Точное время запуска не гарантируется"
+      - "Notion остается единственной БД"
+    simple_mvp:
+      - "State store: отдельная запись cursor в Notion (key: scraper_cursor)"
+      - "Scraper/N8N сохраняет run_started_at и run_finished_at"
+      - "Фильтр пропускает вакансии с publishedAt/firstSeenAt > cursor"
+      - "На успехе: cursor = max(processed_item_time)"
+      - "На ошибке: cursor не обновляется"
+    failure_modes:
+      - "Timezone drift -> пропуск вакансий"
+      - "Отсутствует publishedAt у части источников"
+      - "Дубликаты из-за одинакового времени публикации"
+      - "Race condition при параллельных run-now"
+    risk_controls:
+      - "Хранить все даты в UTC ISO"
+      - "Fallback-логика: publishedAt missing -> first_seen_at"
+      - "Overlap window (например -2h) + дедуп по source:id/url"
+      - "Single-flight lock для run-now"
+    constraints_check:
+      - "No paid services: OK"
+      - "Ollama local only: OK"
+      - "Notion only DB: OK"
+      - "GitHub runner 15 min: улучшает шанс уложиться за счёт меньшего объёма"
+    interfaces_impact:
+      JobOffer: "likely add optional publishedAt?: string and firstSeenAt?: string"
+      WebhookPayload: "optional meta.cursorFrom/cursorTo for traceability"
+      EvaluationResult: "no changes expected"
+    tasks:
+      POC-1-1: "ADR for cursor strategy and conflict policy"
+      POC-1-2: "Notion schema extension for pipeline state/cursor"
+      POC-1-3: "Implement incremental filter and overlap window"
+      POC-1-4: "Add tests: empty cursor, stale cursor, timezone edge, duplicates"
+      POC-1-5: "Add observability: skipped_count, processed_count, cursor_before/after"
+
 phases:
   P0:
     name: Project Bootstrap
@@ -407,7 +453,7 @@ next_execution_plan:
       skill: "/run-local"
       inputs: ["scripts/run-local.sh", ".env", "README.md"]
       output: "Stable local launcher with clear exit codes"
-      acceptance: "dry/full mode documented, preflight checks visible, health summary printed"
+      acceptance: "dry/full mode documented, preflight checks visible, health summary printed on success and failure"
       estimate: "0.5d"
     L2:
       status: pending

@@ -26,7 +26,7 @@ Build a fully local operational mode with:
 
 | ID | Task | Agent | Skill / Command | Estimate | Depends on | Acceptance Criteria |
 |---|---|---|---|---|---|---|
-| L1 | Formalize local run entrypoint | developer | /run-local | 0.5d | - | dry/full mode executable, preflight checks visible, health summary printed |
+| L1 | Formalize local run entrypoint | developer | /run-local | 0.5d | - | dry/full mode executable, preflight checks visible, health summary printed on success and failure |
 | L2 | Lock local env profile and CI override | devops | /release-readiness | 0.5d | L1 | Local runs require no tunnel |
 | L3 | Add regression test for local webhook path | qa | /weekly-health-check | 0.5d | L2 | Test fails on wrong localhost webhook |
 | L4 | Define /run-now contract and failure modes | architect | /adr-check | 0.5d | L3 | ADR accepted, command contract frozen |

@@ -179,6 +179,18 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
+### POC Backlog (следующие улучшения)
+
+- [ ] `POC-1` Incremental ingestion by date cursor
+    - Идея: хранить дату последней успешной обработки (cursor) и забирать только новые вакансии после этой даты.
+    - Зачем: не гонять одни и те же вакансии повторно через webhook/Ollama.
+    - Ограничения: только локальная Ollama, Notion как единственная БД.
+    - Хранилище cursor: отдельная state-запись в Notion.
+    - Защита от пропусков: overlap window + дедуп по `source:id/url`.
+    - Детали POC и шаги реализации: `context/roadmap.yaml` (`poc_backlog.POC-1`).
+
+---
+
 ## Структура репозитория
 
 ```
@@ -270,7 +282,7 @@ recruiter/
 ./scripts/run-local.sh
 ```
 
-Скрипт перед запуском скрапера делает preflight (`webhook`, `n8n`, `ollama`) и в конце печатает health summary с длительностью preflight и общим временем выполнения.
+Скрипт перед запуском скрапера делает preflight (`webhook`, `n8n`, `ollama`) и печатает health summary в конце запуска даже при ошибке (через `EXIT trap`): статус проверок, длительность preflight и общее время выполнения.
 
 Dry-run без отправки в webhook:
 

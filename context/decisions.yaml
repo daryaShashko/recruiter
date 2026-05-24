@@ -149,6 +149,33 @@ decisions:
         - "Two operation modes must be documented and kept in sync"
     implementation: ".env, .env.example, scraper/src/config.ts, README.md"
 
+  ADR-007:
+    title: "Cursor-based incremental vacancy processing (POC)"
+    status: proposed
+    date: "2026-05"
+    context: >
+      Daily webhook runs currently can reprocess the same vacancies many times,
+      causing unnecessary Ollama calls and slower pipelines.
+      Precise schedule timing is not guaranteed, so fixed-window filtering is fragile.
+    decision: >
+      Introduce a persistent cursor (last_successful_run_at / high-watermark datetime)
+      stored in Notion and process only vacancies newer than the cursor,
+      with a small overlap window and deterministic deduplication.
+    rationale:
+      - "Cuts repeated LLM evaluations and reduces local compute load"
+      - "Works with irregular run times (manual + daily)"
+      - "Fits project constraints: Notion as the only persistent store"
+    consequences:
+      positive:
+        - "Lower Ollama/API load"
+        - "Faster daily runs"
+        - "Clear audit trail of processed windows"
+      negative:
+        - "Need robust time normalization (UTC only)"
+        - "Missing publishedAt in some sources needs fallback strategy"
+        - "Concurrent runs require lock/idempotency guard"
+    implementation: "POC backlog: context/roadmap.yaml -> POC-1"
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.
