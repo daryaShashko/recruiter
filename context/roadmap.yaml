@@ -374,6 +374,218 @@ phases:
           note: "docs/post-mortem.md создан как шаблон с dry-run данными (2026-05-22). Финальные данные заполнить после 7 дней production.",
         }
 
+next_execution_plan:
+  plan_id: "LOCAL-OPS-01"
+  objective: "Полностью локальный, бесплатный и управляемый запуск: schedule + manual Run Now через Telegram + catch-up после офлайна"
+  status: in_planning
+  constraints:
+    - "No paid services"
+    - "Ollama local only"
+    - "Notion is the only DB"
+  milestones:
+    M1:
+      name: "Stable local runtime baseline"
+      target: "Single-command local run with preflight checks"
+      tasks: ["L1", "L2", "L3"]
+    M2:
+      name: "Telegram Run Now"
+      target: "Manual command /run-now triggers pipeline end-to-end"
+      tasks: ["L4", "L5", "L6"]
+    M3:
+      name: "Catch-up after downtime"
+      target: "After offline period, process missed window safely"
+      tasks: ["L7", "L8", "L9"]
+    M4:
+      name: "Operations hardening"
+      target: "Healthchecks, runbook, and fallback modes"
+      tasks: ["L10", "L11", "L12"]
+  tasks:
+    L1:
+      status: pending
+      title: "Formalize local run entrypoint"
+      owner_agent: developer
+      skill: "/run-local"
+      inputs: ["scripts/run-local.sh", ".env", "README.md"]
+      output: "Stable local launcher with clear exit codes"
+      acceptance: "dry/full mode both documented and executable"
+      estimate: "0.5d"
+    L2:
+      status: pending
+      title: "Lock local env profile"
+      owner_agent: devops
+      skill: "/release-readiness"
+      inputs: [".env.example", "README.md"]
+      output: "Local-first env policy + CI override policy"
+      acceptance: "No tunnel required for local runs"
+      estimate: "0.5d"
+    L3:
+      status: pending
+      title: "Regression test for local webhook path"
+      owner_agent: qa
+      skill: "/weekly-health-check"
+      inputs: ["scraper/tests/e2e.test.ts"]
+      output: "Test coverage for localhost webhook delivery"
+      acceptance: "Test fails on wrong local webhook path"
+      estimate: "0.5d"
+    L4:
+      status: pending
+      title: "Design Telegram Run Now command contract"
+      owner_agent: architect
+      skill: "/adr-check"
+      inputs: ["n8n/workflows/telegram-trigger.json", "context/interfaces.yaml"]
+      output: "ADR with command contract and failure modes"
+      acceptance: "Command syntax and response contract frozen"
+      estimate: "0.5d"
+    L5:
+      status: pending
+      title: "Implement /run-now in n8n"
+      owner_agent: n8n-specialist
+      skill: "n8n workflow editing"
+      inputs: ["n8n/workflows/telegram-trigger.json", "n8n/workflows/ingest.json", "n8n/workflows/evaluate.json"]
+      output: "Workflow branch that triggers local run pipeline"
+      acceptance: "Telegram /run-now returns success/failure summary"
+      estimate: "1d"
+    L6:
+      status: pending
+      title: "Secure Run Now idempotency"
+      owner_agent: qa
+      skill: "/scraper-bugfix"
+      inputs: ["n8n/workflows/telegram-trigger.json", "docs/notion-schema.md"]
+      output: "Duplicate-run protection and tests"
+      acceptance: "Second /run-now during active run is rejected gracefully"
+      estimate: "0.5d"
+    L7:
+      status: pending
+      title: "Persist last successful run timestamp"
+      owner_agent: n8n-specialist
+      skill: "Notion state persistence"
+      inputs: ["docs/notion-schema.md", "n8n/workflows/notify.json"]
+      output: "State record in Notion for scheduler cursor"
+      acceptance: "last_successful_run_at saved after successful cycle"
+      estimate: "1d"
+    L8:
+      status: pending
+      title: "Implement catch-up command"
+      owner_agent: developer
+      skill: "TypeScript runtime orchestration"
+      inputs: ["scraper/src/index.ts", "scraper/src/sender.ts"]
+      output: "CLI/env mode to process missed time window"
+      acceptance: "Supports explicit window and auto-window from cursor"
+      estimate: "1d"
+    L9:
+      status: pending
+      title: "Integrate /run-now with catch-up options"
+      owner_agent: n8n-specialist
+      skill: "n8n command routing"
+      inputs: ["n8n/workflows/telegram-trigger.json"]
+      output: "Commands: /run-now, /run-catchup 24h"
+      acceptance: "User receives processed count and time window"
+      estimate: "0.5d"
+    L10:
+      status: pending
+      title: "Healthcheck workflow for local services"
+      owner_agent: devops
+      skill: "/weekly-health-check"
+      inputs: ["n8n", "ollama", "scraper"]
+      output: "Periodic service checks with Telegram alert"
+      acceptance: "Alert on any service down state"
+      estimate: "0.5d"
+    L11:
+      status: pending
+      title: "Runbook for offline recovery"
+      owner_agent: business-analyst
+      skill: "Operational SOP writing"
+      inputs: ["README.md", "docs/post-mortem.md"]
+      output: "Step-by-step recovery instructions"
+      acceptance: "Non-technical user can recover in <10 min"
+      estimate: "0.5d"
+    L12:
+      status: pending
+      title: "Prompt pack for operational commands"
+      owner_agent: prompt-engineer
+      skill: "agent-customization"
+      inputs: [".github/prompts/", ".github/agents/"]
+      output: "Prompts for run-now, catch-up, and incident triage"
+      acceptance: "Slash-commands produce deterministic operator actions"
+      estimate: "0.5d"
+  execution_order:
+    - "L1 -> L2 -> L3"
+    - "L4 -> L5 -> L6"
+    - "L7 -> L8 -> L9"
+    - "L10 + L11 + L12"
+  primary_risks:
+    - "Command loops in n8n causing duplicate processing"
+    - "No durable state for catch-up cursor"
+    - "Operator ambiguity without strict runbook"
+  definition_of_done:
+    - "Local scheduled runs stable for 7 days"
+    - "Telegram /run-now works end-to-end"
+    - "At least one offline recovery drill completed"
+    - "Roadmap tasks L1-L12 moved to done/partial with notes"
+
+github_actions_deactivation_plan:
+  plan_id: "GHA-OFF-01"
+  objective: "Отключить GitHub Actions scheduled execution для перехода в полностью локальный режим"
+  status: pending
+  mode_options:
+    SOFT_OFF:
+      description: "Оставить workflow_dispatch, отключить только schedule"
+      effect: "Нет автозапуска по cron, manual запуск в Actions UI доступен"
+    HARD_OFF:
+      description: "Отключить workflow в GitHub UI (Disable workflow)"
+      effect: "Ни cron, ни manual запуск не выполняются до повторного Enable"
+  tasks:
+    G1:
+      status: pending
+      title: "Architecture decision for off mode"
+      owner_agent: architect
+      skill: "/adr-check"
+      output: "Decision record: SOFT_OFF or HARD_OFF"
+      acceptance: "Chosen mode documented with rollback path"
+    G2:
+      status: pending
+      title: "Apply workflow config changes"
+      owner_agent: devops
+      skill: "/release-readiness"
+      output: "Workflow aligned with chosen off mode"
+      acceptance: "No unintended scheduled runs remain"
+    G3:
+      status: pending
+      title: "Disable workflow in GitHub UI if HARD_OFF"
+      owner_agent: devops
+      skill: "GitHub Actions operations"
+      output: "Workflow state switched to Disabled"
+      acceptance: "Actions page shows workflow disabled"
+    G4:
+      status: pending
+      title: "Post-change validation"
+      owner_agent: qa
+      skill: "/weekly-health-check"
+      output: "Verification report for cron/manual behavior"
+      acceptance: "Expected triggers behave exactly per selected mode"
+    G5:
+      status: pending
+      title: "Operator runbook update"
+      owner_agent: business-analyst
+      skill: "Operational SOP writing"
+      output: "Runbook section for disable/enable Actions"
+      acceptance: "Any operator can execute toggle in <5 minutes"
+    G6:
+      status: pending
+      title: "Prompt updates for ops toggles"
+      owner_agent: prompt-engineer
+      skill: "agent-customization"
+      output: "Prompt commands for disable/enable checks"
+      acceptance: "Deterministic command output for off/on operations"
+  execution_order:
+    - "G1 -> G2 -> G3 -> G4 -> G5 -> G6"
+  rollback:
+    - "If SOFT_OFF: restore schedule block in .github/workflows/scraper.yml"
+    - "If HARD_OFF: GitHub Actions UI -> Enable workflow"
+  documentation:
+    - "docs/github-actions-disable-plan.md"
+    - "docs/local-ops-plan.md"
+
 post_poc_improvements:
   description: "Улучшения после завершения POC (P0-P6). Не блокируют запуск."
   IMPROVE-1:

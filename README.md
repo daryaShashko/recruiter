@@ -281,3 +281,7 @@ Dry-run без отправки в webhook:
 Slash-команда Copilot Chat:
 
 - `/run-local`
+
+План отключения GitHub Actions (для полного local-only режима):
+
+- `docs/github-actions-disable-plan.md`
