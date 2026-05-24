@@ -97,4 +97,15 @@ export function validateConfig(): void {
   if (!config.webhookUrl) {
     throw new Error("WEBHOOK_URL environment variable is required");
   }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(config.webhookUrl);
+  } catch {
+    throw new Error("WEBHOOK_URL must be a valid absolute URL");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("WEBHOOK_URL must use http or https protocol");
+  }
 }

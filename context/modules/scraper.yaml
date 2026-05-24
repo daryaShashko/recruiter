@@ -30,6 +30,7 @@ files:
     exports: [config, validateConfig]
     key_values:
       webhookUrl: "from WEBHOOK_URL env var"
+      webhookUrl_validation: "required, absolute http/https URL"
       scraper.locations: ["gdansk", "gdańsk", "remote", "zdalnie"]
       scraper.targetStack:
         ["javascript", "typescript", "node", "react", "postgresql", "postgres"]
@@ -63,16 +64,16 @@ files:
     exports: [sendToWebhook]
     signature: "(jobs: JobOffer[], source: string) => Promise<void>"
     payload_shape: "WebhookPayload { jobs, meta: { source, count, sentAt } }"
-    retry: "3 attempts, exponential backoff starting at 1000ms"
+    retry: "3 attempts, exponential backoff starting at 1000ms (network/5xx); fail-fast on 4xx config/auth/path errors"
     timeout: "15000ms per request"
-    throws: "Error if all retries exhausted"
+    throws: "Error on non-retriable 4xx or if retriable attempts are exhausted"
 
   src/scrapers/justjoin.ts:
     exports: [scrapeJustJoin]
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://justjoin.it"
     api_endpoint: "https://justjoin.it/api/candidate-api/offers" # verified via DevTools 2025-05
-    method: "GET (intercepted via page.on('response'))"
+    method: "GET via interception, with direct-API fallback if click flow yields 0 offers"
     navigation_url: "https://justjoin.it/job-offers/all-locations/javascript?orderBy=descending&sortBy=publishedAt"
     response_path: "json.data"
     id_format: "justjoin_{raw.slug}"
@@ -81,9 +82,13 @@ files:
     location_logic: "workplaceType=remote → 'Remote'; locations[].city contains Gdańsk → 'Gdańsk'; else primary city"
     body_strategy: "buildBody() — synthetic from title + experienceLevel + requiredSkills + niceToHaveSkills + locations"
     pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
+    pagination:
+      mechanism: "Capture totalItems from first page and fetch from offsets 100, 200, ... via browser-context fetch"
+      page_size: 100
+      safety_cap: 30
     known_gaps:
       - "No body text in list API — Ollama evaluates from structured fields only"
-      - "Pagination not implemented — only first batch (~100 offers) is captured"
+      - "Fallback query params may require refresh if JustJoin API contract changes"
     never_throws: true # catches internally, returns [] on failure
 
   src/scrapers/nofluffjobs.ts:

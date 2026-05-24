@@ -70,4 +70,28 @@ describe('sendToWebhook', () => {
     );
     expect(mockedAxios.post).not.toHaveBeenCalled();
   });
+
+  it('fails fast on 404 webhook error without retries', async () => {
+    mockedAxios.post.mockRejectedValueOnce({
+      message: 'Request failed with status code 404',
+      response: { status: 404 },
+    });
+
+    await expect(sendToWebhook([], 'test-source')).rejects.toThrow(
+      /Webhook returned 404/,
+    );
+    expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails fast when webhook URL is invalid', async () => {
+    mockedAxios.post.mockRejectedValueOnce({
+      code: 'ERR_INVALID_URL',
+      message: 'Invalid URL',
+    });
+
+    await expect(sendToWebhook([], 'test-source')).rejects.toThrow(
+      /WEBHOOK_URL is invalid/,
+    );
+    expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+  });
 });

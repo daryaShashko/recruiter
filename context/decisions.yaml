@@ -124,6 +124,31 @@ decisions:
         - "No direct access to Ollama from runner (Ollama runs locally)"
     implementation: ".github/workflows/scraper.yml"
 
+  ADR-006:
+    title: "Local-first webhook delivery with optional public endpoint for CI"
+    status: accepted
+    date: "2026-05"
+    context: >
+      Public free tunnels (localtunnel/ngrok free) are unstable and can return
+      503 Tunnel Unavailable. This breaks scraper delivery despite healthy local n8n.
+      The project must stay максимально бесплатным and operational in local mode.
+    decision: >
+      Default WEBHOOK_URL to local n8n endpoint (http://localhost:5678/webhook/jobs/ingest).
+      Use public tunnel/hosted endpoint only when GitHub Actions runner must reach n8n.
+    rationale:
+      - "Local mode is stable and free; no dependency on tunnel uptime"
+      - "CI mode still possible with public endpoint when needed"
+      - "Clear separation of operating modes reduces false incident debugging"
+    consequences:
+      positive:
+        - "Reliable local runs"
+        - "No tunnel costs for day-to-day usage"
+        - "Faster failure triage (local service vs external transport)"
+      negative:
+        - "GitHub Actions mode requires explicit public URL management"
+        - "Two operation modes must be documented and kept in sync"
+    implementation: ".env, .env.example, scraper/src/config.ts, README.md"
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

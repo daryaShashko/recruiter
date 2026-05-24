@@ -232,7 +232,7 @@ recruiter/
 
 | Переменная | Где используется | Описание |
 |---|---|---|
-| `WEBHOOK_URL` | GitHub Actions, scraper | URL n8n Webhook (туннель localtunnel) |
+| `WEBHOOK_URL` | scraper, GitHub Actions | URL n8n Webhook: локально `http://localhost:5678/webhook/jobs/ingest`; для GitHub Actions — публичный tunnel/hosted URL |
 | `NOTION_TOKEN` | n8n | Notion Integration Secret *(P4)* |
 | `NOTION_DB_ID` | n8n | ID базы данных в Notion *(P4)* |
 | `TELEGRAM_BOT_TOKEN` | n8n | Токен Telegram Bot *(P5)* |
@@ -247,6 +247,37 @@ recruiter/
 |---|---|---|
 | Cloudflare WAF | 403 / 0 bytes | Playwright с browser fingerprint, перехват XHR вместо прямых запросов |
 | NoFluffJobs SSR (2026-05) | Нет XHR с данными | SSR-экстрактор из `<script id="serverApp-state">` |
+| Tunnel недоступен | `503 Tunnel Unavailable` / `404` от публичного webhook | Для локального запуска использовать `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`; tunnel нужен только для GitHub Actions режима |
 | localtunnel subdomain занят | `--subdomain ai-recruiter` недоступен | Запустить без `--subdomain`, обновить `WEBHOOK_URL` в GitHub Secrets |
 | Cloud LLM rate limits | 429 Too Many Requests | Локальная Ollama без лимитов + `keep_alive: 0` |
 | VRAM утечка в Ollama | Память не освобождается | `"keep_alive": 0` в каждом запросе к `/api/chat` |
+
+---
+
+## Полностью локальный запуск
+
+Базовый режим без GitHub Actions и без туннеля:
+
+1. Убедиться, что запущены `n8n` (`http://localhost:5678`) и `ollama` (`http://localhost:11434`).
+2. В `.env` указать:
+    `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`
+3. Запуск одной командой:
+
+```bash
+./scripts/run-local.sh
+```
+
+Dry-run без отправки в webhook:
+
+```bash
+./scripts/run-local.sh --dry-run
+```
+
+Кнопка запуска в VS Code:
+
+- `Terminal` → `Run Task...` → `AI Recruiter: Run Local`
+- или `AI Recruiter: Run Local (dry)`
+
+Slash-команда Copilot Chat:
+
+- `/run-local`

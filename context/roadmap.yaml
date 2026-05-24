@@ -406,10 +406,16 @@ post_poc_improvements:
       - Прямая ссылка на корпоративный карьер-сайт (HTTP GET)
       - Gmail письмо (отдельный Gmail Trigger воркфлоу)
       - LinkedIn URL (проблема авторизации — решать отдельно)
+  IMPROVE-6:
+    title: "Telegram Run Now + Catch-up after downtime"
+    note: >
+      Добавить команду /run-now в Telegram (manual trigger) и режим догоняющего запуска:
+      хранить last_successful_run_at, после офлайна запускать сбор за пропущенный интервал.
+      Цель: запуск по расписанию + ручная кнопка после простоя.
+    priority: HIGH
 
 known_blockers:
-  - "P2-2: GitHub Secret WEBHOOK_URL needs manual update to https://ai-recruiter.loca.lt/webhook/jobs/ingest"
-  - "localtunnel subdomain may be taken on restart — fallback: npx localtunnel --port 5678 (dynamic URL, update Secret accordingly)"
+  - "For GitHub Actions mode only: public webhook URL must be reachable from runner (tunnel or hosted n8n); local mode has no blocker"
 
 # ============================================================
 # SYNC RULE

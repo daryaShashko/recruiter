@@ -1,6 +1,7 @@
 import { JobOffer } from "../types";
 import { openPage } from "../utils/browser";
 import { config } from "../config";
+import type { Page } from "playwright";
 
 const JUSTJOIN_BASE_URL = "https://justjoin.it";
 // Verified via DevTools — 2025-05
@@ -172,6 +173,66 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
 const JUSTJOIN_MAX_PAGES = 30;
 const JUSTJOIN_PAGE_SIZE = 100;
 
+interface FallbackFetchResult {
+  offers: RawJustJoinOffer[];
+  totalItems: number;
+  requestUrl: string;
+}
+
+async function fetchOffersViaDirectApiFallback(
+  page: Page,
+): Promise<FallbackFetchResult | null> {
+  const candidates = [
+    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript&orderBy=descending&sortBy=publishedAt&from=0&perPage=${JUSTJOIN_PAGE_SIZE}`,
+    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript&from=0&perPage=${JUSTJOIN_PAGE_SIZE}`,
+    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript`,
+  ];
+
+  for (const requestUrl of candidates) {
+    const result = await page.evaluate(async (url) => {
+      try {
+        const res = await fetch(url, {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok) {
+          return { ok: false, offers: [], totalItems: 0 };
+        }
+
+        const json = (await res.json()) as {
+          data?: unknown[];
+          offers?: unknown[];
+          meta?: { totalItems?: number; total?: number };
+        };
+
+        const offers =
+          (Array.isArray(json.data) && json.data) ||
+          (Array.isArray(json.offers) && json.offers) ||
+          [];
+
+        const totalItems =
+          (typeof json.meta?.totalItems === "number" && json.meta.totalItems) ||
+          (typeof json.meta?.total === "number" && json.meta.total) ||
+          0;
+
+        return { ok: true, offers, totalItems };
+      } catch {
+        return { ok: false, offers: [], totalItems: 0 };
+      }
+    }, requestUrl);
+
+    if (result.ok && result.offers.length > 0) {
+      return {
+        offers: result.offers as RawJustJoinOffer[],
+        totalItems: result.totalItems,
+        requestUrl,
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function scrapeJustJoin(): Promise<JobOffer[]> {
   const { page, context } = await openPage();
   const rawOffers: RawJustJoinOffer[] = [];
@@ -294,6 +355,25 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
     }
     await page.waitForTimeout(1_000);
 
+    if (rawOffers.length === 0) {
+      console.warn(
+        "[JustJoin] Intercept flow returned 0 offers — trying direct API fallback...",
+      );
+      const fallback = await fetchOffersViaDirectApiFallback(page);
+      if (fallback) {
+        rawOffers.push(...fallback.offers);
+        if (!capturedRequestUrl) capturedRequestUrl = fallback.requestUrl;
+        if (!capturedTotalItems && fallback.totalItems > 0) {
+          capturedTotalItems = fallback.totalItems;
+        }
+        console.log(
+          `[JustJoin] Fallback page 1: ${fallback.offers.length} offers${fallback.totalItems ? ` (totalItems: ${fallback.totalItems})` : ""}`,
+        );
+      } else {
+        console.warn("[JustJoin] Direct API fallback also returned 0 offers.");
+      }
+    }
+
     // ── Pagination: pages 2..N via browser-context fetch ─────────────────────
     // Response meta: { from: 0, totalItems: N, next: { cursor: 100 } }
     // We fetch subsequent pages by setting from=100, 200, 300... in the URL.
@@ -344,7 +424,7 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
     if (rawOffers.length === 0) {
       console.warn("[JustJoin] WARNING: 0 offers collected.");
       console.warn(
-        "[JustJoin] The offers API was not triggered by clicking the JavaScript category.",
+        "[JustJoin] The offers API was not captured via click flow and fallback did not return data.",
       );
       console.warn(
         "[JustJoin] Re-verify the navigation flow via DevTools if this persists.",

@@ -6,6 +6,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isNonRetriableStatus(status: number | undefined): boolean {
+  return status === 400 || status === 401 || status === 403 || status === 404;
+}
+
+function buildWebhook404Hint(url: string): string {
+  return (
+    `[Sender] Webhook returned 404 for URL: ${url}. ` +
+    "Check that the n8n workflow is active and WEBHOOK_URL path is correct " +
+    "(usually /webhook/jobs/ingest for active workflow or /webhook-test/jobs/ingest for test mode)."
+  );
+}
+
+function isInvalidUrlError(err: AxiosError): boolean {
+  return err.code === "ERR_INVALID_URL" || err.message === "Invalid URL";
+}
+
 /**
  * Send job offers to the n8n Webhook with exponential backoff retry.
  */
@@ -54,6 +70,22 @@ export async function sendToWebhook(
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
+
+      if (isInvalidUrlError(axiosError)) {
+        throw new Error(
+          `[Sender] WEBHOOK_URL is invalid: ${config.webhookUrl}`,
+        );
+      }
+
+      if (status === 404) {
+        throw new Error(buildWebhook404Hint(config.webhookUrl));
+      }
+
+      if (isNonRetriableStatus(status)) {
+        throw new Error(
+          `[Sender] Non-retriable webhook error (${status}): ${message}`,
+        );
+      }
 
       if (attempt >= config.sender.maxRetries) {
         throw new Error(
