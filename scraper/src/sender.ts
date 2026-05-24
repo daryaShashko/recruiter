@@ -22,26 +22,26 @@ function isInvalidUrlError(err: AxiosError): boolean {
   return err.code === "ERR_INVALID_URL" || err.message === "Invalid URL";
 }
 
-/**
- * Send job offers to the n8n Webhook with exponential backoff retry.
- */
-export async function sendToWebhook(
-  jobs: JobOffer[],
-  source: string,
-): Promise<void> {
-  if (!config.webhookUrl) {
-    throw new Error("WEBHOOK_URL is not configured");
+function sanitizeBatchSize(value: number | undefined): number {
+  if (!Number.isFinite(value) || !value || value < 1) {
+    return 25;
+  }
+  return Math.floor(value);
+}
+
+function chunkJobs(jobs: JobOffer[], batchSize: number): JobOffer[][] {
+  if (jobs.length === 0) {
+    return [[]];
   }
 
-  const payload: WebhookPayload = {
-    jobs,
-    meta: {
-      source,
-      count: jobs.length,
-      sentAt: new Date().toISOString(),
-    },
-  };
+  const chunks: JobOffer[][] = [];
+  for (let i = 0; i < jobs.length; i += batchSize) {
+    chunks.push(jobs.slice(i, i + batchSize));
+  }
+  return chunks;
+}
 
+async function postPayloadWithRetry(payload: WebhookPayload): Promise<void> {
   let attempt = 0;
   let delay = config.sender.retryDelay;
 
@@ -49,7 +49,7 @@ export async function sendToWebhook(
     attempt++;
     try {
       console.log(
-        `[Sender] Attempt ${attempt}/${config.sender.maxRetries}: sending ${jobs.length} jobs to webhook...`,
+        `[Sender] Attempt ${attempt}/${config.sender.maxRetries}: sending ${payload.meta.count} jobs to webhook...`,
       );
 
       const response = await axios.post(config.webhookUrl, payload, {
@@ -65,7 +65,7 @@ export async function sendToWebhook(
       console.log(
         `[Sender] Webhook responded: ${response.status} ${response.statusText}`,
       );
-      return; // Success
+      return;
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
@@ -97,7 +97,49 @@ export async function sendToWebhook(
         `[Sender] Attempt ${attempt} failed (${status ?? "network error"}: ${message}). Retrying in ${delay}ms...`,
       );
       await sleep(delay);
-      delay *= 2; // Exponential backoff
+      delay *= 2;
     }
+  }
+}
+
+/**
+ * Send job offers to the n8n Webhook with exponential backoff retry.
+ */
+export async function sendToWebhook(
+  jobs: JobOffer[],
+  source: string,
+): Promise<void> {
+  if (!config.webhookUrl) {
+    throw new Error("WEBHOOK_URL is not configured");
+  }
+  const batchSize = sanitizeBatchSize(
+    (config.sender as { batchSize?: number }).batchSize,
+  );
+  const batches = chunkJobs(jobs, batchSize);
+
+  if (batches.length > 1) {
+    console.log(
+      `[Sender] Sending ${jobs.length} jobs in ${batches.length} batches (batch size: ${batchSize})`,
+    );
+  }
+
+  for (let i = 0; i < batches.length; i++) {
+    const batchJobs = batches[i];
+    const payload: WebhookPayload = {
+      jobs: batchJobs,
+      meta: {
+        source,
+        count: batchJobs.length,
+        sentAt: new Date().toISOString(),
+      },
+    };
+
+    if (batches.length > 1) {
+      console.log(
+        `[Sender] Batch ${i + 1}/${batches.length} (${batchJobs.length} jobs)`,
+      );
+    }
+
+    await postPayloadWithRetry(payload);
   }
 }

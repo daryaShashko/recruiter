@@ -233,6 +233,7 @@ recruiter/
 | Переменная | Где используется | Описание |
 |---|---|---|
 | `WEBHOOK_URL` | scraper, GitHub Actions | URL n8n Webhook: локально `http://localhost:5678/webhook/jobs/ingest`; для GitHub Actions — публичный tunnel/hosted URL |
+| `WEBHOOK_BATCH_SIZE` | scraper | Размер батча вакансий в одном POST на webhook (по умолчанию `25`, для локальной Ollama можно `10`) |
 | `NOTION_TOKEN` | n8n | Notion Integration Secret *(P4)* |
 | `NOTION_DB_ID` | n8n | ID базы данных в Notion *(P4)* |
 | `TELEGRAM_BOT_TOKEN` | n8n | Токен Telegram Bot *(P5)* |
@@ -261,11 +262,15 @@ recruiter/
 1. Убедиться, что запущены `n8n` (`http://localhost:5678`) и `ollama` (`http://localhost:11434`).
 2. В `.env` указать:
     `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`
+   При необходимости добавить:
+    `WEBHOOK_BATCH_SIZE=10`
 3. Запуск одной командой:
 
 ```bash
 ./scripts/run-local.sh
 ```
+
+Скрипт перед запуском скрапера делает preflight (`webhook`, `n8n`, `ollama`) и в конце печатает health summary с длительностью preflight и общим временем выполнения.
 
 Dry-run без отправки в webhook:
 

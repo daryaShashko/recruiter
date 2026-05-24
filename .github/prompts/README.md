@@ -11,7 +11,7 @@ These slash commands are available in VS Code Copilot Chat for this workspace.
 ## Delivery and quality
 
 - `/scraper-bugfix` — bugfix flow with test-first validation
-- `/run-local` — full local run flow with preflight checks
+- `/run-local` — full local run flow with preflight checks and end-of-run health summary
 - `/adr-check` — check whether architectural decision record is required
 - `/release-readiness` — GO/NO-GO validation before rollout
 - `/weekly-health-check` — weekly stability and monitoring review

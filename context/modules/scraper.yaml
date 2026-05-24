@@ -46,6 +46,7 @@ files:
       playwright.requestTimeout: 15000
       sender.maxRetries: 3
       sender.retryDelay: 1000 # doubles each attempt (exponential backoff)
+      sender.batchSize: 25 # override via WEBHOOK_BATCH_SIZE
 
   src/types.ts:
     exports: [JobOffer, WebhookPayload, EvaluationResult]
@@ -64,6 +65,7 @@ files:
     exports: [sendToWebhook]
     signature: "(jobs: JobOffer[], source: string) => Promise<void>"
     payload_shape: "WebhookPayload { jobs, meta: { source, count, sentAt } }"
+    batching: "splits jobs into chunks (default 25) and sends sequentially"
     retry: "3 attempts, exponential backoff starting at 1000ms (network/5xx); fail-fast on 4xx config/auth/path errors"
     timeout: "15000ms per request"
     throws: "Error on non-retriable 4xx or if retriable attempts are exhausted"

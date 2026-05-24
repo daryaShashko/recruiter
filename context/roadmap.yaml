@@ -407,7 +407,7 @@ next_execution_plan:
       skill: "/run-local"
       inputs: ["scripts/run-local.sh", ".env", "README.md"]
       output: "Stable local launcher with clear exit codes"
-      acceptance: "dry/full mode both documented and executable"
+      acceptance: "dry/full mode documented, preflight checks visible, health summary printed"
       estimate: "0.5d"
     L2:
       status: pending

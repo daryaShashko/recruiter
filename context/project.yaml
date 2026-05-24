@@ -70,6 +70,7 @@ current_phase: P5 # P0–P4 done, P5 in progress, P6 pending
 structure:
   scraper/: "TypeScript/Playwright job scraper — ts-node project"
   n8n/: "n8n workflow JSONs + Ollama LLM prompts"
+  scripts/: "Local run entrypoints (run-local preflight + health summary)"
   docs/: "Architecture diagrams, schemas, agent skill files"
   docs/agents/: "AI agent system prompt files (8 agents)"
   context/: "THIS — project context manifests (YAML)"
