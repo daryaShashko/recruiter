@@ -90,8 +90,9 @@ export const config = {
     maxRetries: 3,
     // Initial delay between retries (ms), doubles each attempt
     retryDelay: 1_000,
-    // Number of job offers per webhook request
-    batchSize: Number(process.env.WEBHOOK_BATCH_SIZE || 25),
+    // Number of job offers per webhook request.
+    // Default is intentionally high to avoid spawning many parallel n8n executions.
+    batchSize: Number(process.env.WEBHOOK_BATCH_SIZE || 250),
   },
 } as const;
 

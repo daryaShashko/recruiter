@@ -176,6 +176,35 @@ decisions:
         - "Concurrent runs require lock/idempotency guard"
     implementation: "POC backlog: context/roadmap.yaml -> POC-1"
 
+  ADR-008:
+    title: "Sequential Ollama evaluation with pre-LLM Notion dedup"
+    status: accepted
+    date: "2026-05"
+    context: >
+      Sender batches (25 items) caused multiple concurrent evaluate executions in n8n.
+      Combined with parallel HTTP calls to local Ollama this led to timeouts
+      (ECONNABORTED timeout of 120000ms) and partial batch processing.
+      Also, duplicate URLs were evaluated by Ollama before dedup happened in Notify.
+    decision: >
+      In evaluate workflow, process items strictly sequentially via Split In Batches (batchSize: 1),
+      perform Notion URL dedup before Ollama call, and increase Ollama HTTP timeout to 300000ms.
+      In scraper config, raise default WEBHOOK_BATCH_SIZE to 250 to reduce parallel workflow executions.
+    rationale:
+      - "One-item processing avoids concurrent local Ollama overload"
+      - "Pre-LLM dedup removes repeated expensive evaluations"
+      - "Higher timeout tolerates model latency and local queueing"
+      - "Larger webhook payload default reduces simultaneous subworkflow runs"
+    consequences:
+      positive:
+        - "Stable per-item evaluation without fan-out spikes"
+        - "Less wasted Ollama compute on already-known URLs"
+        - "Lower probability of HTTP timeout in evaluate stage"
+      negative:
+        - "End-to-end evaluation latency per run is longer"
+        - "More Notion read calls before LLM (rate limits must be monitored)"
+        - "Notify still keeps dedup guard, resulting in duplicate protection at two layers"
+    implementation: "n8n/workflows/evaluate.json, scraper/src/config.ts, context/modules/n8n.yaml"
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

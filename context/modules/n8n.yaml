@@ -39,21 +39,21 @@ workflows:
 
   evaluate:
     file: n8n/workflows/evaluate.json
-    status: not_created  # Phase P3
+    status: created
     phase: P3
     nodes_sequence:
-      - name: Split In Batches
-        type: n8n-nodes-base.splitInBatches
-        config: "batchSize: 1"
-      - name: Evaluate with Ollama
+      - name: Build Ollama Payload
+        type: n8n-nodes-base.code
+        config: "process all input items via $input.all() (no $input.first() fan-in)"
+      - name: Ask Ollama
         type: n8n-nodes-base.httpRequest
         config:
           method: POST
           url: "http://localhost:11434/api/chat"
           on_error: "Continue (using error output)"
-      - name: Parse LLM Response
+      - name: Parse Ollama Response
         type: n8n-nodes-base.code
-        logic: "JSON.parse(response.message.content) with try/catch"
+        logic: "parse linked current item via $('Code: Build Ollama Payload').item; fallback to match=false on empty/invalid response"
       - name: Filter Matches
         type: n8n-nodes-base.if
         condition: "{{ $json.match }} === true"
@@ -116,7 +116,7 @@ ollama:
     path: "response.message.content"
     expected: "JSON string: { match: boolean, reason: string, url: string }"
     parse_in: "n8n Code node with try/catch"
-    fallback_on_error: "{ match: false, reason: 'Parse error', url: $json.url }"
+    fallback_on_error: "{ match: false, reason: 'Parse error: ...', url: $json.url }"
 
 evaluator_prompt:
   file: n8n/prompts/evaluator.md
