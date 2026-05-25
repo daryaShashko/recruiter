@@ -121,7 +121,7 @@ workflows:
         type: n8n-nodes-base.notion
         operation: create
         database: AI Recruiter Board
-        fields: [Name, Company, URL, Source, Match Reason, Salary, Status=New, Location, Tags, Scraped At]
+        fields: [Name, Company, URL, Source, Match Reason, Salary, Status=New, Location, Scraped At]
       - name: Telegram Send Alert
         type: n8n-nodes-base.telegram
         note: "Fires after Notion create (sequential, not parallel)"
@@ -185,7 +185,6 @@ notion_field_mapping:
   Salary: "{{ $json.salary }}"
   Status: "New"
   Location: "{{ $json.location }}"
-  Tags: "{{ $json.tags }}"
   Scraped_At: "{{ $json.scrapedAt }}"
   dedup_key: URL  # Notion is queried by URL before insert
 

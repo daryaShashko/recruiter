@@ -56,10 +56,6 @@
               "textContent": "={{ $json.location }}"
             },
             {
-              "key": "Tags|multi_select",
-              "multiSelectValue": "={{ $json.tags.join(',') }}"
-            },
-            {
               "key": "Scraped At|date",
               "dateValue": "={{ $json.scrapedAt }}"
             }

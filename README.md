@@ -132,7 +132,7 @@ Telegram (ручная ссылка)  ──────────────
 #### 4.1 — Структура базы в Notion
 - [x] `P4-1` Создать Notion Database: `AI Recruiter Board` (канбан-вид)
 - [x] `P4-2` Описать схему в `/docs/notion-schema.md`: поля, типы, возможные статусы
-- [x] `P4-3` Задать поля: `Title`, `Company`, `URL` (dedup), `Source`, `Match Reason`, `Salary`, `Status`, `Location`, `Tags`, `Scraped At`
+- [x] `P4-3` Задать поля: `Title`, `Company`, `URL` (dedup), `Source`, `Match Reason`, `Salary`, `Status`, `Location`, `Scraped At`
 - [x] `P4-4` Создать Notion Integration Token, добавить в `.env` и GitHub Secrets
 
 #### 4.2 — Дедупликация

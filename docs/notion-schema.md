@@ -18,7 +18,6 @@ Kanban view grouped by `Status`
 | `Salary` | Text | Salary range string (e.g. "15,000–20,000 PLN B2B") |
 | `Status` | Select | `New`, `Review`, `Applied`, `Rejected` |
 | `Location` | Text | City or "Remote" |
-| `Tags` | Multi-select | Tech stack tags from job posting |
 | `Scraped At` | Date | ISO timestamp when scraped |
 
 ## Kanban Columns (Status Values)

@@ -46,10 +46,6 @@ interfaces:
         required: false
         format: "'{from}–{to} {currency}'"
         examples: ["15000–20000 PLN", "120–160 EUR/day (B2B)"]
-      tags:
-        type: "string[]"
-        required: false
-        note: "Lowercase tech stack tags from job posting"
       scrapedAt:
         type: string
         required: true

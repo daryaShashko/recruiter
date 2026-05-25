@@ -12,53 +12,29 @@
       "name": "Webhook: POST /jobs/ingest",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [320, 500],
+      "position": [300, 300],
       "webhookId": "0b77b897-54ea-4f81-8c75-a4d0cc4da3bb"
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={\"ok\":true}",
-        "options": {
-          "responseCode": 200
-        }
+        "options": { "responseCode": 200 }
       },
       "id": "5a8a767c-6447-4140-a424-9036fed23c2b",
       "name": "Respond to Webhook: 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [544, 500]
+      "position": [520, 300]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
           "conditions": [
-            {
-              "id": "check-meta-count",
-              "leftValue": "={{ $json.body.meta.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "equal"
-              }
-            },
-            {
-              "id": "check-jobs-length",
-              "leftValue": "={{ ($json.body.jobs ?? []).length }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "equal"
-              }
-            }
+            { "id": "check-jobs-length", "leftValue": "={{ ($json.body.jobs ?? []).length }}", "rightValue": 0, "operator": { "type": "number", "operation": "equal" } }
           ],
-          "combinator": "or"
+          "combinator": "and"
         },
         "options": {}
       },
@@ -66,48 +42,38 @@
       "name": "IF: Zero jobs check",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [768, 500]
+      "position": [740, 300]
     },
     {
       "parameters": {
         "chatId": "270408820",
-        "text": "=⚠️ *AI Recruiter* — 0 вакансий\nИсточник: {{ $json.body.meta.source }}\n{{ new Date().toISOString() }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
+        "text": "=⚠️ *AI Recruiter* — 0 вакансий\n{{ new Date().toISOString() }}",
+        "additionalFields": { "parse_mode": "Markdown" }
       },
       "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
       "name": "Telegram: Zero Jobs Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [992, 720],
-      "credentials": {
-        "telegramApi": {
-          "id": "AELRiJlX0Uggd98o",
-          "name": "Telegram account 3"
-        }
-      }
+      "position": [960, 500],
+      "credentials": { "telegramApi": { "id": "AELRiJlX0Uggd98o", "name": "Telegram account 3" } }
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\n\n// Accept: { jobs: [...] } or bare array\nconst raw = Array.isArray(body?.jobs) ? body.jobs\n          : Array.isArray(body)       ? body\n          : [];\n\nif (raw.length === 0) {\n  console.log('[Ingest] Empty jobs array — nothing to process');\n  return [];\n}\n\nconsole.log(`[Ingest] Normalizing ${raw.length} jobs`);\n\nreturn raw.map(job => ({\n  json: {\n    id:        job.id        || '',\n    title:     job.title     || '',\n    company:   job.company   || '',\n    url:       job.url       || '',\n    body:      job.body      || job.jobText || job.description || '',\n    source:    job.source    || 'unknown',\n    location:  job.location  || '',\n    salary:    job.salary    || '',\n    tags:      Array.isArray(job.tags) ? job.tags : [],\n    scrapedAt: job.scrapedAt || new Date().toISOString(),\n  }\n}));"
+        "jsCode": "const body = $input.first().json.body;\nconst raw = Array.isArray(body?.jobs) ? body.jobs : Array.isArray(body) ? body : [];\nif (raw.length === 0) return [];\nconsole.log(`[Ingest] Normalizing ${raw.length} jobs`);\nreturn raw.map(job => ({\n  json: {\n    id:        job.id        || '',\n    title:     job.title     || '',\n    company:   job.company   || '',\n    url:       job.url       || '',\n    body:      job.body      || job.jobText || job.description || '',\n    source:    job.source    || 'unknown',\n    location:  job.location  || '',\n    salary:    job.salary    || '',\n    scrapedAt: job.scrapedAt || new Date().toISOString(),\n  }\n}));"
       },
       "id": "57c3b74e-9be3-4085-9613-e967c7be9842",
       "name": "Code: Normalize Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [992, 500]
+      "position": [960, 300]
     },
     {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
+      "parameters": { "batchSize": 1, "options": {} },
       "id": "cc11dd22-ee33-4444-5555-666677778888",
       "name": "Split In Batches: 1",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [1216, 500]
+      "position": [1180, 300]
     },
     {
       "parameters": {
@@ -115,18 +81,9 @@
         "value1": "={{ $json.source }}",
         "rules": {
           "rules": [
-            {
-              "value2": "justjoin",
-              "output": 0
-            },
-            {
-              "value2": "nofluffjobs",
-              "output": 1
-            },
-            {
-              "value2": "manual",
-              "output": 2
-            }
+            { "value2": "justjoin", "output": 0 },
+            { "value2": "nofluffjobs", "output": 1 },
+            { "value2": "manual", "output": 2 }
           ]
         },
         "fallbackOutput": 3
@@ -135,7 +92,7 @@
       "name": "Switch: Route by Source",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [1440, 500]
+      "position": [1400, 300]
     },
     {
       "parameters": {
@@ -145,34 +102,168 @@
       "name": "Code: Unknown Source",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1660, 700]
+      "position": [1620, 500]
     },
     {
       "parameters": {
-        "workflowId": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
           "__rl": true,
-          "value": "KmuD32xms1YHxDNQ",
+          "value": "369747f7-ebec-8017-8843-e71fe805e3de",
           "mode": "list",
-          "cachedResultUrl": "/workflow/KmuD32xms1YHxDNQ",
-          "cachedResultName": "Evaluate Jobs (Ollama)"
+          "cachedResultName": "AI Recruiter Board",
+          "cachedResultUrl": "https://www.notion.so/369747f7ebec80178843e71fe805e3de"
         },
-        "workflowInputs": {
-          "mappingMode": "passThrough",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            { "key": "URL|url", "condition": "equals", "urlValue": "={{ $json.url }}" }
+          ]
         },
-        "options": {
-          "waitForSubWorkflow": true
-        }
+        "options": {}
       },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [1880, 500],
-      "id": "afa2ced7-d4a4-464b-87f5-0562e1470f6a",
-      "name": "Call 'Evaluate Jobs (Ollama)'"
+      "id": "a92d5f28-f1b0-447b-82cb-d979b7ad0a3f",
+      "name": "Notion: Find Existing URL",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [1620, 300],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": { "notionApi": { "id": "m7tXgSbJizPV6bkb", "name": "Notion account" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            { "id": "is-duplicate", "leftValue": "={{ !!$json.id }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "afccd1bc-5fe9-4ea8-afdf-2d00557d7300",
+      "name": "IF: Already in Notion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {},
+      "id": "6a3eb193-4f31-4d04-b64b-fb0d58d0a9f8",
+      "name": "NoOp: Skip Duplicate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2060, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const systemPrompt = `You are an expert IT recruiter assistant. Evaluate job postings for a Senior Software Engineer.\n\nTarget Profile: Senior/Lead/Architect, JS/TS/Node.js/React/PostgreSQL, Gdańsk OR remote.\n\nMatch if: Senior-level, Node.js/TS primary backend, Gdańsk or remote.\nReject if: Junior/Mid, primary backend Java/C#/.NET/PHP/Ruby/Go, not Gdańsk and not remote.\nIf Node.js + Java legacy both listed: match true ONLY if Node.js is listed first or described as primary.\n\nRespond ONLY with valid JSON, no markdown:\n{\"match\": true or false, \"reason\": \"one sentence\", \"url\": \"job url\"}`;\n\n// IMPORTANT: Notion dedup replaces $json — get original job from Split\nconst job = $('Split In Batches: 1').item.json;\n\nconst userContent = [\n  `Job Title: ${job.title}`,\n  `Company: ${job.company}`,\n  `Location: ${job.location || 'Not specified'}`,\n  `Salary: ${job.salary || 'Not specified'}`,\n  `URL: ${job.url}`,\n  '',\n  'Job Description:',\n  job.body || 'No description available'\n].join('\\n');\n\nreturn [{\n  json: {\n    ...job,\n    ollamaBody: {\n      model: 'llama3.1:latest',\n      stream: false,\n      keep_alive: 0,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user', content: userContent }\n      ]\n    }\n  }\n}];"
+      },
+      "id": "dfc97430-4503-46a7-8ae4-4bec34aab8da",
+      "name": "Code: Build Ollama Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.ollamaBody }}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "e8985b37-754a-40ec-8fff-4bb704ebbac7",
+      "name": "HTTP Request: Ask Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2280, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ollamaResp = $input.first().json;\nconst job = $('Code: Build Ollama Payload').first().json;\n\nconst fallback = (reason) => ({\n  json: {\n    id: job.id, title: job.title, company: job.company,\n    url: job.url, source: job.source, location: job.location,\n    salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,\n    match: false, reason\n  }\n});\n\nif (ollamaResp?.error) {\n  console.log(`[Evaluate] Ollama error for ${job.url}`);\n  return [fallback('Ollama timeout or error')];\n}\n\nconst raw = ollamaResp?.message?.content || '';\nif (!raw) return [fallback('Empty Ollama response')];\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  return [fallback(`Parse error: ${e.message}`)];\n}\n\nif (typeof parsed.match !== 'boolean') return [fallback('Bad response shape')];\n\nconsole.log(`[Evaluate] ${parsed.match ? 'MATCH' : 'skip'} — ${parsed.reason}`);\n\nreturn [{\n  json: {\n    id: job.id, title: job.title, company: job.company,\n    url: job.url, source: job.source, location: job.location,\n    salary: job.salary, scrapedAt: job.scrapedAt,\n    match: parsed.match, reason: parsed.reason\n  }\n}];"
+      },
+      "id": "788e8037-a845-4a1f-b513-03fa217e7640",
+      "name": "Code: Parse Ollama Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [
+            { "id": "match-true", "leftValue": "={{ $json.match }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d36160ca-a224-46a1-8f65-4d34763eaef1",
+      "name": "IF: Match?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2720, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "369747f7-ebec-8017-8843-e71fe805e3de",
+          "mode": "list",
+          "cachedResultName": "AI Recruiter Board",
+          "cachedResultUrl": "https://www.notion.so/369747f7ebec80178843e71fe805e3de"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            { "key": "Name|title", "title": "={{ $json.title }}" },
+            { "key": "Company|rich_text", "textContent": "={{ $json.company }}" },
+            { "key": "URL|url", "urlValue": "={{ $json.url }}" },
+            { "key": "Source|select", "selectValue": "={{ $json.source }}" },
+            { "key": "Match Reason|rich_text", "textContent": "={{ $json.reason }}" },
+            { "key": "Salary|rich_text", "textContent": "={{ $json.salary }}" },
+            { "key": "Status|select", "selectValue": "New" },
+            { "key": "Location|rich_text", "textContent": "={{ $json.location }}" },
+            { "key": "Scraped At|date", "dateValue": "={{ $json.scrapedAt }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fcb97adf-1190-482b-a7f4-8f4d96483530",
+      "name": "Notion: Create Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [2940, 180],
+      "onError": "continueRegularOutput",
+      "credentials": { "notionApi": { "id": "m7tXgSbJizPV6bkb", "name": "Notion account" } }
+    },
+    {
+      "parameters": {
+        "chatId": "270408820",
+        "text": "=🟢 *{{ $('Code: Parse Ollama Response').item.json.title }}*\n🏢 {{ $('Code: Parse Ollama Response').item.json.company }}\n💰 {{ $('Code: Parse Ollama Response').item.json.salary || 'не указана' }}\n📍 {{ $('Code: Parse Ollama Response').item.json.location || 'не указано' }} | {{ $('Code: Parse Ollama Response').item.json.source }}\n🔗 {{ $('Code: Parse Ollama Response').item.json.url }}\n\n_{{ $('Code: Parse Ollama Response').item.json.reason }}_",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "1c54b156-096f-4598-80df-23a22a163290",
+      "name": "Telegram: Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3160, 180],
+      "credentials": { "telegramApi": { "id": "AELRiJlX0Uggd98o", "name": "Telegram account 3" } }
+    },
+    {
+      "parameters": {},
+      "id": "afac79a4-5e19-480c-bfd7-75fd4206d5f3",
+      "name": "NoOp: Discard Non-Match",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2940, 420]
     },
     {
       "parameters": {},
@@ -180,133 +271,78 @@
       "name": "NoOp: All Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1440, 720]
+      "position": [1180, 500]
     }
   ],
   "pinData": {},
   "connections": {
     "Webhook: POST /jobs/ingest": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook: 200",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Respond to Webhook: 200", "type": "main", "index": 0 }]]
     },
     "Respond to Webhook: 200": {
-      "main": [
-        [
-          {
-            "node": "IF: Zero jobs check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "IF: Zero jobs check", "type": "main", "index": 0 }]]
     },
     "IF: Zero jobs check": {
       "main": [
-        [
-          {
-            "node": "Telegram: Zero Jobs Alert",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Code: Normalize Jobs",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Telegram: Zero Jobs Alert", "type": "main", "index": 0 }],
+        [{ "node": "Code: Normalize Jobs", "type": "main", "index": 0 }]
       ]
     },
     "Code: Normalize Jobs": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches: 1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Split In Batches: 1", "type": "main", "index": 0 }]]
     },
     "Split In Batches: 1": {
       "main": [
-        [
-          {
-            "node": "Switch: Route by Source",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "NoOp: All Done",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "NoOp: All Done", "type": "main", "index": 0 }],
+        [{ "node": "Switch: Route by Source", "type": "main", "index": 0 }]
       ]
     },
     "Switch: Route by Source": {
       "main": [
-        [
-          {
-            "node": "Call 'Evaluate Jobs (Ollama)'",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call 'Evaluate Jobs (Ollama)'",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call 'Evaluate Jobs (Ollama)'",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Code: Unknown Source",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Notion: Find Existing URL", "type": "main", "index": 0 }],
+        [{ "node": "Notion: Find Existing URL", "type": "main", "index": 0 }],
+        [{ "node": "Notion: Find Existing URL", "type": "main", "index": 0 }],
+        [{ "node": "Code: Unknown Source", "type": "main", "index": 0 }]
       ]
     },
     "Code: Unknown Source": {
+      "main": [[{ "node": "Notion: Find Existing URL", "type": "main", "index": 0 }]]
+    },
+    "Notion: Find Existing URL": {
+      "main": [[{ "node": "IF: Already in Notion?", "type": "main", "index": 0 }]]
+    },
+    "IF: Already in Notion?": {
       "main": [
-        [
-          {
-            "node": "Call 'Evaluate Jobs (Ollama)'",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "NoOp: Skip Duplicate", "type": "main", "index": 0 }],
+        [{ "node": "Code: Build Ollama Payload", "type": "main", "index": 0 }]
       ]
     },
-    "Call 'Evaluate Jobs (Ollama)'": {
+    "NoOp: Skip Duplicate": {
+      "main": [[{ "node": "Split In Batches: 1", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Ollama Payload": {
+      "main": [[{ "node": "HTTP Request: Ask Ollama", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: Ask Ollama": {
+      "main": [[{ "node": "Code: Parse Ollama Response", "type": "main", "index": 0 }]]
+    },
+    "Code: Parse Ollama Response": {
+      "main": [[{ "node": "IF: Match?", "type": "main", "index": 0 }]]
+    },
+    "IF: Match?": {
       "main": [
-        [
-          {
-            "node": "Split In Batches: 1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Notion: Create Page", "type": "main", "index": 0 }],
+        [{ "node": "NoOp: Discard Non-Match", "type": "main", "index": 0 }]
       ]
+    },
+    "Notion: Create Page": {
+      "main": [[{ "node": "Telegram: Send Alert", "type": "main", "index": 0 }]]
+    },
+    "Telegram: Send Alert": {
+      "main": [[{ "node": "Split In Batches: 1", "type": "main", "index": 0 }]]
+    },
+    "NoOp: Discard Non-Match": {
+      "main": [[{ "node": "Split In Batches: 1", "type": "main", "index": 0 }]]
     }
   },
   "active": true,
