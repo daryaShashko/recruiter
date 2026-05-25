@@ -1,52 +1,6 @@
 current_phase: P7
 current_focus: "P6 6/7 done (P6-7 awaits production data). P7 (Cloud Migration) and P8 (Evaluator Observability) are PROPOSED — awaiting execution start."
 
-poc_backlog:
-  POC-1:
-    status: pending
-    title: "Incremental ingestion by cursor date"
-    goal: "Не обрабатывать повторно старые вакансии и снижать нагрузку на Ollama/API"
-    place_in_data_flow: "scraper -> webhook ingress filter -> evaluate"
-    summary: >
-      Ввести cursor-based фильтрацию: хранить last_successful_run_at
-      (или first_seen_at/high-watermark) и передавать дальше только новые/обновлённые вакансии
-      с момента последнего успешного цикла.
-    assumptions:
-      - "Запуск webhook примерно 1 раз в день"
-      - "Точное время запуска не гарантируется"
-      - "Notion остается единственной БД"
-    simple_mvp:
-      - "State store: отдельная запись cursor в Notion (key: scraper_cursor)"
-      - "Scraper/N8N сохраняет run_started_at и run_finished_at"
-      - "Фильтр пропускает вакансии с publishedAt/firstSeenAt > cursor"
-      - "На успехе: cursor = max(processed_item_time)"
-      - "На ошибке: cursor не обновляется"
-    failure_modes:
-      - "Timezone drift -> пропуск вакансий"
-      - "Отсутствует publishedAt у части источников"
-      - "Дубликаты из-за одинакового времени публикации"
-      - "Race condition при параллельных run-now"
-    risk_controls:
-      - "Хранить все даты в UTC ISO"
-      - "Fallback-логика: publishedAt missing -> first_seen_at"
-      - "Overlap window (например -2h) + дедуп по source:id/url"
-      - "Single-flight lock для run-now"
-    constraints_check:
-      - "No paid services: OK"
-      - "Ollama local only: OK"
-      - "Notion only DB: OK"
-      - "GitHub runner 15 min: улучшает шанс уложиться за счёт меньшего объёма"
-    interfaces_impact:
-      JobOffer: "likely add optional publishedAt?: string and firstSeenAt?: string"
-      WebhookPayload: "optional meta.cursorFrom/cursorTo for traceability"
-      EvaluationResult: "no changes expected"
-    tasks:
-      POC-1-1: "ADR for cursor strategy and conflict policy"
-      POC-1-2: "Notion schema extension for pipeline state/cursor"
-      POC-1-3: "Implement incremental filter and overlap window"
-      POC-1-4: "Add tests: empty cursor, stale cursor, timezone edge, duplicates"
-      POC-1-5: "Add observability: skipped_count, processed_count, cursor_before/after"
-
 phases:
   P0:
     name: Project Bootstrap
@@ -423,9 +377,9 @@ phases:
   P7:
     name: "Cloud Migration — Oracle Cloud + Cloud LLM"
     status: pending
-    goal: "Migrate pipeline from local laptop to stable 24/7 cloud server with free-tier LLM"
+    goal: "Migrate n8n pipeline to stable cloud infrastructure and use cloud LLMs"
     blocked_by: NONE
-    depends_on: ["P6"]
+    depends_on: ["P6"] # P7 can be executed in parallel with P8
     adrs: ["ADR-010", "ADR-011"]
     problem_statement: >
       The current setup has a critical reliability problem: n8n runs on developer's
@@ -597,7 +551,7 @@ phases:
     status: pending
     goal: "Full visibility into LLM decisions, human feedback, and data-driven prompt tuning"
     blocked_by: NONE
-    depends_on: ["P4"]
+    depends_on: ["P4"] # P8 can be executed in parallel with P7
     adrs: ["ADR-012"]
     problem_statement: >
       The evaluate workflow sends ~180 rejected vacancies/day to NoOp: Discard Non-Match.
@@ -747,6 +701,68 @@ phases:
       - "Level 2: 👍/👎 buttons work, /rejected and /wrong commands functional"
       - "Level 3: Weekly accuracy report sent to Telegram"
       - "Prompt improvement cycle: data → analysis → prompt change → measure impact"
+
+  # ─────────────────────────────────────────────────────────
+  # PHASE 9 — Incremental Improvements & POC Backlog
+  # ─────────────────────────────────────────────────────────
+  P9:
+    name: "Incremental Improvements & POC Backlog"
+    status: pending
+    goal: "Дополнительные фичи и UX-улучшения после запуска основного функционала"
+    blocked_by: NONE
+    sub_phases:
+      "9.1 Incremental Ingestion":
+        goal: "Не обрабатывать повторно старые вакансии"
+        tasks:
+          POC-1:
+            status: pending
+            title: "Incremental ingestion by cursor date"
+            note: "Хранить дату последней обработки в Notion"
+          POC-2:
+            status: pending
+            title: "Внедрить фильтр-пропуск старых вакансий до отправки в n8n/LLM"
+          POC-3:
+            status: pending
+            title: "Защита от дублей с overlap window (-2 часа от курсора)"
+      "9.2 Telegram & UX Улучшения":
+        goal: "Улучшить UX в Telegram"
+        tasks:
+          IMP-1:
+            status: pending
+            title: "Убрать n8n-брендинг"
+            note: "Заменить узел Telegram на HTTP Request к api.telegram.org"
+          IMP-2:
+            status: pending
+            title: "Улучшить формат сообщения"
+            note: "HTML parse_mode, красивые секции зарплаты/локации"
+          IMP-3:
+            status: pending
+            title: "Telegram Run Now + Catch-up"
+            note: "Кнопка ручного запуска и догоняющего сбора после простоя"
+      "9.3 Глубокий анализ компаний":
+        goal: "Оценка типа компании"
+        tasks:
+          IMP-4:
+            status: pending
+            title: "LLM-оценка компании"
+            note: "Второй вызов LLM (после матча) для анализа типа (аутсорс/продукт)"
+          IMP-5:
+            status: pending
+            title: "Scrape-анализ компании"
+            note: "Парсинг company-domain/about и суммаризация через LLM"
+      "9.4 Универсальный ручной ввод":
+        goal: "Оценка вакансий из любых источников через Telegram"
+        tasks:
+          IMP-6:
+            status: pending
+            title: "Поддержка входящих сообщений"
+            note: "Текст или URL отправляются боту"
+          IMP-7:
+            status: pending
+            title: "Извлечение текста с HTTP-страниц для присланных ссылок"
+          IMP-8:
+            status: pending
+            title: "Оценка ручных вакансий и отправка результата"
 
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
@@ -961,48 +977,6 @@ github_actions_deactivation_plan:
   documentation:
     - "docs/github-actions-disable-plan.md"
     - "docs/local-ops-plan.md"
-
-post_poc_improvements:
-  description: "Улучшения после завершения POC (P0-P6). Не блокируют запуск."
-  IMPROVE-1:
-    title: "Telegram: убрать n8n-брендинг"
-    note: "Заменить Telegram-узел на HTTP Request к api.telegram.org/sendMessage — footer исчезнет"
-    priority: HIGH
-    note_p8: "Будет частично реализовано в EVAL-5 (inline keyboard через HTTP Request)"
-  IMPROVE-2:
-    title: "Telegram: улучшить формат сообщения"
-    note: "HTML parse_mode, секции: вакансия / зарплата / локация / причина матча. Читабельный вид."
-    priority: HIGH
-  IMPROVE-3:
-    title: "Company research: Ollama из текста вакансии"
-    note: "Второй Ollama-вызов после match:true — аутсорс/продукт, размер команды, культура. Без доп. запросов."
-    priority: MEDIUM
-    note_p7: "After P7, use Cloud LLM API instead of Ollama for this"
-  IMPROVE-4:
-    title: "Company research: scrape сайта компании"
-    note: "HTTP GET company-domain/about → текст → Ollama summarize → секция в Telegram-сообщении"
-    priority: LOW
-  IMPROVE-5:
-    title: "Universal manual intake via Telegram"
-    note: >
-      Пользователь шлёт боту любой текст или ссылку.
-      IF URL → HTTP GET страница → extract body text.
-      IF текст (LinkedIn сообщение, копипаст) → использовать как есть.
-      Wrap в JobOffer { source: manual } → evaluate → notify.
-      Отдельные источники: Gmail Trigger (n8n), LinkedIn (требует auth — сложно).
-    priority: HIGH
-    sources:
-      - Любой текст / сообщение от рекрутера из LinkedIn
-      - Прямая ссылка на корпоративный карьер-сайт (HTTP GET)
-      - Gmail письмо (отдельный Gmail Trigger воркфлоу)
-      - LinkedIn URL (проблема авторизации — решать отдельно)
-  IMPROVE-6:
-    title: "Telegram Run Now + Catch-up after downtime"
-    note: >
-      Добавить команду /run-now в Telegram (manual trigger) и режим догоняющего запуска:
-      хранить last_successful_run_at, после офлайна запускать сбор за пропущенный интервал.
-      Цель: запуск по расписанию + ручная кнопка после простоя.
-    priority: HIGH
 
 known_blockers:
   - "For GitHub Actions mode only: public webhook URL must be reachable from runner (tunnel or hosted n8n); local mode has no blocker"

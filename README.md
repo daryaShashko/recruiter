@@ -33,8 +33,9 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 4** — Notion database integration ✅
 - [x] **PHASE 5** — Telegram bot ✅
 - [ ] **PHASE 6** — E2E hardening & monitoring 🔄 (6/7 done)
-- [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md)
-- [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md)
+- [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
+- [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
+- [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
 
 ---
 
@@ -248,15 +249,28 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### POC Backlog (следующие улучшения)
+### PHASE 9 — Incremental Improvements & POC Backlog 📋
+> Цель: дополнительные фичи и UX-улучшения после запуска основного функционала.
+> Задачи не блокируют запуск и могут выполняться по мере необходимости.
 
-- [ ] `POC-1` Incremental ingestion by date cursor
-    - Идея: хранить дату последней успешной обработки (cursor) и забирать только новые вакансии после этой даты.
-    - Зачем: не гонять одни и те же вакансии повторно через webhook/Ollama.
-    - Ограничения: только локальная Ollama, Notion как единственная БД.
-    - Хранилище cursor: отдельная state-запись в Notion.
-    - Защита от пропусков: overlap window + дедуп по `source:id/url`.
-    - Детали POC и шаги реализации: `context/roadmap.yaml` (`poc_backlog.POC-1`).
+#### 9.1 — Incremental Ingestion
+- [ ] `POC-1` Incremental ingestion by date cursor: хранить дату последней обработки в Notion
+- [ ] `POC-2` Внедрить фильтр-пропуск старых вакансий до отправки в n8n/Ollama
+- [ ] `POC-3` Защита от дублей с overlap window (-2 часа от курсора)
+
+#### 9.2 — Telegram & UX Улучшения
+- [ ] `IMP-1` Убрать n8n-брендинг: заменить узел Telegram на HTTP Request к api.telegram.org
+- [ ] `IMP-2` Улучшить формат сообщения (HTML parse_mode, красивые секции зарплаты/локации)
+- [ ] `IMP-3` Telegram Run Now + Catch-up: кнопка ручного запуска и догоняющего сбора после простоя
+
+#### 9.3 — Глубокий анализ компаний
+- [ ] `IMP-4` Ollama-оценка компании: второй вызов LLM (после успешного матча) для анализа типа (аутсорс/продукт)
+- [ ] `IMP-5` Scrape-анализ компании: парсинг `company-domain/about` и суммаризация через LLM
+
+#### 9.4 — Универсальный ручной ввод
+- [ ] `IMP-6` Поддержка входящих сообщений: текст или URL отправляются боту
+- [ ] `IMP-7` Извлечение текста с HTTP-страниц для присланных ссылок
+- [ ] `IMP-8` Оценка ручных вакансий и отправка результата обратно в Telegram
 
 ---
 
