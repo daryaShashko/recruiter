@@ -1,18 +1,26 @@
 # Automated AI Recruiter Pipeline
 
-Персональный AI-рекрутер: автоматизированная система поиска и первичного скрининга IT-вакансий на базе n8n + Playwright + Ollama.
+Персональный AI-рекрутер: автоматизированная система поиска и первичного скрининга IT-вакансий на базе n8n + Playwright + LLM (Ollama / Groq / Gemini).
 
 **Цель:** Найти вакансии Senior / Tech Lead / Solution Architect (JS/TS/Node/React/Postgres) в Гданьске или remote, без ручного скроллинга.
 
 ---
 
-## Архитектура (целевая)
+## Архитектура
 
 ```
-GitHub Actions (Playwright) → POST /webhook → n8n → Ollama (local LLM)
+GitHub Actions (Playwright) → POST /webhook → n8n → LLM (Ollama / Groq / Gemini)
+                                                    ↓
+                                               Evaluation Log (all decisions)
                                                     ↓ match: true
-Telegram (ручная ссылка)  ──────────────────→ n8n → Notion (Kanban) + Telegram Alert
+Telegram (ручная ссылка)  ──────────────────→ n8n → Notion (Kanban) + Telegram Alert (👍/👎)
 ```
+
+> **Текущий режим:** n8n локально + Ollama локально + tunnel
+>
+> **Планируется (P7):** Oracle Cloud Always Free (ARM, 24 GB RAM) + Cloud LLM (Groq/Gemini)
+>
+> Подробности: [docs/architecture.md](docs/architecture.md) | [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md) | [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md)
 
 ---
 
@@ -24,7 +32,9 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 3** — Ollama evaluation integration ✅
 - [x] **PHASE 4** — Notion database integration ✅
 - [x] **PHASE 5** — Telegram bot ✅
-- [ ] **PHASE 6** — E2E hardening & monitoring 🔄
+- [ ] **PHASE 6** — E2E hardening & monitoring 🔄 (6/7 done)
+- [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md)
+- [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md)
 
 ---
 
@@ -179,6 +189,65 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
+### PHASE 7 — Cloud Migration: Oracle Cloud + Cloud LLM 📋
+> Цель: стабильный 24/7 сервер без зависимости от ноутбука и tunnel.
+> ADR: [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md)
+
+#### 7.1 — Cloud Infrastructure Provisioning
+- [ ] `CLOUD-1` Регистрация Oracle Cloud аккаунта
+- [ ] `CLOUD-2` Создание VM.Standard.A1.Flex (4 OCPU, 24 GB RAM)
+- [ ] `CLOUD-3` Настройка VCN Security List (порты 80, 443, 22)
+- [ ] `CLOUD-4` SSH, обновление системы, настройка swap (4-8 GB)
+- [ ] `CLOUD-5` Установка Docker Engine + Docker Compose
+
+#### 7.2 — n8n + Reverse Proxy
+- [ ] `CLOUD-6` Настройка бесплатного домена (DuckDNS или свой)
+- [ ] `CLOUD-7` Написание `docker-compose.yml` (postgres + n8n + caddy)
+- [ ] `CLOUD-8` Деплой стека, проверка HTTPS-доступности n8n
+
+#### 7.3 — Миграция пайплайна + замена LLM
+- [ ] `CLOUD-9` Экспорт воркфлоу из локального n8n
+- [ ] `CLOUD-10` Импорт воркфлоу + восстановление credentials на облачном n8n
+- [ ] `CLOUD-11` Замена Ollama на Cloud LLM API (Groq/Gemini) + Wait node (4s)
+
+#### 7.4 — GitHub Actions
+- [ ] `CLOUD-12` Обновление `WEBHOOK_URL` в GitHub Secrets
+- [ ] `CLOUD-13` E2E-тест: dispatch → scrape → cloud n8n → Notion + Telegram
+
+#### 7.5 — Operational Hardening
+- [ ] `CLOUD-14` Автоматические бэкапы (pg_dump + n8n data → GitHub repo)
+- [ ] `CLOUD-15` Мониторинг uptime (UptimeRobot → Telegram)
+- [ ] `CLOUD-16` Документация процедуры обновления Docker-образов
+
+---
+
+### PHASE 8 — Evaluator Observability & Feedback Loop 📋
+> Цель: видеть ВСЕ решения LLM-оценщика, давать фидбек, тюнить промпт на данных.
+> ADR: [ADR-012](docs/adr/ADR-012-evaluator-observability.md)
+> Проблема: сейчас ~180 отклонённых вакансий/день уходят в чёрную дыру (`NoOp: Discard`).
+
+#### 8.1 — Evaluation Log (Level 1 — приоритет)
+- [ ] `EVAL-1` Создание Notion DB `Evaluation Log` (схема: [notion-schema.md](docs/notion-schema.md))
+- [ ] `EVAL-2` Добавление узла Notion Log в evaluate.json (перед `IF: Match?`)
+- [ ] `EVAL-3` Обновление docs/notion-schema.md
+- [ ] `EVAL-4` Добавление `NOTION_EVAL_LOG_DB_ID` в env vars
+
+#### 8.2 — Telegram Feedback (Level 2)
+- [ ] `EVAL-5` Inline-кнопки 👍/👎 на Telegram-алертах
+- [ ] `EVAL-6` Воркфлоу Feedback Handler (callback_query → Notion update)
+- [ ] `EVAL-7` Команды `/rejected`, `/wrong <url>`
+- [ ] `EVAL-8` Экспорт нового воркфлоу
+
+#### 8.3 — Accuracy Reporting (Level 3 — после 2 недель данных)
+- [ ] `EVAL-9` Weekly Report воркфлоу (cron → accuracy stats → Telegram)
+- [ ] `EVAL-10` Notion views для аналитики
+
+#### 8.4 — Dynamic Profile Tuning (Level 4 — отложено до NestJS)
+- [ ] `EVAL-11` Хранение профиля оценщика в Notion key-value
+- [ ] `EVAL-12` Telegram-команды `/profile add-stack`, `/profile remove-stack`
+
+---
+
 ### POC Backlog (следующие улучшения)
 
 - [ ] `POC-1` Incremental ingestion by date cursor
@@ -221,17 +290,24 @@ recruiter/
 ├── n8n/
 │   ├── workflows/
 │   │   ├── ingest.json          # Webhook + нормализация + роутинг по source
-│   │   └── evaluate.json        # Split → Ollama → IF match → [Notion/Telegram]
+│   │   ├── evaluate.json        # Split → LLM → IF match → [Notion/Telegram]
+│   │   └── notify.json          # Notion Create Page + Telegram Alert
 │   └── prompts/
-│       └── evaluator.md         # System-промпт для llama3.1:latest
+│       └── evaluator.md         # System-промпт для LLM-оценщика
 ├── docs/
-│   ├── architecture.md
-│   ├── notion-schema.md         # Схема Notion Database (P4)
+│   ├── architecture.md          # Текущая + планируемая архитектура
+│   ├── notion-schema.md         # Схемы: AI Recruiter Board + Evaluation Log
+│   ├── adr/                     # Architecture Decision Records
+│   │   ├── ADR-010-*.md         # Cloud Migration (Oracle)
+│   │   ├── ADR-011-*.md         # Cloud LLM (Groq/Gemini)
+│   │   └── ADR-012-*.md         # Evaluator Observability
 │   └── agents/                  # Промпты AI-агентов
 ├── context/                     # Контекстные манифесты для агентов
 │   ├── project.yaml
 │   ├── roadmap.yaml
+│   ├── decisions.yaml           # Все ADR в YAML-формате
 │   ├── interfaces.yaml
+│   ├── env.yaml
 │   └── modules/
 ├── .gitignore
 ├── .env.example
@@ -252,6 +328,16 @@ recruiter/
 | `TELEGRAM_CHAT_ID` | n8n | ID чата для алертов *(P5)* |
 | `OLLAMA_HOST` | n8n | URL Ollama (default: `http://localhost:11434`) |
 
+**Планируемые (P7/P8):**
+
+| Переменная | Где используется | Описание |
+|---|---|---|
+| `LLM_PROVIDER` | n8n | Провайдер LLM: `ollama` / `groq` / `gemini` (default: `ollama`) |
+| `LLM_API_KEY` | n8n | API-ключ для Groq или Gemini *(только при LLM_PROVIDER != ollama)* |
+| `LLM_MODEL` | n8n | Модель LLM (зависит от провайдера) |
+| `NOTION_EVAL_LOG_DB_ID` | n8n | ID Notion DB Evaluation Log *(P8)* |
+| `N8N_DB_TYPE` | n8n docker | `sqlite` или `postgresdb` *(P7, Oracle Cloud)* |
+
 ---
 
 ## Известные проблемы и решения
@@ -260,10 +346,11 @@ recruiter/
 |---|---|---|
 | Cloudflare WAF | 403 / 0 bytes | Playwright с browser fingerprint, перехват XHR вместо прямых запросов |
 | NoFluffJobs SSR (2026-05) | Нет XHR с данными | SSR-экстрактор из `<script id="serverApp-state">` |
-| Tunnel недоступен | `503 Tunnel Unavailable` / `404` от публичного webhook | Для локального запуска использовать `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`; tunnel нужен только для GitHub Actions режима |
+| Tunnel недоступен | `503 Tunnel Unavailable` / `404` от публичного webhook | Для локального запуска использовать `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`; P7 решит эту проблему полностью (Oracle Cloud) |
 | localtunnel subdomain занят | `--subdomain ai-recruiter` недоступен | Запустить без `--subdomain`, обновить `WEBHOOK_URL` в GitHub Secrets |
-| Cloud LLM rate limits | 429 Too Many Requests | Локальная Ollama без лимитов + `keep_alive: 0` |
+| Cloud LLM rate limits | 429 Too Many Requests | Throttled Queue: Wait node 4s в n8n → ≤15 RPM. Fallback: переключение на второй провайдер |
 | VRAM утечка в Ollama | Память не освобождается | `"keep_alive": 0` в каждом запросе к `/api/chat` |
+| Слепая зона оценщика | Нет данных об отклонённых вакансиях | Evaluation Log (P8, ADR-012): логировать ВСЕ решения LLM в отдельную Notion DB |
 
 ---
 

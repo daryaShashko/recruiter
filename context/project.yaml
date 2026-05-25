@@ -10,8 +10,10 @@ project:
   description: >
     Automated IT job scraper with LLM evaluation.
     Collects job offers from JustJoin.it and NoFluffJobs via Playwright,
-    evaluates them with a local Ollama LLM, saves matches to Notion,
-    and sends Telegram alerts — all triggered daily by GitHub Actions.
+    evaluates them with LLM (local Ollama or cloud Groq/Gemini), saves matches to Notion,
+    and sends Telegram alerts — triggered daily by GitHub Actions.
+    Planned: migration to Oracle Cloud Always Free (ADR-010/011) and
+    evaluator observability with feedback loop (ADR-012).
   stage: early_development # early_development | active | stable | maintenance
   version: 0.1.0
 
@@ -30,15 +32,21 @@ tech_stack:
     runner: ts-node 10.9
     testing: jest 29 + ts-jest 29
   pipeline:
-    workflow_engine: n8n (local, --tunnel for public webhook)
-    llm: Ollama — llama3.1:latest (local, no cloud)
+    workflow_engine: "n8n (local; planned: Oracle Cloud Always Free — ADR-010)"
+    llm: "Ollama llama3.1:latest (local); planned: Groq/Gemini free-tier API (ADR-011)"
   storage:
-    database: Notion API (kanban board + dedup source)
+    primary_database: Notion API (kanban board + dedup source)
+    evaluation_log: "Notion Evaluation Log (planned — ADR-012)"
+    n8n_internal: "SQLite (local); planned: PostgreSQL in Docker (ADR-010)"
   alerts:
     bot: Telegram Bot API
   ci_cd:
     platform: GitHub Actions (ubuntu-latest, free tier)
     schedule: "0 8 * * * (08:00 UTC = 10:00 Warsaw)"
+  infrastructure_planned:
+    server: "Oracle Cloud Always Free — Ampere A1 (4 vCPU, 24 GB RAM)"
+    reverse_proxy: "Caddy (auto-TLS via Let's Encrypt)"
+    monitoring: "UptimeRobot (free tier)"
 
 architecture:
   # Full diagram: see docs/architecture.md
@@ -57,21 +65,26 @@ architecture:
       output: "individual JobOffer items"
     - step: 4
       from: n8n HTTP Request
-      action: Evaluate each job with Ollama (llama3.1:8b)
+      action: "Evaluate each job with LLM (local Ollama or cloud Groq/Gemini)"
       output: "{ match: boolean, reason: string, url: string }"
+    - step: 4.5
+      from: n8n Notion Create Page (planned — ADR-012)
+      action: "Log evaluation result (match AND reject) to Evaluation Log DB"
+      output: "Evaluation Log record created"
     - step: 5
       from: n8n IF node (match === true)
-      action: Save to Notion + send Telegram alert
+      action: Save to Notion Board + send Telegram alert
       output: "Notion page created, Telegram message sent"
 
-current_phase: P5 # P0–P4 done, P5 in progress, P6 pending
+current_phase: P7 # P0–P5 done, P6 in_progress (6/7), P7+P8 proposed
 # See context/roadmap.yaml for detailed task status
 
 structure:
   scraper/: "TypeScript/Playwright job scraper — ts-node project"
-  n8n/: "n8n workflow JSONs + Ollama LLM prompts"
+  n8n/: "n8n workflow JSONs + LLM prompts"
   scripts/: "Local run entrypoints (run-local preflight + health summary)"
-  docs/: "Architecture diagrams, schemas, agent skill files"
+  docs/: "Architecture diagrams, schemas, ADRs, agent skill files"
+  docs/adr/: "Architecture Decision Records (ADR-001 through ADR-012)"
   docs/agents/: "AI agent system prompt files (8 agents)"
   context/: "THIS — project context manifests (YAML)"
   .github/: "GitHub Actions CI/CD workflows"

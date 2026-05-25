@@ -1,14 +1,5 @@
-# ============================================================
-# ROADMAP STATUS MANIFEST
-# Current phase/task completion state.
-# Update this file when: task completed, phase starts/ends,
-# new tasks discovered, priorities change.
-# ============================================================
-# Status values: done | in_progress | partial | pending | blocked | skipped
-# ============================================================
-
-current_phase: P6
-current_focus: "P6 IN PROGRESS — 6/7 done. P6-7 ждёт 7 дней production-мониторинга."
+current_phase: P7
+current_focus: "P6 6/7 done (P6-7 awaits production data). P7 (Cloud Migration) and P8 (Evaluator Observability) are PROPOSED — awaiting execution start."
 
 poc_backlog:
   POC-1:
@@ -420,10 +411,348 @@ phases:
           note: "docs/post-mortem.md создан как шаблон с dry-run данными (2026-05-22). Финальные данные заполнить после 7 дней production.",
         }
 
+  # ─────────────────────────────────────────────────────────
+  # PHASE 7 — Cloud Migration (ADR-010 + ADR-011)
+  # Problem solved: n8n depends on developer's laptop + unstable tunnel.
+  #   This is the #1 reliability risk for unattended 24/7 operation.
+  #   Additionally, Ollama on ARM CPU (no GPU) is too slow for daily batches.
+  # Decision: Migrate to Oracle Cloud Always Free (ARM, 4 CPU, 24 GB RAM)
+  #   with Docker Compose (n8n + Postgres + Caddy) and Cloud LLM API.
+  # ADRs: ADR-010 (cloud infra), ADR-011 (cloud LLM)
+  # ─────────────────────────────────────────────────────────
+  P7:
+    name: "Cloud Migration — Oracle Cloud + Cloud LLM"
+    status: pending
+    goal: "Migrate pipeline from local laptop to stable 24/7 cloud server with free-tier LLM"
+    blocked_by: NONE
+    depends_on: ["P6"]
+    adrs: ["ADR-010", "ADR-011"]
+    problem_statement: >
+      The current setup has a critical reliability problem: n8n runs on developer's
+      laptop via an unstable public tunnel. If the laptop sleeps, loses internet, or
+      the tunnel crashes — the entire pipeline silently fails. This violates the P6
+      goal of "system runs unattended for 30+ days."
+      Additionally, moving to cloud ARM without GPU makes local Ollama impractical
+      (3-6 hours for 200 vacancies vs 15 minutes with cloud LLM API).
+
+    sub_phases:
+      "7.1 Cloud Infrastructure Provisioning":
+        goal: "Get a bare server with public IP, Docker installed"
+        tasks:
+          CLOUD-1:
+            status: pending
+            title: "Register Oracle Cloud account"
+            owner_agent: devops
+            note: "Create OCI account, enable Always Free tier"
+            estimate: "0.5d"
+          CLOUD-2:
+            status: pending
+            title: "Create Compute Instance (VM.Standard.A1.Flex)"
+            owner_agent: devops
+            note: "4 OCPU, 24 GB RAM, 200 GB boot volume, Ubuntu 22.04 aarch64"
+            risk: "A1 instances may be unavailable — retry over several days or use availability script"
+            estimate: "0.5d"
+          CLOUD-3:
+            status: pending
+            title: "Configure VCN Security List (Ingress Rules)"
+            owner_agent: devops
+            note: "Open ports: 80 (HTTP), 443 (HTTPS), 22 (SSH). Block all other inbound."
+            estimate: "0.5d"
+          CLOUD-4:
+            status: pending
+            title: "SSH into server, update system, configure swap"
+            owner_agent: devops
+            note: "sudo apt update && upgrade. Add 4-8 GB swap as OOM safety net."
+            estimate: "0.5d"
+          CLOUD-5:
+            status: pending
+            title: "Install Docker Engine + Docker Compose plugin"
+            owner_agent: devops
+            note: "Follow official Docker install for Ubuntu ARM64"
+            estimate: "0.5d"
+
+      "7.2 n8n + Reverse Proxy Deployment":
+        goal: "Run n8n on HTTPS with stable URL — no more tunnel"
+        tasks:
+          CLOUD-6:
+            status: pending
+            title: "Configure free domain (DuckDNS or own) → server public IP"
+            owner_agent: devops
+            note: "Optional: use own domain if available. DuckDNS = free dynamic DNS."
+            estimate: "0.5d"
+          CLOUD-7:
+            status: pending
+            title: "Write docker-compose.yml with 3 services"
+            owner_agent: devops
+            note: >
+              Services: postgres (n8n internal DB), n8n (DB_TYPE=postgresdb, env vars),
+              caddy (reverse proxy, auto Let's Encrypt TLS, routes to n8n:5678).
+              Use named Docker volumes for data persistence.
+            estimate: "1d"
+          CLOUD-8:
+            status: pending
+            title: "Deploy stack and verify n8n HTTPS accessibility"
+            owner_agent: devops
+            note: "docker compose up -d. Verify: curl https://n8n.your-domain.com → n8n login page."
+            acceptance: "n8n is accessible via HTTPS from any browser"
+            estimate: "0.5d"
+
+      "7.3 Pipeline Migration + LLM Switch":
+        goal: "Move workflows from local n8n to cloud, replace Ollama with cloud LLM"
+        tasks:
+          CLOUD-9:
+            status: pending
+            title: "Export all workflows from local n8n"
+            owner_agent: n8n-specialist
+            note: "Export Ingest, Evaluate, Notify, Telegram Trigger workflows as JSON"
+            estimate: "0.5d"
+          CLOUD-10:
+            status: pending
+            title: "Import workflows + restore credentials on cloud n8n"
+            owner_agent: n8n-specialist
+            note: "Import workflows. Re-enter Notion token, Telegram bot token in n8n Credentials."
+            estimate: "0.5d"
+          CLOUD-11:
+            status: pending
+            title: "Replace Ollama HTTP Request with Cloud LLM API node"
+            owner_agent: n8n-specialist
+            note: >
+              In evaluate workflow: replace HTTP Request (localhost:11434/api/chat)
+              with Groq API (primary) or Gemini 1.5 Flash (fallback).
+              Add Wait node (4s) inside Split In Batches loop = ≤15 RPM.
+              Add error handling: if 429 → retry after 60s or switch to fallback.
+              Register free API keys: console.groq.com, aistudio.google.com.
+            acceptance: "200 test vacancies evaluated in <20 min without 429 errors"
+            estimate: "1d"
+
+      "7.4 GitHub Actions Reconfiguration":
+        goal: "Point scraper at new production webhook URL"
+        tasks:
+          CLOUD-12:
+            status: pending
+            title: "Update WEBHOOK_URL in GitHub Secrets"
+            owner_agent: devops
+            note: "Change to https://n8n.your-domain.com/webhook/jobs/ingest"
+            estimate: "0.5d"
+          CLOUD-13:
+            status: pending
+            title: "E2E test: manual GitHub Actions dispatch → verify full pipeline"
+            owner_agent: qa
+            note: "Workflow Dispatch → scraper runs → webhook hits cloud n8n → LLM evaluates → Notion + Telegram"
+            acceptance: "At least 1 vacancy appears in Notion Board + Telegram alert received"
+            estimate: "0.5d"
+
+      "7.5 Operational Hardening":
+        goal: "Backups, monitoring, update strategy for cloud server"
+        tasks:
+          CLOUD-14:
+            status: pending
+            title: "Set up automated backups (pg_dump + n8n data)"
+            owner_agent: devops
+            note: >
+              Cron job: daily pg_dump + tar n8n data volume → push to private GitHub repo.
+              Retention: 7 daily backups. Free storage in GitHub repo.
+            estimate: "0.5d"
+          CLOUD-15:
+            status: pending
+            title: "Set up uptime monitoring"
+            owner_agent: devops
+            note: "Free UptimeRobot (50 monitors free) → ping /healthz every 5 min → Telegram alert on downtime"
+            estimate: "0.5d"
+          CLOUD-16:
+            status: pending
+            title: "Document Docker image update procedure"
+            owner_agent: devops
+            note: "Monthly: docker compose pull && docker compose up -d. Or Watchtower for auto-updates."
+            estimate: "0.5d"
+
+    execution_order:
+      - "CLOUD-1 → CLOUD-2 → CLOUD-3 → CLOUD-4 → CLOUD-5"
+      - "CLOUD-6 → CLOUD-7 → CLOUD-8"
+      - "CLOUD-9 → CLOUD-10 → CLOUD-11"
+      - "CLOUD-12 → CLOUD-13"
+      - "CLOUD-14 + CLOUD-15 + CLOUD-16"
+    primary_risks:
+      - "OCI A1 instance unavailability — may take days to provision"
+      - "ARM Docker image incompatibility for future services"
+      - "Cloud LLM API free tier changes or deprecation"
+      - "Oracle Always Free terms changes (low probability)"
+    definition_of_done:
+      - "n8n accessible via stable HTTPS URL (no tunnel)"
+      - "Full pipeline: GH Actions → cloud n8n → Cloud LLM → Notion + Telegram"
+      - "Backups running daily"
+      - "Uptime monitoring active with Telegram alerts"
+      - "All CLOUD-1 through CLOUD-16 tasks done"
+
+  # ─────────────────────────────────────────────────────────
+  # PHASE 8 — Evaluator Observability (ADR-012)
+  # Problem solved: ~180 rejected vacancies/day vanish into NoOp node.
+  #   No way to detect false negatives, measure accuracy, or tune prompts.
+  #   Model migration (Ollama → Groq) may shift behavior undetected.
+  # Decision: Log ALL evaluations, add feedback loop, build accuracy metrics.
+  # ADR: ADR-012
+  # ─────────────────────────────────────────────────────────
+  P8:
+    name: "Evaluator Observability & Feedback Loop"
+    status: pending
+    goal: "Full visibility into LLM decisions, human feedback, and data-driven prompt tuning"
+    blocked_by: NONE
+    depends_on: ["P4"]
+    adrs: ["ADR-012"]
+    problem_statement: >
+      The evaluate workflow sends ~180 rejected vacancies/day to NoOp: Discard Non-Match.
+      This is a blind spot: there is no way to know if the LLM correctly rejected a
+      vacancy or missed a good match. False negatives (wrongly rejected good vacancies)
+      are completely invisible. Prompt tuning is guesswork without accuracy data.
+      The upcoming model switch (ADR-011: Ollama → Groq/Gemini) amplifies this risk —
+      without a baseline, evaluation regression is undetectable.
+
+    sub_phases:
+      "8.1 Evaluation Log (Level 1)":
+        goal: "Log every LLM decision — match AND reject — in a Notion database"
+        priority: HIGH
+        effort: "1-2 hours"
+        tasks:
+          EVAL-1:
+            status: pending
+            title: "Create Notion Database: Evaluation Log"
+            owner_agent: n8n-specialist
+            note: >
+              New Notion DB (separate from AI Recruiter Board).
+              Fields: Title, Company, URL, Source, Match (checkbox), Reason (text),
+              Model (text), Batch ID (text), Evaluated At (date),
+              Human Verdict (select: Correct/Wrong–Should Match/Wrong–Should Reject/Pending),
+              Tags (multi-select).
+            estimate: "0.5d"
+          EVAL-2:
+            status: pending
+            title: "Update evaluate.json: add Notion Log node before IF: Match?"
+            owner_agent: n8n-specialist
+            note: >
+              Add Notion Create Page node AFTER Code: Parse Ollama Response
+              and BEFORE IF: Match?. Logs every evaluation regardless of outcome.
+              Sets Model field to current LLM_PROVIDER value.
+              Sets Batch ID to ISO timestamp of the run.
+            acceptance: "Both matched and rejected vacancies appear in Evaluation Log"
+            estimate: "0.5d"
+          EVAL-3:
+            status: pending
+            title: "Update docs/notion-schema.md with Evaluation Log schema"
+            owner_agent: developer
+            note: "Document new DB schema alongside existing AI Recruiter Board schema"
+            estimate: "0.5d"
+          EVAL-4:
+            status: pending
+            title: "Add NOTION_EVAL_LOG_DB_ID to env vars"
+            owner_agent: devops
+            note: "Add to .env, .env.example, context/env.yaml, GitHub Secrets"
+            estimate: "0.5d"
+
+      "8.2 Telegram Feedback (Level 2)":
+        goal: "1-tap feedback on matches + ability to review rejected vacancies"
+        priority: MEDIUM
+        effort: "4-6 hours"
+        tasks:
+          EVAL-5:
+            status: pending
+            title: "Add inline keyboard buttons to Telegram match alerts"
+            owner_agent: n8n-specialist
+            note: >
+              Replace Telegram Send Message node with HTTP Request to api.telegram.org.
+              Add inline_keyboard: [[{text: '👍 Correct', callback_data: 'correct:<url>'},
+              {text: '👎 Wrong', callback_data: 'wrong:<url>'}]].
+            estimate: "0.5d"
+          EVAL-6:
+            status: pending
+            title: "Create Feedback Handler workflow"
+            owner_agent: n8n-specialist
+            note: >
+              New n8n workflow: Telegram Trigger (callback_query) →
+              Parse callback_data (correct/wrong + url) →
+              Notion Update Page (set Human Verdict in Evaluation Log) →
+              Telegram Answer Callback Query (acknowledge button press).
+            acceptance: "Pressing 👍 or 👎 updates Human Verdict in Notion"
+            estimate: "1d"
+          EVAL-7:
+            status: pending
+            title: "Add /rejected and /wrong commands to Telegram trigger"
+            owner_agent: n8n-specialist
+            note: >
+              /rejected [N] — query Evaluation Log, filter Match=false,
+              sort by Evaluated At desc, return last N (default 10) as Telegram messages.
+              /wrong <url> — find entry in Evaluation Log by URL,
+              set Human Verdict = 'Wrong – Should Match'.
+            estimate: "1d"
+          EVAL-8:
+            status: pending
+            title: "Export new workflows to n8n/workflows/"
+            owner_agent: n8n-specialist
+            note: "Export feedback-handler.json"
+            estimate: "0.5d"
+
+      "8.3 Accuracy Reporting (Level 3)":
+        goal: "Weekly automated accuracy report based on human-verified data"
+        priority: LOW
+        effort: "4-5 hours"
+        blocked_by: "At least 2 weeks of Evaluation Log data with Human Verdict annotations"
+        tasks:
+          EVAL-9:
+            status: pending
+            title: "Create Weekly Report workflow"
+            owner_agent: n8n-specialist
+            note: >
+              Cron trigger (weekly, Monday 10:00).
+              Query Evaluation Log: all entries where Human Verdict != Pending.
+              Calculate: total evaluated, matched, rejected, correct %, wrong %.
+              Identify patterns in wrong decisions (common stacks, titles).
+              Send summary to Telegram.
+            estimate: "1d"
+          EVAL-10:
+            status: pending
+            title: "Design accuracy dashboard in Notion"
+            owner_agent: business-analyst
+            note: "Create Notion views: 'Wrong Decisions', 'Accuracy This Week', 'All Rejected'. Use formulas for stats."
+            estimate: "0.5d"
+
+      "8.4 Dynamic Profile Tuning (Level 4 — FUTURE)":
+        goal: "Change evaluator behavior from Telegram without touching n8n"
+        priority: LOW
+        blocked_by: "NestJS backend (future stage)"
+        deferred: true
+        deferred_reason: >
+          Dynamic prompt generation + config management via Notion key-value store
+          is fragile without a proper backend. Better implemented in NestJS stage
+          with a real API and database.
+        tasks:
+          EVAL-11:
+            status: deferred
+            title: "Store evaluator profile in Notion as key-value config"
+            note: "Notion page with: targetStack, rejectStack, targetLevels, location, etc."
+          EVAL-12:
+            status: deferred
+            title: "Telegram commands for profile tuning"
+            note: "/profile, /profile add-stack python, /profile remove-stack react, etc."
+
+    execution_order:
+      - "EVAL-1 → EVAL-2 → EVAL-3 → EVAL-4 (Level 1 — do first)"
+      - "EVAL-5 → EVAL-6 → EVAL-7 → EVAL-8 (Level 2 — next sprint)"
+      - "EVAL-9 → EVAL-10 (Level 3 — after 2 weeks of data)"
+      - "EVAL-11 → EVAL-12 (Level 4 — deferred to NestJS stage)"
+    primary_risks:
+      - "Notion API rate limits with extra logging calls (mitigated by throttled queue)"
+      - "Human review fatigue — need to actually mark Human Verdict regularly"
+      - "Telegram callback_query handling complexity"
+    definition_of_done:
+      - "Level 1: Every LLM decision logged in Evaluation Log Notion DB"
+      - "Level 2: 👍/👎 buttons work, /rejected and /wrong commands functional"
+      - "Level 3: Weekly accuracy report sent to Telegram"
+      - "Prompt improvement cycle: data → analysis → prompt change → measure impact"
+
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
   objective: "Полностью локальный, бесплатный и управляемый запуск: schedule + manual Run Now через Telegram + catch-up после офлайна"
   status: in_planning
+  note: "This plan was designed for local-only mode. With P7 (Cloud Migration), some tasks become simpler (no tunnel) or change scope. Review after P7 completion."
   constraints:
     - "No paid services"
     - "Ollama local only"
@@ -573,6 +902,7 @@ github_actions_deactivation_plan:
   plan_id: "GHA-OFF-01"
   objective: "Отключить GitHub Actions scheduled execution для перехода в полностью локальный режим"
   status: pending
+  note: "After P7 (Cloud Migration), this plan may be unnecessary — GH Actions will POST to a stable cloud URL, not a tunnel."
   mode_options:
     SOFT_OFF:
       description: "Оставить workflow_dispatch, отключить только schedule"
@@ -638,6 +968,7 @@ post_poc_improvements:
     title: "Telegram: убрать n8n-брендинг"
     note: "Заменить Telegram-узел на HTTP Request к api.telegram.org/sendMessage — footer исчезнет"
     priority: HIGH
+    note_p8: "Будет частично реализовано в EVAL-5 (inline keyboard через HTTP Request)"
   IMPROVE-2:
     title: "Telegram: улучшить формат сообщения"
     note: "HTML parse_mode, секции: вакансия / зарплата / локация / причина матча. Читабельный вид."
@@ -646,6 +977,7 @@ post_poc_improvements:
     title: "Company research: Ollama из текста вакансии"
     note: "Второй Ollama-вызов после match:true — аутсорс/продукт, размер команды, культура. Без доп. запросов."
     priority: MEDIUM
+    note_p7: "After P7, use Cloud LLM API instead of Ollama for this"
   IMPROVE-4:
     title: "Company research: scrape сайта компании"
     note: "HTTP GET company-domain/about → текст → Ollama summarize → секция в Telegram-сообщении"
@@ -674,9 +1006,11 @@ post_poc_improvements:
 
 known_blockers:
   - "For GitHub Actions mode only: public webhook URL must be reachable from runner (tunnel or hosted n8n); local mode has no blocker"
+  - "P7 will resolve tunnel blocker by providing stable cloud HTTPS endpoint"
 
 # ============================================================
 # SYNC RULE
 # Update this file when any task status changes.
 # Orchestrator reads this file to report current project state.
 # ============================================================
+

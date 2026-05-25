@@ -244,6 +244,120 @@ decisions:
       context/modules/n8n.yaml (updated workflow descriptions)
     supersedes: "Part of ADR-008 (Split In Batches placement)"
 
+  ADR-010:
+    title: "Migrate n8n to Oracle Cloud Infrastructure Always Free"
+    status: proposed
+    date: "2026-05"
+    context: >
+      Current deployment requires developer's laptop running 24/7 with n8n + Ollama.
+      Public tunnel (localtunnel/n8n --tunnel) is unstable: rotates URLs on restart,
+      returns 503/504 intermittently. This is the #1 reliability risk — if laptop
+      sleeps or tunnel crashes, GitHub Actions scraper silently fails.
+      Oracle Cloud Always Free offers ARM A1 instances (4 vCPU, 24 GB RAM, 200 GB disk)
+      at $0/month permanently (not a trial).
+    decision: >
+      Deploy n8n, Caddy (reverse proxy + auto-TLS), and PostgreSQL (n8n internal DB)
+      as a Docker Compose stack on an OCI Ampere A1 Flex instance.
+      Use free domain (DuckDNS or own) for stable HTTPS webhook URL.
+    rationale:
+      - "Eliminates tunnel dependency — WEBHOOK_URL set once, never rotates"
+      - "24/7 uptime independent of developer's laptop"
+      - "$0/month forever — OCI Always Free is not a trial"
+      - "24 GB RAM handles n8n + Postgres + Caddy with room for future NestJS"
+      - "PostgreSQL prevents SQLite 'database is locked' under concurrent writes"
+    consequences:
+      positive:
+        - "Stable 24/7 operation without human intervention"
+        - "No manual WEBHOOK_URL rotation after tunnel restart"
+        - "Future-proof infra for NestJS + Lovable UI stage"
+      negative:
+        - "ARM (aarch64) — needs ARM-compatible Docker images (available for n8n/Caddy)"
+        - "OCI A1 availability — high demand, may take days to provision"
+        - "New infra to maintain: server updates, Docker updates, firewall"
+        - "Oracle could change Always Free terms (low probability)"
+    implementation: >
+      Phase 7 (CLOUD-1 through CLOUD-12) in context/roadmap.yaml.
+      ADR file: docs/adr/ADR-010-cloud-migration-oracle.md
+
+  ADR-011:
+    title: "Replace local Ollama with free Cloud LLM API (Groq/Gemini)"
+    status: proposed
+    date: "2026-05"
+    supersedes_partially: "ADR-002 (Local Ollama constraint — now applies only to local dev mode)"
+    context: >
+      ADR-002 banned cloud LLMs for rate limits, costs, and privacy reasons.
+      With ADR-010 (cloud migration to ARM), the situation reverses:
+      Oracle ARM instances have NO GPU. Ollama on CPU: ~2-5 tok/s.
+      200 vacancies would take 3-6 hours (vs 15 min with cloud API).
+      CPU-bound inference consumes 100% of 4 vCPU, destabilizing n8n.
+      Original ADR-002 concerns: (1) rate limits — solved by throttled queue;
+      (2) costs — solved by free tiers (Groq 15 RPM, Gemini 15 RPM/1500 RPD);
+      (3) privacy — job postings are public data, not PII.
+    decision: >
+      Use Groq (primary) and Gemini 1.5 Flash (fallback) free-tier APIs.
+      Implement Throttled Queue: Wait node (4s) after each LLM call = ≤15 RPM.
+      Keep Ollama as local dev/test option via LLM_PROVIDER env var.
+    rationale:
+      - "10-20x faster: 15 min vs 3-6 hours for 200 vacancies"
+      - "$0 cost — both Groq and Gemini have sufficient free tiers"
+      - "n8n CPU stays idle during evaluation — stable for concurrent operations"
+      - "Higher model quality available (Gemini Flash, Llama 3 70B via Groq)"
+      - "Dual-provider fallback increases reliability"
+      - "Job postings are public data — no PII concern"
+    consequences:
+      positive:
+        - "Fast evaluation (15 min for full daily batch)"
+        - "No GPU/VRAM management needed"
+        - "Dual-provider redundancy"
+      negative:
+        - "External API dependency (mitigated by fallback)"
+        - "Rate limits require throttled queue pattern"
+        - "Free tier terms may change (mitigated by dual-provider)"
+        - "New API key secrets to manage"
+    implementation: >
+      Part of Phase 7 (CLOUD-9 through CLOUD-11).
+      ADR file: docs/adr/ADR-011-cloud-llm-migration.md.
+      Updates architect.md anti-pattern CLOUD_LLM → PAID_LLM.
+
+  ADR-012:
+    title: "Evaluator observability — Evaluation Log + Feedback Loop"
+    status: proposed
+    date: "2026-05"
+    context: >
+      Currently, rejected vacancies go to NoOp: Discard Non-Match — zero observability.
+      ~180 of 200 daily vacancies are rejected, but there is no way to verify correctness.
+      False negatives (wrongly rejected good vacancies) are invisible.
+      Prompt tuning is guesswork without data on evaluator accuracy.
+      ADR-011 (cloud LLM switch) makes this critical: model change may shift behavior
+      and without a baseline, regression is undetectable.
+    decision: >
+      Implement 4-level incremental observability:
+      Level 1 (immediate): Notion Evaluation Log DB — logs ALL decisions (match + reject).
+      Level 2 (next sprint): Telegram inline feedback buttons + /rejected + /wrong commands.
+      Level 3 (after 2 weeks data): Weekly accuracy report via cron workflow.
+      Level 4 (NestJS stage): Dynamic profile tuning via Telegram commands.
+    rationale:
+      - "Can't improve what you can't measure — prompt tuning needs data"
+      - "Model migration safety net — before/after comparison baseline"
+      - "Notion already integrated — one extra node, not a new service"
+      - "Level 1 alone provides 80% of value with minimal effort (1-2 hours)"
+      - "Telegram inline buttons = 1-tap feedback, zero friction"
+    consequences:
+      positive:
+        - "Full visibility into ALL evaluator decisions"
+        - "Detect false negatives (missed good vacancies)"
+        - "Data-driven prompt improvements"
+        - "Regression detection on model changes"
+      negative:
+        - "Extra Notion API calls (+1 per vacancy for logging)"
+        - "Notion storage growth (~6000 records/month, within free tier)"
+        - "Manual review effort — Human Verdict must be marked by hand"
+        - "Telegram callback_query handling adds workflow complexity"
+    implementation: >
+      Phase 8 (EVAL-1 through EVAL-12) in context/roadmap.yaml.
+      ADR file: docs/adr/ADR-012-evaluator-observability.md.
+      New Notion DB: Evaluation Log. New env var: NOTION_EVAL_LOG_DB_ID.
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

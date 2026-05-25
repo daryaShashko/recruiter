@@ -88,10 +88,69 @@ interfaces:
         required: true
         note: "Echoed from the user message — used for traceability"
     critical_notes:
-      - "Ollama MUST return ONLY this JSON — no markdown, no explanation outside JSON"
-      - "Parse from: response.message.content (n8n HTTP Request response)"
-      - "Add try/catch in n8n Code node — Ollama may wrap in markdown code blocks"
+      - "LLM MUST return ONLY this JSON — no markdown, no explanation outside JSON"
+      - "Parse from: response.message.content (Ollama) or response.choices[0].message.content (Groq/Gemini)"
+      - "Add try/catch in n8n Code node — LLM may wrap in markdown code blocks"
       - "If parsing fails, default to { match: false, reason: 'Parse error', url: $json.url }"
+
+  # ── ADR-012: Evaluation Log (planned, Phase 8) ───────────
+  EvaluationLogRecord:
+    file: "Notion Evaluation Log DB (not a TypeScript type — Notion page schema)"
+    description: >
+      Represents one row in the Evaluation Log Notion database.
+      Created for EVERY vacancy that passes through the LLM evaluator — both matched and rejected.
+      Used for accuracy tracking, false-negative detection, and prompt tuning.
+    fields:
+      title:
+        type: string (Notion Title)
+        required: true
+        note: "Job title"
+      company:
+        type: string (Notion Text)
+        required: true
+      url:
+        type: string (Notion URL)
+        required: true
+        note: "Same URL used for dedup in AI Recruiter Board"
+      source:
+        type: select
+        required: true
+        values: ["justjoin", "nofluffjobs", "linkedin", "manual"]
+      match:
+        type: boolean (Notion Checkbox)
+        required: true
+        note: "LLM decision: true = relevant, false = rejected"
+      reason:
+        type: string (Notion Text)
+        required: true
+        note: "Verbatim LLM reason, one sentence"
+      model:
+        type: string (Notion Text)
+        required: true
+        note: "LLM model used: llama3.1, groq-llama3, gemini-flash, etc."
+      batch_id:
+        type: string (Notion Text)
+        required: true
+        format: ISO 8601 timestamp
+        note: "Groups all evaluations from the same pipeline run"
+      evaluated_at:
+        type: date (Notion Date)
+        required: true
+      human_verdict:
+        type: select (Notion Select)
+        required: false
+        default: "Pending"
+        values: ["Correct", "Wrong – Should Match", "Wrong – Should Reject", "Pending"]
+        note: "Set manually by user after reviewing the LLM decision"
+      tags:
+        type: multi-select (Notion Multi-select)
+        required: false
+        note: "Tech stack tags from vacancy, for pattern analysis"
+    critical_notes:
+      - "This is a Notion DB schema, not a TypeScript interface"
+      - "Log node placement: AFTER Code: Parse Ollama Response, BEFORE IF: Match?"
+      - "Must log both match:true AND match:false decisions"
+      - "Human Verdict defaults to Pending — updated via Telegram feedback or manual review"
 
 # ============================================================
 # SYNC RULE

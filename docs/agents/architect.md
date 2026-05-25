@@ -16,9 +16,12 @@ interface contracts, data schemas, and code review feedback.
 
 Every decision you make must be grounded in the project's hard constraints:
   - Free GitHub Actions runner (Ubuntu, 15-minute timeout per job)
-  - Local Ollama only — no cloud LLM, no external AI APIs
-  - No external databases — Notion is the only persistent store
-  - No paid services beyond what already exists
+  - LLM evaluation: local Ollama (dev) OR free-tier cloud API — Groq/Gemini (prod)
+    See ADR-011 for rationale; ADR-002 original "Ollama only" constraint superseded for cloud
+  - Notion is the primary business data store (job board + evaluation log)
+  - PostgreSQL used ONLY for n8n internal state (not for business data)
+  - No paid services — all infrastructure must be $0/month
+  - Evaluation Log (ADR-012): every LLM decision MUST be logged (match AND reject)
 ```
 
 ---
@@ -44,7 +47,7 @@ Full data flow:
       | POST /webhook/jobs/ingest
       | body: WebhookPayload { jobs: JobOffer[], meta: { source, count, sentAt } }
       v
-  [n8n: local, exposed via --tunnel]
+  [n8n: cloud (Oracle Always Free) or local, stable HTTPS via Caddy]
       |
       +—— Webhook node → Respond immediately 200 OK
       |
@@ -57,9 +60,12 @@ Full data flow:
       |    exists → discard
       |    new ↓
       |
-      +—— HTTP Request → Ollama localhost:11434/api/chat
-      |       model: llama3.1:8b, stream: false, keep_alive: 0
+      +—— HTTP Request → LLM API (Groq/Gemini or Ollama localhost:11434/api/chat)
+      |       model: llama3/gemini-flash/mixtral, stream: false
+      |       + Wait node (4s) for cloud APIs (≤15 RPM)
       |       response: { match: boolean, reason: string, url: string }
+      |
+      +—— Notion: Log to Evaluation Log DB (ADR-012, ALL decisions)
       |
       +—— IF match === true
               |
@@ -212,10 +218,12 @@ Save ADRs as: docs/adr/ADR-NNN-<slug>.md
     The scraper has a 15-second timeout. Ollama evaluation takes 2-8s per job × N jobs.
     Always: Webhook node → Respond 200 immediately → process async in the same workflow.
 
-  CLOUD_LLM
-    Never substitute Ollama with OpenAI, Anthropic, or any cloud LLM.
-    Reasons: rate limits break batch processing; per-token costs are unbounded;
-    job descriptions contain personal data (company info, salaries).
+  PAID_LLM
+    Never use a paid LLM API (OpenAI, Anthropic, etc.) for evaluation.
+    Free-tier APIs (Groq, Gemini) are acceptable per ADR-011.
+    Reasons: per-token costs are unbounded for daily batch processing.
+    Always prefer: free-tier cloud API > local Ollama > paid API.
+    If free-tier limits change, switch provider or fall back to local Ollama.
 
   FULL_TEXT_IN_NOTION
     Never store the full job description body in Notion.
@@ -294,25 +302,41 @@ When asked to review a TypeScript file, check IN THIS ORDER:
     OS:           Ubuntu (latest)
     Timeout:      15 minutes per job (hard limit on free tier)
     RAM:          ~7 GB
-    No GPU:       Ollama does NOT run on the GH runner — it runs on the local machine
+    No GPU:       LLM does NOT run on the GH runner — it runs on the n8n server
     Secrets:      WEBHOOK_URL, NOTION_TOKEN, NOTION_DB_ID, TELEGRAM_BOT_TOKEN,
-                  TELEGRAM_CHAT_ID, OLLAMA_HOST
+                  TELEGRAM_CHAT_ID, LLM_API_KEY
 
-  n8n:
+  n8n (local mode):
     Deployment:   Local machine, exposed via `npx n8n start --tunnel`
     Tunnel URL:   rotates on restart — must re-set WEBHOOK_URL secret after each restart
-    Ollama call:  localhost:11434 — only reachable if n8n and Ollama run on same machine
+    LLM:          Ollama localhost:11434 — only reachable if n8n and Ollama run on same machine
 
-  Ollama:
-    Model:        llama3.1:8b
-    keep_alive:   0 (mandatory — free VRAM after each request)
-    Response:     must be valid JSON { match, reason, url }
-                  use structured output or enforce via system prompt
+  n8n (cloud mode — planned, ADR-010):
+    Deployment:   Oracle Cloud Always Free (ARM A1, 4 CPU, 24 GB RAM)
+    URL:          Stable HTTPS via Caddy + Let's Encrypt — set WEBHOOK_URL once
+    LLM:          Cloud API (Groq/Gemini) via HTTP Request node
+    Internal DB:  PostgreSQL (n8n executions, credentials, workflows)
+
+  LLM Evaluation:
+    Local (Ollama):
+      Model:        llama3.1:8b
+      keep_alive:   0 (mandatory — free VRAM after each request)
+      Response:     must be valid JSON { match, reason, url }
+    Cloud (Groq/Gemini):
+      Rate limit:   15 RPM (free tier) — enforced by Wait node (4s) in n8n
+      Fallback:     if primary returns 429 → switch to secondary provider
+      Response:     same JSON format { match, reason, url }
 
   Notion API:
     Rate limit:   3 requests/sec (average), 90 requests/min
     Property cap: 2000 chars for text properties
     Dedup query:  filter by URL property before each Create Page call
+    Databases:    AI Recruiter Board (matches) + Evaluation Log (all decisions)
+
+  Evaluation Log (ADR-012):
+    Purpose:      Log EVERY LLM decision (match AND reject)
+    Human Verdict: Correct / Wrong–Should Match / Wrong–Should Reject / Pending
+    Placement:    Notion node BEFORE IF: Match? in evaluate.json
 ```
 
 ---
