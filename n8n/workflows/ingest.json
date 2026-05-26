@@ -32,7 +32,8 @@
         "conditions": {
           "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
           "conditions": [
-            { "id": "check-jobs-length", "leftValue": "={{ ($json.body.jobs ?? []).length }}", "rightValue": 0, "operator": { "type": "number", "operation": "equal" } }
+            { "id": "check-jobs-length", "leftValue": "={{ ($json.body.jobs ?? []).length }}", "rightValue": 0, "operator": { "type": "number", "operation": "equal" } },
+            { "id": "not-probe", "leftValue": "={{ $json.body.meta?.source }}", "rightValue": "probe", "operator": { "type": "string", "operation": "notEquals" } }
           ],
           "combinator": "and"
         },
@@ -55,6 +56,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [960, 500],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
       "credentials": { "telegramApi": { "id": "AELRiJlX0Uggd98o", "name": "Telegram account 3" } }
     },
     {
@@ -255,6 +260,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [3160, 180],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
       "credentials": { "telegramApi": { "id": "AELRiJlX0Uggd98o", "name": "Telegram account 3" } }
     },
     {

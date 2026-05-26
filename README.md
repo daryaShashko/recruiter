@@ -36,6 +36,7 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
+- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 📋 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md)
 
 ---
 
@@ -271,6 +272,35 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] `IMP-6` Поддержка входящих сообщений: текст или URL отправляются боту
 - [ ] `IMP-7` Извлечение текста с HTTP-страниц для присланных ссылок
 - [ ] `IMP-8` Оценка ручных вакансий и отправка результата обратно в Telegram
+
+---
+
+### PHASE 10 — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 📋
+> Цель: автоматизированная оценка системных промптов через Promptfoo с GitOps-деплоем через Telegram.
+> ADR: [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md)
+
+#### 10.1 — Gold Dataset & Promptfoo Config
+- [ ] `P10-1` Установить `promptfoo` как devDependency в корне проекта
+- [ ] `P10-2` Создать `promptfooconfig.yaml` с настройками промптов, локального провайдера Ollama и резервного Gemini Flash
+- [ ] `P10-3` Сформировать базовый `gold_dataset.yaml` на 15–30 эталонных вакансий
+
+#### 10.2 — Hybrid Assertions & Local Verification
+- [ ] `P10-4` Внедрить детерминированные JavaScript-ассерты для быстрой и бесплатной проверки поля `match` (true/false)
+- [ ] `P10-5` Настроить проверки `llm-rubric` через бесплатный лимит Gemini 1.5 Flash для валидации текстового поля `reason`
+- [ ] `P10-6` Прогнать локальные тесты: `npx promptfoo eval` и убедиться в успешной генерации отчетов в CLI/HTML
+
+#### 10.3 — GitHub Actions Workflow
+- [ ] `P10-7` Создать workflow `.github/workflows/prompt-eval.yml`, запускающийся на Pull Request при изменении промптов
+- [ ] `P10-8` Настроить в GHA шаги установки окружения, запуска promptfoo-тестов и экспорта результатов в JSON
+
+#### 10.4 — Telegram GitOps Merge Hook
+- [ ] `P10-9` Разработать воркфлоу n8n для отправки сводки тестов (F1-score, diff промпта) и кнопок аппрува в Telegram
+- [ ] `P10-10` Реализовать webhook в n8n для автоматического слияния Pull Request через GitHub REST API при нажатии `[ ✅ Merge PR ]`
+- [ ] `P10-11` Настроить триггер автодеплоя на сервере: автоматический pull ветки `main` после успешного мержа PR
+
+#### 10.5 — Downstream Generalization
+- [ ] `P10-12` Обобщить конфигурацию `promptfooconfig.yaml` для оценки промптов `company_analyzer` и `entity_extractor`
+- [ ] `P10-13` Создать специализированные золотые датасеты и ассерты для анализа компаний и извлечения данных
 
 ---
 

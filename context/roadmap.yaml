@@ -1,5 +1,5 @@
 current_phase: P7
-current_focus: "P6 6/7 done (P6-7 awaits production data). P7 (Cloud Migration) and P8 (Evaluator Observability) are PROPOSED — awaiting execution start."
+current_focus: "P6 6/7 done (P6-7 awaits production data). P7 (Cloud Migration), P8 (Evaluator Observability), and P10 (Automated Prompt Evaluation & Optimization) are PROPOSED — awaiting execution start."
 
 phases:
   P0:
@@ -763,6 +763,149 @@ phases:
           IMP-8:
             status: pending
             title: "Оценка ручных вакансий и отправка результата"
+
+  # ─────────────────────────────────────────────────────────
+  # PHASE 10 — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo)
+  # Problem solved: Prompt tuning is currently manual, slow, and lacks regression guardrails.
+  #   Additionally, model/prompt changes can cause undetected regressions in matching quality.
+  # Decision: Implement a programmatic evaluation framework (Promptfoo) + GitOps PR deployment.
+  # ADR: ADR-013
+  # ─────────────────────────────────────────────────────────
+  P10:
+    name: "Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo)"
+    status: pending
+    goal: "Scientific prompt tuning, regression prevention, and safe GitOps rollout"
+    blocked_by: NONE
+    depends_on: ["P8"] # Phase 10 builds on the Notion logs and human verdicts of Phase 8
+    adrs: ["ADR-013"]
+    problem_statement: >
+      Prompt modifications are currently guessing games. There is no automated way
+      to verify that fixing a edge case in one prompt doesn't trigger regressions in other
+      cases. As we transition to cloud models (Phase 7) or add new prompts (Phase 9),
+      we need a baseline metric and an automated runner to measure accuracy, precision,
+      recall, and cost. Furthermore, integrating Promptfoo and GitOps will ensure pure TS
+      workspace stack homogeneity and safe version control via PR merge clicks from Telegram.
+
+    sub_phases:
+      "10.1 Gold Dataset & Promptfoo Config":
+        goal: "Set up Promptfoo framework and compile baseline test dataset"
+        priority: HIGH
+        tasks:
+          P10-1:
+            status: pending
+            title: "Install promptfoo as devDependency"
+            owner_agent: developer
+            note: "Add promptfoo to package.json, run npm install."
+            estimate: "0.2d"
+          P10-2:
+            status: pending
+            title: "Create promptfooconfig.yaml"
+            owner_agent: architect
+            note: "Define prompts (evaluator.md), local Ollama provider, and cloud Flash fallback."
+            estimate: "0.3d"
+          P10-3:
+            status: pending
+            title: "Compile baseline gold_dataset.yaml"
+            owner_agent: business-analyst
+            note: "Build 15-30 representative test cases with vacancy texts, expected decisions, and criteria."
+            estimate: "0.5d"
+
+      "10.2 Hybrid Assertions & Local Verification":
+        goal: "Establish zero-cost validation logic and verify execution locally"
+        priority: HIGH
+        tasks:
+          P10-4:
+            status: pending
+            title: "Implement JS assertions for match field"
+            owner_agent: developer
+            note: "Add zero-cost Javascript assertions to check match = true/false in output JSON."
+            estimate: "0.5d"
+          P10-5:
+            status: pending
+            title: "Integrate Gemini Flash for llm-rubric assertions"
+            owner_agent: developer
+            note: "Add llm-rubric checks using free Gemini Flash API to validate the reasoning text field."
+            estimate: "0.5d"
+          P10-6:
+            status: pending
+            title: "Verify local execution runner"
+            owner_agent: qa
+            note: "Run npx promptfoo eval and assert CLI/HTML report generation works without issues."
+            estimate: "0.3d"
+
+      "10.3 GitHub Actions Workflow":
+        goal: "Integrate prompt testing into Pull Requests on GitHub"
+        priority: MEDIUM
+        tasks:
+          P10-7:
+            status: pending
+            title: "Create prompt-eval.yml GHA workflow"
+            owner_agent: devops
+            note: "Triggers on any system prompt modification in feature branches. Runs promptfoo."
+            estimate: "0.5d"
+          P10-8:
+            status: pending
+            title: "Configure promptfoo test execution in GHA"
+            owner_agent: devops
+            note: "Set up dependencies, local Ollama or cloud tokens, run evaluations, and export JSON results."
+            estimate: "0.5d"
+
+      "10.4 Telegram GitOps Merge Hook":
+        goal: "Deploy prompt updates safely using GitOps and Telegram click callbacks"
+        priority: MEDIUM
+        tasks:
+          P10-9:
+            status: pending
+            title: "Create n8n PR notification workflow"
+            owner_agent: n8n-specialist
+            note: "Parses GHA promptfoo JSON. Sends F1-score/diff reports and inline keyboard to Telegram."
+            estimate: "0.5d"
+          P10-10:
+            status: pending
+            title: "Build GitHub API PR Merge webhook in n8n"
+            owner_agent: n8n-specialist
+            note: "Sends POST request to GitHub pulls merge API on clicking Apply Prompt."
+            estimate: "0.5d"
+          P10-11:
+            status: pending
+            title: "Configure live production pull trigger"
+            owner_agent: devops
+            note: "Pulls main branch automatically to production server upon successful branch merge."
+            estimate: "0.5d"
+
+      "10.5 Downstream Generalization":
+        goal: "Extend prompt evaluation pipeline to other system prompts"
+        priority: LOW
+        tasks:
+          P10-12:
+            status: pending
+            title: "Support generalized prompt targets"
+            owner_agent: n8n-specialist
+            note: "Adapt promptfooconfig.yaml to evaluate company_analyzer and entity_extractor prompts."
+            estimate: "0.5d"
+          P10-13:
+            status: pending
+            title: "Establish secondary gold datasets"
+            owner_agent: business-analyst
+            note: "Create focused validation datasets and distinct grading rubrics for generalized prompts."
+            estimate: "0.5d"
+
+    execution_order:
+      - "P10-1 → P10-2 → P10-3 (Config & Dataset)"
+      - "P10-4 → P10-5 → P10-6 (Assertions)"
+      - "P10-7 → P10-8 (CI/CD Workflow)"
+      - "P10-9 → P10-10 → P10-11 (Telegram GitOps)"
+      - "P10-12 → P10-13 (Generalization)"
+    primary_risks:
+      - "Ollama timeout during CI/CD execution (mitigated by custom timeouts or cloud model providers)"
+      - "Overfitting system prompts to the gold dataset while losing general accuracy"
+      - "Github REST API token expiration (mitigated by durable n8n credential secrets)"
+    definition_of_done:
+      - "Promptfoo installed and gold dataset compiled locally"
+      - "F1-scores, precision, and recall calculated locally via javascript and llm-rubric assertions"
+      - "Pull requests automatically execute prompt evaluations on GitHub Actions"
+      - "n8n notifies user of test results and merges branch programmatically via GitHub REST API"
+      - "Production live code successfully pulls the merged prompt"
 
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
