@@ -53,18 +53,21 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
    - < 60: Junior, entry-level, internship, or requires <2 years experience.
 
 **Response Format:**
-You MUST respond ONLY with a raw JSON object. Do NOT wrap the JSON in markdown code blocks (do NOT use ```json or ```). Do NOT include any introductory, explanatory, or conversational text (such as "Here is the JSON" or "Here is the evaluation"). Your entire response MUST start with the character '{' and end with the character '}'. Any other text will break the parser.
+You MUST respond ONLY with valid JSON. No markdown, no explanation outside JSON.
 {
-  "overall_score": 85, // Composite weighted integer score between 0 and 100
-  "tech_stack_match": 90, // Integer between 0 and 100
-  "seniority_match": 80, // Integer between 0 and 100
-  "red_flags": [
-    "Violation description 1",
-    "Violation description 2"
-  ], // List of strings describing reasons for deductions or violations of candidate profile. All values in the array MUST be plain strings, NOT objects.
+  "overall_score": 85,
+  "tech_stack_match": 90,
+  "seniority_match": 80,
+  "red_flags": ["Low salary", "Wrong location"],
   "reason": "One sentence explaining the decision breakdown",
   "url": "the job URL passed in the prompt"
 }
+
+**CRITICAL red_flags FORMATTING RULES:**
+- "red_flags" MUST be a flat array of short, clean, one-phrase text strings (strictly strings, NOT objects).
+- Each red flag string MUST be a simple tag of 2-5 words (e.g. "Low salary", "Wrong location", "EPAM company", "Legacy stack").
+- Do NOT include bullet points, markdown symbols (like *, -, #, or backticks), HTML, or newlines in the red flags.
+- Do NOT use commas inside a single red flag string (replace them with spaces or semicolons, e.g. "Salary 15000 PLN B2B" instead of "Salary: 15,000 PLN"). This is crucial so that n8n/Notion splits them correctly.
 ```
 
 ---

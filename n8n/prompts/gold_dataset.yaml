@@ -523,3 +523,27 @@
         const cleaned = output.substring(start, end + 1).trim();
         return JSON.parse(cleaned).overall_score < 50;
       weight: 3
+
+- description: "F09: Senior Frontend Developer — Katowice hybrid, Angular stack → should NOT match"
+  vars:
+    title: "Frontend Developer"
+    company: "SCALO"
+    location: "Centrum, Katowice"
+    salary: "19 200 - 22 400 PLN Net/month (b2b)"
+    url: "https://justjoin.it/job-offer/scalo-frontend-developer-katowice-javascript-be64deb3"
+    body: >-
+      Senior Frontend Developer at SCALO in Katowice. Requires advanced JavaScript,
+      TypeScript, and Angular. This is a hybrid/office position located in Katowice.
+  assert:
+    - type: javascript
+      value: |
+        const start = output.indexOf('{');
+        const end = output.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) return false;
+        const cleaned = output.substring(start, end + 1).trim();
+        const parsed = JSON.parse(cleaned);
+        const isLow = parsed.overall_score < 50;
+        const hasRedFlags = Array.isArray(parsed.red_flags) && parsed.red_flags.length > 0;
+        const hasLocation = parsed.red_flags.some(x => x.toLowerCase().includes('location') || x.toLowerCase().includes('katowice') || x.toLowerCase().includes('mismatch'));
+        return isLow && hasRedFlags && hasLocation;
+      weight: 3

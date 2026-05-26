@@ -26,6 +26,7 @@ providers:
     label: "Llama 3.1 8B (local Ollama)"
     config:
       temperature: 0
+      format: "json"
 
 # ─── Optional: Grading provider for llm-rubric assertions ──
 # Uncomment and set GOOGLE_API_KEY env var to enable
@@ -76,6 +77,25 @@ defaultTest:
         const parsed = JSON.parse(cleaned);
         return parsed.url === context.vars.url;
       weight: 1
+
+    # 4. Red flags formatting validation (no commas, no markdown, length limit)
+    - type: javascript
+      value: |
+        const start = output.indexOf('{');
+        const end = output.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) return false;
+        const cleaned = output.substring(start, end + 1).trim();
+        const parsed = JSON.parse(cleaned);
+        if (!Array.isArray(parsed.red_flags)) return false;
+        for (const flag of parsed.red_flags) {
+          if (typeof flag !== 'string') return false;
+          if (flag.includes(',')) return false;
+          if (flag.includes('*') || flag.includes('_') || flag.includes('`') || flag.includes('\n') || flag.includes('\r')) return false;
+          const wordCount = flag.trim().split(/\s+/).length;
+          if (wordCount < 1 || wordCount > 6) return false;
+        }
+        return true;
+      weight: 2
 
 # ─── Test Cases ──────────────────────────────────────────
 # Gold dataset: 20 curated test cases (8 true, 7 false, 5 edge cases)
