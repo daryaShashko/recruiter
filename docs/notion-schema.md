@@ -14,18 +14,22 @@ Kanban view grouped by `Status`
 | `Company` | Text | Company name |
 | `URL` | URL | Direct link to job posting — **used for deduplication** |
 | `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual` |
-| `Match Reason` | Text | LLM explanation (1 sentence from Ollama) |
+| `Match Reason` | Text | LLM explanation (reason breakdown from Ollama) |
 | `Salary` | Text | Salary range string (e.g. "15,000–20,000 PLN B2B") |
-| `Status` | Select | `New`, `Review`, `Applied`, `Rejected` |
+| `Status` | Select | `Hot Match`, `Review`, `Applied`, `Rejected` |
 | `Location` | Text | City or "Remote" |
+| `Score` | Number | Composite weighted score (0-100) from LLM |
+| `Tech Stack Match` | Number | Sub-score (0-100) for tech stack matching |
+| `Seniority Match` | Number | Sub-score (0-100) for seniority levels |
+| `Red Flags` | Multi-select | List of reasons for point deductions |
 | `Scraped At` | Date | ISO timestamp when scraped |
 
 ## Kanban Columns (Status Values)
 
 | Status | Meaning |
 |---|---|
-| `New` | Just added by the pipeline — not yet reviewed |
-| `Review` | Marked for closer look |
+| `Hot Match` | Strongly matched vacancy (score >= 80) — alerts sent to Telegram |
+| `Review` | Marginally matched vacancy (score 50-79) — review list in Notion |
 | `Applied` | Application submitted |
 | `Rejected` | Decided not to apply |
 
@@ -75,8 +79,12 @@ Table view, sorted by `Evaluated At` descending
 | `Company` | Text | Company name |
 | `URL` | URL | Direct link to job posting |
 | `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual` |
-| `Match` | Checkbox | LLM decision: true = match, false = reject |
+| `Match` | Checkbox | true = match (overall_score >= 50), false = reject (overall_score < 50) |
 | `Reason` | Text | LLM reason (verbatim, 1 sentence) |
+| `Score` | Number | Composite weighted score (0-100) from LLM |
+| `Tech Stack Match` | Number | Sub-score (0-100) for tech stack matching |
+| `Seniority Match` | Number | Sub-score (0-100) for seniority levels |
+| `Red Flags` | Multi-select | List of reasons for point deductions |
 | `Model` | Text | Model used: `llama3.1`, `groq-llama3`, `gemini-flash` |
 | `Batch ID` | Text | ISO timestamp of the batch run (groups items from same run) |
 | `Evaluated At` | Date | When evaluation happened |

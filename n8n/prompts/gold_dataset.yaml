@@ -31,7 +31,7 @@
       with Node.js. Fully remote position within EU timezone.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
     # Uncomment when GOOGLE_API_KEY is set:
     # - type: llm-rubric
@@ -54,7 +54,7 @@
       2+ years in a lead role.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T03: Senior Full-Stack React + Node.js — fully remote"
@@ -72,7 +72,7 @@
       anywhere. 5+ years of full-stack experience required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T04: Principal Engineer — JavaScript platform, remote"
@@ -91,7 +91,7 @@
       10+ years of experience, deep expertise in the JavaScript ecosystem.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T05: Staff Engineer — TypeScript platform, EU remote"
@@ -110,7 +110,7 @@
       on developer productivity and platform design.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T06: Senior Backend Node.js — Gdynia/Tricity hybrid"
@@ -128,7 +128,7 @@
       backend experience required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T07: Solution Architect Node.js/React — remote"
@@ -147,7 +147,7 @@
       JavaScript/Node.js expertise.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 - description: "T08: Senior React Developer + Node.js backend — Gdańsk"
@@ -165,7 +165,7 @@
       5+ years React experience required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
 
 
@@ -188,7 +188,7 @@
       Perfect for bootcamp graduates or self-taught developers.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "F02: Senior Java/Spring Boot — wrong primary stack"
@@ -206,7 +206,7 @@
       backend development. Fully remote position. 5+ years Java required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
     # Uncomment when GOOGLE_API_KEY is set:
     # - type: llm-rubric
@@ -227,7 +227,7 @@
       5+ years of .NET experience required. Hybrid work model.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "F04: Senior PHP/Laravel — wrong stack"
@@ -244,7 +244,7 @@
       e-commerce platform. 5+ years PHP experience required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "F05: Senior Node.js Warsaw on-site only — wrong location"
@@ -261,7 +261,7 @@
       Friday. No remote work available. 5+ years backend experience.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "F06: Senior Go Backend — wrong primary stack"
@@ -279,7 +279,7 @@
       5+ years experience. Fully remote.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "F07: Spam / newsletter confirmation — not a job posting"
@@ -297,7 +297,7 @@
       Follow us on LinkedIn for updates!
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 
@@ -321,7 +321,7 @@
       during the transition. 5+ years experience, Node.js expertise required.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3
     # Uncomment when GOOGLE_API_KEY is set:
     # - type: llm-rubric
@@ -344,7 +344,7 @@
       Node.js is a nice-to-have.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
     # Uncomment when GOOGLE_API_KEY is set:
     # - type: llm-rubric
@@ -366,7 +366,7 @@
       from our experienced team of senior engineers.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "E04: No tech stack mentioned — cannot determine stack → should NOT match"
@@ -384,7 +384,7 @@
       Competitive compensation package. Apply now to learn more.
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === false"
+      value: "JSON.parse(output).overall_score < 50"
       weight: 3
 
 - description: "E05: Salary info only, no description — evaluate on title → should match"
@@ -397,5 +397,5 @@
     body: "No description available"
   assert:
     - type: javascript
-      value: "JSON.parse(output).match === true"
+      value: "JSON.parse(output).overall_score >= 80"
       weight: 3

@@ -18,7 +18,7 @@ GitHub Actions (Playwright scraper)
         → IF match: true → Notion Create Page + Telegram alert
 ```
 
-The team has **8 specialist agents**. Each agent has a skill file at `docs/agents/<name>.md`
+The team has **9 specialist agents**. Each agent has a skill file at `docs/agents/<name>.md`
 that serves as its system prompt. No agent does everything — each has a strict domain.
 The Orchestrator coordinates the team and routes tasks using Task Briefs.
 
@@ -36,6 +36,7 @@ The Orchestrator coordinates the team and routes tasks using Task Briefs.
 | **DevOps Engineer** | `devops.md` | GitHub Actions, secrets, CI/CD pipelines | When touching `.github/workflows/` or managing secrets |
 | **Business Analyst** | `business-analyst.md` | Feature value from recruiter's perspective, prioritization | When deciding whether to build a feature or defining acceptance criteria |
 | **Prompt Engineer** | `prompt-engineer.md` | All prompts: Ollama evaluator, agent prompts, n8n Code nodes | When writing, fixing, or reviewing any prompt in the project |
+| **Product Manager** | `product-manager.md` | Feature evaluation, staging, roadmap tasks generation | When analyzing a new idea, defining MVP, or updating roadmap.yaml |
 
 ---
 
@@ -135,6 +136,7 @@ task completed). A CI check enforces that no YAML file is stale after a commit.
 | "Is this feature worth building?" / user stories | **Business Analyst** |
 | Improve or fix any prompt (Ollama evaluator, agent, Code node) | **Prompt Engineer** |
 | "What should I work on next?" / task decomposition | **Orchestrator** |
+| Evaluate a new feature idea / create roadmap tasks | **Product Manager** |
 | Cross-cutting concern touching multiple agents | **Architect** first, then delegate |
 
 ---

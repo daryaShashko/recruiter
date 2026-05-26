@@ -903,6 +903,99 @@ phases:
       - "n8n notifies user of test results and merges branch programmatically via GitHub REST API"
       - "Production live code successfully pulls the merged prompt"
 
+  P11:
+    name: "Multidimensional Scoring & Intelligent Routing"
+    status: pending
+    goal: "Transition job evaluation to a 0-100 multidimensional scoring system with high/medium/low routing tiers"
+    blocked_by: ["P8", "P10"]
+    depends_on: ["P8", "P10"]
+    adrs: []
+    problem_statement: >
+      A binary yes/no classifier causes borderline candidates/vacancies to be hard-rejected.
+      Additionally, it does not allow dynamic prioritization or sorting in Notion.
+      We need to replace this with a multi-criteria scoring system that splits vacancies
+      into Hot Matches, Review, and Discard, optimizing the recruiter's pipeline.
+
+    sub_phases:
+      "11.1 Core Prompt & Notion MVP":
+        goal: "Deploy the multidimensional evaluator prompt and configure n8n score-based routing"
+        tasks:
+          P11-1:
+            status: pending
+            title: "Rewrite system prompt for 0-100 scoring"
+            owner_agent: prompt-engineer
+            note: "Modify evaluator.md and evaluator-template.json to output JSON: overall_score, tech_stack_match, seniority_match, red_flags array."
+            estimate: "0.3d"
+          P11-2:
+            status: pending
+            title: "Update Notion DB schemas and mappings"
+            owner_agent: n8n-specialist
+            note: "Document and add properties: Score (Number), Red Flags (Multi-select), Tech Stack Match (Number), Seniority Match (Number)."
+            estimate: "0.2d"
+          P11-3:
+            status: pending
+            title: "Implement score routing Switch node in n8n"
+            owner_agent: n8n-specialist
+            note: "Replace binary IF node with Switch node in ingest.json. Route: >=80 (Hot Match to Telegram/Notion), 50-79 (Review to Notion silently), <50 (Discard to Eval Log)."
+            estimate: "0.4d"
+
+      "11.2 QA Validation & CI Hardening":
+        goal: "Configure promptfoo test suites to assert on scores and prevent regressions"
+        tasks:
+          P11-4:
+            status: pending
+            title: "Update promptfooconfig.yaml assertions"
+            owner_agent: qa-engineer
+            note: "Add JS assertions validating the structure of overall_score, tech_stack_match, seniority_match, and red_flags array."
+            estimate: "0.2d"
+          P11-5:
+            status: pending
+            title: "Re-assert gold_dataset.yaml tests"
+            owner_agent: qa-engineer
+            note: "Update assertion criteria in gold_dataset.yaml. Assert >=80 for T cases, >=50 for E cases, and <50 with red flags for F cases."
+            estimate: "0.4d"
+          P11-6:
+            status: pending
+            title: "Verify prompt score accuracy locally"
+            owner_agent: developer
+            note: "Execute npm run eval locally to verify accuracy and ensure F1-score/error rates are within acceptable thresholds."
+            estimate: "0.2d"
+
+      "11.3 Observability & Tuning":
+        goal: "Deploy monitoring and establish continuous prompt feedback tuning"
+        tasks:
+          P11-7:
+            status: pending
+            title: "Document threshold tuning SOP"
+            owner_agent: business-analyst
+            note: "Write docs/scoring-tuning-guide.md to define the operational process for shifting routing thresholds based on market trends."
+            estimate: "0.3d"
+          P11-8:
+            status: pending
+            title: "Integrate Telegram feedback callbacks with scoring"
+            owner_agent: n8n-specialist
+            note: "Update n8n feedback-handler to register thumbs up/down user reviews against the numeric score metrics."
+            estimate: "0.4d"
+          P11-9:
+            status: pending
+            title: "Expose weekly score analytics digest"
+            owner_agent: business-analyst
+            note: "Update weekly digest workflow to compute and alert on average scores, volume distributions, and major red flag patterns."
+            estimate: "0.3d"
+
+    execution_order:
+      - "P11-1 → P11-2 → P11-3 (MVP Deploy)"
+      - "P11-4 → P11-5 → P11-6 (Test Hardening)"
+      - "P11-7 → P11-8 → P11-9 (Ops & Tuning)"
+    primary_risks:
+      - "Model variance causing scoring drift on border cases"
+      - "Increased latency from larger JSON schema outputs"
+    definition_of_done:
+      - "System evaluator prompt returns structured 4-metric score JSON"
+      - "n8n pipeline routes jobs safely to Telegram and Notion boards based on thresholds"
+      - "All 20 test cases in gold_dataset are validated with scoring assertions and CI passes"
+      - "Weekly statistics track score metrics and red flag distributions"
+
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
   objective: "Полностью локальный, бесплатный и управляемый запуск: schedule + manual Run Now через Telegram + catch-up после офлайна"
