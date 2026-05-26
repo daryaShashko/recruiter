@@ -399,3 +399,22 @@
     - type: javascript
       value: "JSON.parse(output).overall_score >= 80"
       weight: 3
+
+- description: "F08: Senior Node.js at Crypto Startup — restricted industry → should NOT match"
+  vars:
+    title: "Senior Backend Developer (Node.js/TS)"
+    company: "Solana Labs"
+    location: "Remote (EU)"
+    salary: "$8,500 – $11,000 USD/month B2B"
+    url: "https://justjoin.it/offers/solana-labs-senior-backend-dev-99999"
+    body: >-
+      Solana Labs is looking for a Senior Backend Developer to build and optimize
+      high-throughput Node.js microservices and Web3 integration layers for our
+      decentralized applications (dApps). Tech stack: TypeScript, Node.js,
+      PostgreSQL, Docker, Rust, Solana Web3.js, anchor framework.
+      Salary is very competitive, remote first. Looking for 6+ years experience
+      with Node.js and a passion for blockchain and decentralized finance (DeFi).
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).overall_score < 50"
+      weight: 3

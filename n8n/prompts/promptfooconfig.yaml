@@ -42,6 +42,8 @@ providers:
 # Applied to EVERY test case automatically.
 # Zero-cost JavaScript checks — no API calls, instant execution.
 defaultTest:
+  vars:
+    profile: file://../n8n/prompts/candidate_profile.md
   assert:
     # 1. Output must be valid JSON
     - type: is-json
