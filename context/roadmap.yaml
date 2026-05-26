@@ -580,29 +580,22 @@ phases:
             estimate: "0.5d"
           EVAL-2:
             status: done
-            note: "Notion: Log to Eval Log node inserted between Code: Parse Ollama Response and IF: Match?. onError: continueRegularOutput. Logs all 11 fields. DB ID placeholder: YOUR_EVAL_LOG_DB_ID_HERE — user must replace after EVAL-1."
             title: "Update evaluate.json: add Notion Log node before IF: Match?"
             owner_agent: n8n-specialist
-            note: >
-              Add Notion Create Page node AFTER Code: Parse Ollama Response
-              and BEFORE IF: Match?. Logs every evaluation regardless of outcome.
-              Sets Model field to current LLM_PROVIDER value.
-              Sets Batch ID to ISO timestamp of the run.
+            note: "Notion: Log to Eval Log node inserted between Code: Parse Ollama Response and IF: Match?. onError: continueRegularOutput. Logs all 11 fields (Title, Company, URL, Source, Match, Reason, Model, Batch ID, Evaluated At, Human Verdict=Pending, Tags). DB ID placeholder YOUR_EVAL_LOG_DB_ID_HERE — user replaces after EVAL-1."
             acceptance: "Both matched and rejected vacancies appear in Evaluation Log"
             estimate: "0.5d"
           EVAL-3:
             status: done
-            note: "docs/notion-schema.md already contains full Evaluation Log schema (added in prior session)."
             title: "Update docs/notion-schema.md with Evaluation Log schema"
             owner_agent: developer
-            note: "Document new DB schema alongside existing AI Recruiter Board schema"
+            note: "docs/notion-schema.md already contains full Evaluation Log schema (added in prior session)."
             estimate: "0.5d"
           EVAL-4:
             status: partial
-            note: "context/env.yaml: done. .env.example: user must add NOTION_EVAL_LOG_DB_ID=<id> line manually (see docs/eval-log-setup.md). GitHub Secret: manual after EVAL-1."
             title: "Add NOTION_EVAL_LOG_DB_ID to env vars"
             owner_agent: devops
-            note: "Add to .env, .env.example, context/env.yaml, GitHub Secrets"
+            note: "context/env.yaml: done. .env.example + .env: user adds NOTION_EVAL_LOG_DB_ID=<id> manually (see docs/eval-log-setup.md step 4-5). GitHub Secret: manual after EVAL-1."
             estimate: "0.5d"
 
       "8.2 Telegram Feedback (Level 2)":
@@ -978,7 +971,12 @@ next_execution_plan:
       title: "Implement /run-now in n8n"
       owner_agent: n8n-specialist
       skill: "n8n workflow editing"
-      inputs: ["n8n/workflows/telegram-trigger.json", "n8n/workflows/ingest.json", "n8n/workflows/evaluate.json"]
+      inputs:
+        [
+          "n8n/workflows/telegram-trigger.json",
+          "n8n/workflows/ingest.json",
+          "n8n/workflows/evaluate.json",
+        ]
       output: "Workflow branch that triggers local run pipeline"
       acceptance: "Telegram /run-now returns success/failure summary"
       estimate: "1d"
