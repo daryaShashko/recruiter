@@ -582,7 +582,7 @@ phases:
             status: done
             title: "Update evaluate.json: add Notion Log node before IF: Match?"
             owner_agent: n8n-specialist
-            note: "Notion: Log to Eval Log node inserted between Code: Parse Ollama Response and IF: Match?. onError: continueRegularOutput. Logs all 11 fields (Title, Company, URL, Source, Match, Reason, Model, Batch ID, Evaluated At, Human Verdict=Pending, Tags). DB ID placeholder YOUR_EVAL_LOG_DB_ID_HERE — user replaces after EVAL-1."
+            note: "Notion: Log to Eval Log node inserted in ingest.json between Code: Parse Ollama Response and IF: Match?. onError: continueRegularOutput. Logs all 11 fields. DB ID placeholder YOUR_EVAL_LOG_DB_ID_HERE — user replaces after EVAL-1. NOTE: evaluate.json is deprecated — all pipeline logic lives in ingest.json."
             acceptance: "Both matched and rejected vacancies appear in Evaluation Log"
             estimate: "0.5d"
           EVAL-3:

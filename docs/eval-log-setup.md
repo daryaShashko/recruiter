@@ -90,14 +90,14 @@ NOTION_EVAL_LOG_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-## Шаг 6 — Обновить `evaluate.json` в n8n (замена плейсхолдера + импорт)
+## Шаг 6 — Обновить `ingest.json` в n8n (замена плейсхолдера + импорт)
 
-Файл `n8n/workflows/evaluate.json` уже обновлён в репозитории с новым узлом.
+Файл `n8n/workflows/ingest.json` уже обновлён в репозитории с новым узлом.
 Тебе нужно заменить плейсхолдер и импортировать в n8n.
 
 ### 6a. Заменить плейсхолдер в JSON-файле
 
-В файле `n8n/workflows/evaluate.json` найди строку:
+В файле `n8n/workflows/ingest.json` найди строку:
 ```json
 "value": "YOUR_EVAL_LOG_DB_ID_HERE",
 ```
@@ -109,18 +109,19 @@ NOTION_EVAL_LOG_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ### 6b. Импортировать воркфлоу в n8n
 
 1. Открой n8n → в левом меню нажми **Workflows**
-2. Найди воркфлоу **"Evaluate Jobs (Ollama)"**
+2. Найди воркфлоу **"Ingest Jobs"**
 3. Открой его → нажми меню `•••` в правом верхнем углу → **Import from file**
-4. Выбери файл `n8n/workflows/evaluate.json`
+4. Выбери файл `n8n/workflows/ingest.json`
 5. Подтверди замену (Yes, overwrite)
 6. Нажми **Save** → **Activate**
 
-> **Альтернатива:** Можно открыть `evaluate.json`, скопировать содержимое, и
+> **Альтернатива:** Можно открыть `ingest.json`, скопировать содержимое, и
 > в n8n сделать **Import from clipboard**.
 
 ### Что изменилось в воркфлоу
 
-Добавлен узел **`Notion: Log to Eval Log`** между двумя существующими узлами:
+Добавлен узел **`Notion: Log to Eval Log`** между двумя существующими узлами
+внутри `ingest.json`:
 
 ```
 Code: Parse Ollama Response  →  [NEW] Notion: Log to Eval Log  →  IF: Match?
@@ -175,8 +176,8 @@ Code: Parse Ollama Response  →  [NEW] Notion: Log to Eval Log  →  IF: Match?
 - [ ] **Шаг 3** — Скопирован ID базы данных
 - [ ] **Шаг 4** — `NOTION_EVAL_LOG_DB_ID=<id>` добавлен в `.env`
 - [ ] **Шаг 5** — Строка добавлена в `.env.example`
-- [ ] **Шаг 6a** — Плейсхолдер `YOUR_EVAL_LOG_DB_ID_HERE` заменён в `evaluate.json`
-- [ ] **Шаг 6b** — Воркфлоу импортирован и активирован в n8n
+- [ ] **Шаг 6a** — Плейсхолдер `YOUR_EVAL_LOG_DB_ID_HERE` заменён в `ingest.json`
+- [ ] **Шаг 6b** — Воркфлоу **Ingest Jobs** импортирован и активирован в n8n
 - [ ] **Шаг 7** — *(опционально)* GitHub Secret добавлен
 - [ ] **Шаг 8** — Тест: записи появляются в Notion
 

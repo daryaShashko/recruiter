@@ -22,12 +22,15 @@ workflows:
     trigger: "scraper/src/sender.ts POST request"
     last_updated: "2026-05-24"
     architecture_note: >
-      Split In Batches (size 1) lives here — after Normalize, before Switch.
-      This ensures single-item processing before routing.
-      Switch output[0..2] → Call 'Evaluate Jobs (Ollama)'.
-      Switch fallback → Code: Unknown Source → Call 'Evaluate'.
-      Call 'Evaluate' loopback → Split In Batches (loop until all items done).
-      waitForSubWorkflow: true on Call 'Evaluate' — ingest waits per item.
+      SINGLE MONOLITHIC WORKFLOW — contains the full pipeline end-to-end.
+      No sub-workflows (evaluate.json and notify.json are deprecated/replaced).
+      Flow: Webhook → Respond 200 → IF zero jobs → Normalize → SplitInBatches(1) →
+      Switch(source) → Notion dedup → IF duplicate → Build Ollama Payload →
+      Ask Ollama → Parse Ollama Response → [LOG to Eval Log — P8] → IF Match? →
+      (true: Notion Create Page → Telegram alert → loop back to Split)
+      (false: NoOp Discard → loop back to Split).
+      SplitInBatches loops until all items processed.
+      Key: NoOp:Skip Duplicate and NoOp:Discard BOTH loop back to Split.
     nodes_sequence:
       - name: Webhook
         type: n8n-nodes-base.webhook
@@ -64,7 +67,12 @@ workflows:
 
   evaluate:
     file: n8n/workflows/evaluate.json
-    status: created
+    status: deprecated
+    deprecated_note: >
+      evaluate.json is no longer used in production. The entire pipeline
+      (dedup, LLM eval, Notion write, Telegram alert) was consolidated
+      into ingest.json as a single flat workflow with SplitInBatches loop.
+      This file is kept as a historical reference only. Do NOT modify.
     phase: P3
     last_updated: "2026-05-24"
     architecture_note: >
@@ -121,14 +129,25 @@ workflows:
         type: n8n-nodes-base.notion
         operation: create
         database: AI Recruiter Board
-        fields: [Name, Company, URL, Source, Match Reason, Salary, Status=New, Location, Scraped At]
+        fields:
+          [
+            Name,
+            Company,
+            URL,
+            Source,
+            Match Reason,
+            Salary,
+            Status=New,
+            Location,
+            Scraped At,
+          ]
       - name: Telegram Send Alert
         type: n8n-nodes-base.telegram
         note: "Fires after Notion create (sequential, not parallel)"
 
   telegram_trigger:
     file: n8n/workflows/telegram-trigger.json
-    status: not_created  # Phase P5
+    status: not_created # Phase P5
     phase: P5
     nodes_sequence:
       - name: Telegram Trigger
@@ -147,7 +166,7 @@ ollama:
   request_template:
     model: "llama3.1:8b"
     stream: false
-    keep_alive: 0  # MANDATORY — prevents VRAM leak between requests
+    keep_alive: 0 # MANDATORY — prevents VRAM leak between requests
     messages:
       - role: system
         content: "see n8n/prompts/evaluator.md"
@@ -186,7 +205,7 @@ notion_field_mapping:
   Status: "New"
   Location: "{{ $json.location }}"
   Scraped_At: "{{ $json.scrapedAt }}"
-  dedup_key: URL  # Notion is queried by URL before insert
+  dedup_key: URL # Notion is queried by URL before insert
 
 telegram_alert_format: |
   🟢 *{{ $json.title }}* @ {{ $json.company }}

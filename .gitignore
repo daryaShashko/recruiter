@@ -39,3 +39,7 @@ Thumbs.db
 # Scraped data (debug artifacts)
 scraper/output/
 *.scraped.json
+
+# n8n workflow exports — contain personal IDs (chatId, Notion DB IDs, instanceId)
+# Export manually from n8n UI; never commit production workflow JSONs
+n8n/workflows/*.json
