@@ -1,5 +1,5 @@
 current_phase: P7
-current_focus: "P6 6/7 done (P6-7 awaits production data). P7 (Cloud Migration), P8 (Evaluator Observability), and P10 (Automated Prompt Evaluation & Optimization) are PROPOSED — awaiting execution start."
+current_focus: "P6 6/7 done (P6-7 awaits production data). P10 IN PROGRESS: P10-1…P10-4 DONE (promptfoo config + gold dataset + JS assertions). Next: P10-5…P10-6 (llm-rubric + local verification). P8 IN PROGRESS: EVAL-2/3/4 DONE (evaluate.json logging node added, schema+env docs ready). BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB)."
 
 phases:
   P0:
@@ -579,7 +579,8 @@ phases:
               Tags (multi-select).
             estimate: "0.5d"
           EVAL-2:
-            status: pending
+            status: done
+            note: "Notion: Log to Eval Log node inserted between Code: Parse Ollama Response and IF: Match?. onError: continueRegularOutput. Logs all 11 fields. DB ID placeholder: YOUR_EVAL_LOG_DB_ID_HERE — user must replace after EVAL-1."
             title: "Update evaluate.json: add Notion Log node before IF: Match?"
             owner_agent: n8n-specialist
             note: >
@@ -590,13 +591,15 @@ phases:
             acceptance: "Both matched and rejected vacancies appear in Evaluation Log"
             estimate: "0.5d"
           EVAL-3:
-            status: pending
+            status: done
+            note: "docs/notion-schema.md already contains full Evaluation Log schema (added in prior session)."
             title: "Update docs/notion-schema.md with Evaluation Log schema"
             owner_agent: developer
             note: "Document new DB schema alongside existing AI Recruiter Board schema"
             estimate: "0.5d"
           EVAL-4:
-            status: pending
+            status: partial
+            note: "context/env.yaml: done. .env.example: user must add NOTION_EVAL_LOG_DB_ID=<id> line manually (see docs/eval-log-setup.md). GitHub Secret: manual after EVAL-1."
             title: "Add NOTION_EVAL_LOG_DB_ID to env vars"
             owner_agent: devops
             note: "Add to .env, .env.example, context/env.yaml, GitHub Secrets"
@@ -773,7 +776,7 @@ phases:
   # ─────────────────────────────────────────────────────────
   P10:
     name: "Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo)"
-    status: pending
+    status: in_progress
     goal: "Scientific prompt tuning, regression prevention, and safe GitOps rollout"
     blocked_by: NONE
     depends_on: ["P8"] # Phase 10 builds on the Notion logs and human verdicts of Phase 8
@@ -792,22 +795,22 @@ phases:
         priority: HIGH
         tasks:
           P10-1:
-            status: pending
+            status: done
             title: "Install promptfoo as devDependency"
             owner_agent: developer
-            note: "Add promptfoo to package.json, run npm install."
+            note: "promptfoo ^0.93.0 added to scraper/package.json devDependencies. Already installed."
             estimate: "0.2d"
           P10-2:
-            status: pending
+            status: done
             title: "Create promptfooconfig.yaml"
             owner_agent: architect
-            note: "Define prompts (evaluator.md), local Ollama provider, and cloud Flash fallback."
+            note: "n8n/prompts/promptfooconfig.yaml created. Ollama llama3.1 provider (temp=0), file://evaluator-template.json chat prompt, default assertions (is-json + schema + URL), tests from gold_dataset.yaml. Gemini Flash llm-rubric documented as optional."
             estimate: "0.3d"
           P10-3:
-            status: pending
+            status: done
             title: "Compile baseline gold_dataset.yaml"
             owner_agent: business-analyst
-            note: "Build 15-30 representative test cases with vacancy texts, expected decisions, and criteria."
+            note: "n8n/prompts/gold_dataset.yaml compiled. 20 test cases: 8 true matches (Senior/Lead/Principal/Staff, Node.js/TS, Remote/Gdańsk), 7 false matches (wrong seniority/stack/location, spam), 5 edge cases (mixed stacks, misleading names, missing data). Realistic vacancy texts."
             estimate: "0.5d"
 
       "10.2 Hybrid Assertions & Local Verification":
@@ -815,10 +818,10 @@ phases:
         priority: HIGH
         tasks:
           P10-4:
-            status: pending
+            status: done
             title: "Implement JS assertions for match field"
             owner_agent: developer
-            note: "Add zero-cost Javascript assertions to check match = true/false in output JSON."
+            note: "3 default assertions in promptfooconfig.yaml (is-json, schema validation, URL echo) + per-test match=true/false JS assertion in each gold_dataset test case. All zero-cost, no API calls. npm scripts: eval, eval:view added to scraper/package.json."
             estimate: "0.5d"
           P10-5:
             status: pending
@@ -1130,4 +1133,3 @@ known_blockers:
 # Update this file when any task status changes.
 # Orchestrator reads this file to report current project state.
 # ============================================================
-

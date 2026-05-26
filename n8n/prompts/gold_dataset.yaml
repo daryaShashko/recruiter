@@ -1,0 +1,401 @@
+# ─────────────────────────────────────────────────────────
+# AI Recruiter — Gold Dataset for Prompt Evaluation
+# Task: P10-3
+#
+# 20 curated test cases:
+#   T01–T08: TRUE matches  (should return match: true)
+#   F01–F07: FALSE matches (should return match: false)
+#   E01–E05: EDGE cases    (tricky scenarios)
+#
+# Expand this file over time with real production edge cases.
+# Target: 30–50 test cases for reliable F1-score calculation.
+# ─────────────────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════════════════
+#  TRUE MATCHES — should return match: true
+# ═══════════════════════════════════════════════════════════
+
+- description: "T01: Senior Node.js Backend Developer — Remote (classic match)"
+  vars:
+    title: "Senior Node.js Backend Developer"
+    company: "TechFlow Solutions"
+    location: "Remote (EU)"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/techflow-senior-nodejs-backend-dev-12345"
+    body: >-
+      We are hiring a Senior Node.js Backend Developer to join our remote-first
+      engineering team. You will design and build RESTful APIs using TypeScript,
+      Express.js, and PostgreSQL. Experience with Docker, CI/CD, and cloud
+      services (AWS/GCP) is required. Our frontend is built with React.
+      Minimum 5 years of professional experience in backend development
+      with Node.js. Fully remote position within EU timezone.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+    # Uncomment when GOOGLE_API_KEY is set:
+    # - type: llm-rubric
+    #   value: "Reasoning must mention Node.js/TypeScript as the primary stack and confirm remote eligibility."
+    #   provider: google:gemini-1.5-flash
+
+- description: "T02: Tech Lead TypeScript/NestJS — Gdańsk hybrid"
+  vars:
+    title: "Tech Lead — TypeScript/Node.js"
+    company: "DataBridge"
+    location: "Gdańsk, hybrid"
+    salary: "25,000 – 32,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/databridge-tech-lead-typescript-gdansk-ab12cd"
+    body: >-
+      We are looking for an experienced Tech Lead to guide our backend team
+      of 6 engineers. Our stack: TypeScript, NestJS, React, PostgreSQL,
+      Redis, Docker, Kubernetes. You will own technical decisions, code
+      reviews, and architecture for our SaaS platform. Hybrid model: 2 days
+      in our Gdańsk office. Requirements: 7+ years in software engineering,
+      2+ years in a lead role.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T03: Senior Full-Stack React + Node.js — fully remote"
+  vars:
+    title: "Senior Full-Stack Engineer (React + Node.js)"
+    company: "CloudNine"
+    location: "Fully Remote"
+    salary: "20,000 – 26,000 PLN net B2B"
+    url: "https://justjoin.it/offers/cloudnine-senior-fullstack-react-nodejs-67890"
+    body: >-
+      Join our product team as a Senior Full-Stack Engineer. Frontend:
+      React 18, TypeScript, Next.js, Tailwind CSS. Backend: Node.js,
+      Express, GraphQL. Database: MongoDB, Redis. You will work in a
+      cross-functional squad of 8 people. Fully remote — we hire from
+      anywhere. 5+ years of full-stack experience required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T04: Principal Engineer — JavaScript platform, remote"
+  vars:
+    title: "Principal Software Engineer"
+    company: "FinServe"
+    location: "Remote"
+    salary: "30,000 – 40,000 PLN net B2B"
+    url: "https://justjoin.it/offers/finserve-principal-engineer-js-platform-11111"
+    body: >-
+      As a Principal Software Engineer, you will define the technical vision
+      for our JavaScript platform. Responsibilities include leading
+      architecture for TypeScript-based Node.js microservices, React web
+      applications, and PostgreSQL data layer. You will mentor engineers
+      across 3 product teams and drive technical excellence. Remote role.
+      10+ years of experience, deep expertise in the JavaScript ecosystem.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T05: Staff Engineer — TypeScript platform, EU remote"
+  vars:
+    title: "Staff Engineer — Platform (TypeScript)"
+    company: "ScaleUp AG"
+    location: "Remote (EU timezone)"
+    salary: "€7,000 – €9,000 net/month"
+    url: "https://justjoin.it/offers/scaleup-staff-engineer-typescript-22222"
+    body: >-
+      We need a Staff Engineer for our Platform team. You will work on
+      Node.js runtimes, TypeScript build tooling, and AWS Lambda
+      infrastructure. DynamoDB and S3 for data storage. Your decisions
+      will impact 40+ engineers across the organization. Remote within
+      EU timezone. 8+ years of engineering experience, strong opinions
+      on developer productivity and platform design.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T06: Senior Backend Node.js — Gdynia/Tricity hybrid"
+  vars:
+    title: "Senior Backend Developer"
+    company: "GreenSoft"
+    location: "Gdynia (Tricity), hybrid"
+    salary: "20,000 – 25,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/greensoft-senior-backend-nodejs-gdynia-cc33dd"
+    body: >-
+      Senior Backend Developer needed for our Gdynia office (Tricity area).
+      Hybrid model, 3 days in office. Tech stack: Node.js, TypeScript,
+      NestJS, PostgreSQL, REST APIs, Docker, Kubernetes. You will build
+      and maintain backend services for our logistics platform. 5+ years
+      backend experience required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T07: Solution Architect Node.js/React — remote"
+  vars:
+    title: "Solution Architect (JavaScript/Node.js)"
+    company: "ArchitectHub"
+    location: "Remote"
+    salary: "35,000 – 45,000 PLN net B2B"
+    url: "https://justjoin.it/offers/architecthub-solution-architect-nodejs-33333"
+    body: >-
+      Solution Architect role for our distributed systems team. You will
+      design Node.js microservices architecture, oversee React frontend
+      patterns, and manage cloud infrastructure on AWS and GCP. Team of
+      20 engineers. Fully remote position. Requirements: 10+ years of
+      software engineering, 3+ years in architecture roles, deep
+      JavaScript/Node.js expertise.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+- description: "T08: Senior React Developer + Node.js backend — Gdańsk"
+  vars:
+    title: "Senior React Developer"
+    company: "UX Masters"
+    location: "Gdańsk, office/remote"
+    salary: "18,000 – 24,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/uxmasters-senior-react-developer-gdansk-dd44ee"
+    body: >-
+      Senior React Developer for our Gdańsk team. You will build complex
+      UIs with React 18, TypeScript, and Next.js. Our backend is Node.js +
+      Express + PostgreSQL, and you will occasionally contribute to backend
+      features. Flexible: fully remote or hybrid from our Gdańsk office.
+      5+ years React experience required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+
+
+# ═══════════════════════════════════════════════════════════
+#  FALSE MATCHES — should return match: false
+# ═══════════════════════════════════════════════════════════
+
+- description: "F01: Junior JavaScript Developer — wrong seniority"
+  vars:
+    title: "Junior JavaScript Developer"
+    company: "StartupXYZ"
+    location: "Remote"
+    salary: "6,000 – 9,000 PLN gross"
+    url: "https://justjoin.it/offers/startupxyz-junior-javascript-dev-44444"
+    body: >-
+      This is an entry-level position for aspiring JavaScript developers.
+      You will learn React basics, HTML, CSS, and modern JavaScript.
+      No prior experience needed — we provide a 3-month training program.
+      Work alongside senior developers on real projects. Fully remote.
+      Perfect for bootcamp graduates or self-taught developers.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "F02: Senior Java/Spring Boot — wrong primary stack"
+  vars:
+    title: "Senior Java Developer"
+    company: "EnterpriseSoft"
+    location: "Remote"
+    salary: "24,000 – 30,000 PLN net B2B"
+    url: "https://justjoin.it/offers/enterprisesoft-senior-java-dev-55555"
+    body: >-
+      We are looking for a Senior Java Developer to join our enterprise
+      team. Main technologies: Java 17, Spring Boot, Hibernate, Kafka,
+      PostgreSQL. You will build microservices for our banking platform.
+      Some React dashboards exist, but your primary focus will be Java
+      backend development. Fully remote position. 5+ years Java required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+    # Uncomment when GOOGLE_API_KEY is set:
+    # - type: llm-rubric
+    #   value: "Reasoning must identify Java as the primary stack, not JavaScript/Node.js."
+    #   provider: google:gemini-1.5-flash
+
+- description: "F03: Senior C#/.NET — wrong stack and database"
+  vars:
+    title: "Senior .NET Developer"
+    company: "DotNetPro"
+    location: "Gdańsk"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/dotnetpro-senior-dotnet-gdansk-ee55ff"
+    body: >-
+      Senior .NET Developer for our Gdańsk office. Technologies: C# .NET 8,
+      ASP.NET Core, Entity Framework, MSSQL Server, Azure cloud services.
+      You will develop enterprise applications for our insurance clients.
+      5+ years of .NET experience required. Hybrid work model.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "F04: Senior PHP/Laravel — wrong stack"
+  vars:
+    title: "Senior PHP Developer"
+    company: "WebAgency"
+    location: "Remote"
+    salary: "18,000 – 24,000 PLN net B2B"
+    url: "https://justjoin.it/offers/webagency-senior-php-dev-66666"
+    body: >-
+      Senior PHP Developer, fully remote. We use PHP 8.2, Laravel 10,
+      MySQL, and Vue.js for the frontend. REST API development and
+      third-party integrations. You will maintain and extend our
+      e-commerce platform. 5+ years PHP experience required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "F05: Senior Node.js Warsaw on-site only — wrong location"
+  vars:
+    title: "Senior Node.js Developer"
+    company: "WarsawTech"
+    location: "Warsaw, on-site only"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/warsawtech-senior-nodejs-warsaw-77777"
+    body: >-
+      Senior Node.js Developer for our Warsaw headquarters. You will work
+      with TypeScript, NestJS, PostgreSQL, and Docker. This is an on-site
+      position — you must be present in our Warsaw office Monday through
+      Friday. No remote work available. 5+ years backend experience.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "F06: Senior Go Backend — wrong primary stack"
+  vars:
+    title: "Senior Go Backend Engineer"
+    company: "GoLabs"
+    location: "Remote"
+    salary: "25,000 – 32,000 PLN net B2B"
+    url: "https://justjoin.it/offers/golabs-senior-go-backend-88888"
+    body: >-
+      Senior Go Backend Engineer for our distributed systems team. Core
+      technologies: Go (Golang), gRPC, Protocol Buffers, PostgreSQL,
+      Kubernetes. We have some minor internal tools in Node.js, but all
+      production services are written in Go. Looking for Go experts with
+      5+ years experience. Fully remote.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "F07: Spam / newsletter confirmation — not a job posting"
+  vars:
+    title: "🎉 Join our talent community!"
+    company: "RecruitBot"
+    location: "N/A"
+    salary: "N/A"
+    url: "https://recruitbot.io/newsletter/confirm/99999"
+    body: >-
+      Thank you for your interest in RecruitBot! This is a confirmation
+      that we received your application. We will review your profile and
+      get back to you within 5 business days. In the meantime, subscribe
+      to our newsletter for the latest job market insights and career tips.
+      Follow us on LinkedIn for updates!
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+
+# ═══════════════════════════════════════════════════════════
+#  EDGE CASES — tricky scenarios from evaluator.md table
+# ═══════════════════════════════════════════════════════════
+
+- description: "E01: Node.js + Java legacy — Node.js is PRIMARY → should match"
+  vars:
+    title: "Senior Software Engineer"
+    company: "LegacyTech"
+    location: "Remote"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/legacytech-senior-engineer-nodejs-java-aaaa1"
+    body: >-
+      We are rebuilding our platform in Node.js and TypeScript. Primary
+      development is Node.js microservices with NestJS framework, React
+      frontend with Next.js, and PostgreSQL database. Some legacy Java
+      services exist but are actively being migrated to Node.js. You will
+      spend 80% of your time on Node.js and 20% maintaining Java services
+      during the transition. 5+ years experience, Node.js expertise required.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3
+    # Uncomment when GOOGLE_API_KEY is set:
+    # - type: llm-rubric
+    #   value: "Reasoning must acknowledge Node.js as the primary stack despite Java legacy presence."
+    #   provider: google:gemini-1.5-flash
+
+- description: "E02: Java primary + Node.js secondary — Java is PRIMARY → should NOT match"
+  vars:
+    title: "Senior Software Engineer (Java/Node.js)"
+    company: "HybridTech"
+    location: "Remote"
+    salary: "24,000 – 30,000 PLN net B2B"
+    url: "https://justjoin.it/offers/hybridtech-senior-java-nodejs-bbbb2"
+    body: >-
+      Our main platform is built on Java Spring Boot with Kafka event
+      streaming and PostgreSQL. We recently added a small Node.js BFF
+      (Backend-for-Frontend) layer for our React admin dashboard. Your
+      primary responsibilities will be Java microservices development (70%),
+      with occasional Node.js BFF work (30%). Java expertise is required;
+      Node.js is a nice-to-have.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+    # Uncomment when GOOGLE_API_KEY is set:
+    # - type: llm-rubric
+    #   value: "Reasoning must identify Java as the primary stack, not Node.js."
+    #   provider: google:gemini-1.5-flash
+
+- description: "E03: 'Senior' in company name but Junior role → should NOT match"
+  vars:
+    title: "Junior Developer at Senior Tech Solutions"
+    company: "Senior Tech Solutions"
+    location: "Remote"
+    salary: "7,000 – 10,000 PLN gross"
+    url: "https://nofluffjobs.com/job/senior-tech-solutions-junior-dev-cccc3"
+    body: >-
+      Junior Developer position at Senior Tech Solutions. We are a growing
+      startup working with React, Node.js, and PostgreSQL. This is an
+      entry-level role — no previous professional experience required. We
+      welcome internship applicants and recent graduates. You will learn
+      from our experienced team of senior engineers.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "E04: No tech stack mentioned — cannot determine stack → should NOT match"
+  vars:
+    title: "Senior Engineer"
+    company: "Stealth Startup"
+    location: "Remote"
+    salary: "Competitive"
+    url: "https://justjoin.it/offers/stealth-startup-senior-engineer-dddd4"
+    body: >-
+      We are looking for a senior engineer to join our stealth-mode startup.
+      We are building something revolutionary in the AI space. Unfortunately,
+      we cannot disclose our technology stack at this time. The right
+      candidate will be adaptable and excited about cutting-edge technology.
+      Competitive compensation package. Apply now to learn more.
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === false"
+      weight: 3
+
+- description: "E05: Salary info only, no description — evaluate on title → should match"
+  vars:
+    title: "Senior Node.js Developer — Gdańsk"
+    company: "QuickHire"
+    location: "Gdańsk"
+    salary: "23,000 – 29,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/quickhire-senior-nodejs-gdansk-eeee5"
+    body: "No description available"
+  assert:
+    - type: javascript
+      value: "JSON.parse(output).match === true"
+      weight: 3

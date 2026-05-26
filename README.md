@@ -36,7 +36,7 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
-- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 📋 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md)
+- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(4/13 done)*
 
 ---
 
@@ -280,12 +280,12 @@ Telegram (ручная ссылка)  ──────────────
 > ADR: [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md)
 
 #### 10.1 — Gold Dataset & Promptfoo Config
-- [ ] `P10-1` Установить `promptfoo` как devDependency в корне проекта
-- [ ] `P10-2` Создать `promptfooconfig.yaml` с настройками промптов, локального провайдера Ollama и резервного Gemini Flash
-- [ ] `P10-3` Сформировать базовый `gold_dataset.yaml` на 15–30 эталонных вакансий
+- [x] `P10-1` Установить `promptfoo` как devDependency в корне проекта ✅ (`^0.93.0` в scraper/package.json)
+- [x] `P10-2` Создать `promptfooconfig.yaml` с настройками промптов, локального провайдера Ollama и резервного Gemini Flash ✅ (`n8n/prompts/promptfooconfig.yaml`)
+- [x] `P10-3` Сформировать базовый `gold_dataset.yaml` на 15–30 эталонных вакансий ✅ (20 тест-кейсов: 8 true, 7 false, 5 edge)
 
 #### 10.2 — Hybrid Assertions & Local Verification
-- [ ] `P10-4` Внедрить детерминированные JavaScript-ассерты для быстрой и бесплатной проверки поля `match` (true/false)
+- [x] `P10-4` Внедрить детерминированные JavaScript-ассерты для быстрой и бесплатной проверки поля `match` (true/false) ✅ (3 default + per-test assertions)
 - [ ] `P10-5` Настроить проверки `llm-rubric` через бесплатный лимит Gemini 1.5 Flash для валидации текстового поля `reason`
 - [ ] `P10-6` Прогнать локальные тесты: `npx promptfoo eval` и убедиться в успешной генерации отчетов в CLI/HTML
 
@@ -337,7 +337,10 @@ recruiter/
 │   │   ├── evaluate.json        # Split → LLM → IF match → [Notion/Telegram]
 │   │   └── notify.json          # Notion Create Page + Telegram Alert
 │   └── prompts/
-│       └── evaluator.md         # System-промпт для LLM-оценщика
+│       ├── evaluator.md             # System-промпт для LLM-оценщика
+│       ├── evaluator-template.json  # Chat-формат промпта для Promptfoo
+│       ├── promptfooconfig.yaml     # Конфиг Promptfoo (P10-2)
+│       └── gold_dataset.yaml        # Эталонный датасет (P10-3)
 ├── docs/
 │   ├── architecture.md          # Текущая + планируемая архитектура
 │   ├── notion-schema.md         # Схемы: AI Recruiter Board + Evaluation Log

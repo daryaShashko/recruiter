@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────
+# AI Recruiter — Promptfoo Evaluation Config
+# ADR: ADR-013 (Lightweight Prompt Evaluation & CI/CD Pipeline)
+# Tasks: P10-2 (config), P10-4 (JS assertions)
+#
+# Usage:
+#   cd scraper && npm run eval         # run full evaluation
+#   cd scraper && npm run eval:view    # open HTML report in browser
+#
+# Prerequisites:
+#   - Ollama running locally with llama3.1:latest pulled
+#   - npm install in /scraper (promptfoo is a devDependency)
+# ─────────────────────────────────────────────────────────
+
+description: "AI Recruiter — Evaluator Prompt v1"
+
+# ─── Prompt ──────────────────────────────────────────────
+# Chat-format template: system prompt (from evaluator.md) + user message
+# Variables: {{title}}, {{company}}, {{location}}, {{salary}}, {{url}}, {{body}}
+prompts:
+  - file://evaluator-template.json
+
+# ─── Providers ───────────────────────────────────────────
+providers:
+  - id: ollama:chat:llama3.1:latest
+    label: "Llama 3.1 8B (local Ollama)"
+    config:
+      temperature: 0
+
+# ─── Optional: Grading provider for llm-rubric assertions ──
+# Uncomment and set GOOGLE_API_KEY env var to enable
+# reasoning quality checks via Gemini Flash (free tier).
+#
+# defaultTest:
+#   options:
+#     provider:
+#       id: google:gemini-1.5-flash
+#       config:
+#         temperature: 0
+
+# ─── Default Assertions (P10-4) ─────────────────────────
+# Applied to EVERY test case automatically.
+# Zero-cost JavaScript checks — no API calls, instant execution.
+defaultTest:
+  assert:
+    # 1. Output must be valid JSON
+    - type: is-json
+      weight: 2
+
+    # 2. JSON must contain { match: boolean, reason: string, url: string }
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const hasMatch = typeof parsed.match === 'boolean';
+        const hasReason = typeof parsed.reason === 'string' && parsed.reason.length > 0;
+        const hasUrl = typeof parsed.url === 'string' && parsed.url.length > 0;
+        return hasMatch && hasReason && hasUrl;
+      weight: 2
+
+    # 3. URL in LLM response must echo back the input URL
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        return parsed.url === context.vars.url;
+      weight: 1
+
+# ─── Test Cases ──────────────────────────────────────────
+# Gold dataset: 20 curated test cases (8 true, 7 false, 5 edge cases)
+# Source: evaluator.md criteria + real-world patterns from dry-runs
+tests: file://gold_dataset.yaml
