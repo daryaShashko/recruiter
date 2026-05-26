@@ -43,7 +43,7 @@ providers:
 # Zero-cost JavaScript checks — no API calls, instant execution.
 defaultTest:
   vars:
-    profile: file://../n8n/prompts/candidate_profile.md
+    profile: file://candidate_profile.md
   assert:
     # 1. Output must be valid JSON
     - type: is-json
@@ -52,7 +52,11 @@ defaultTest:
     # 2. JSON must contain overall_score, tech_stack_match, seniority_match, red_flags, reason, url
     - type: javascript
       value: |
-        const parsed = JSON.parse(output);
+        const start = output.indexOf('{');
+        const end = output.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) return false;
+        const cleaned = output.substring(start, end + 1).trim();
+        const parsed = JSON.parse(cleaned);
         const hasOverall = typeof parsed.overall_score === 'number' && parsed.overall_score >= 0 && parsed.overall_score <= 100;
         const hasTech = typeof parsed.tech_stack_match === 'number' && parsed.tech_stack_match >= 0 && parsed.tech_stack_match <= 100;
         const hasSeniority = typeof parsed.seniority_match === 'number' && parsed.seniority_match >= 0 && parsed.seniority_match <= 100;
@@ -65,7 +69,11 @@ defaultTest:
     # 3. URL in LLM response must echo back the input URL
     - type: javascript
       value: |
-        const parsed = JSON.parse(output);
+        const start = output.indexOf('{');
+        const end = output.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) return false;
+        const cleaned = output.substring(start, end + 1).trim();
+        const parsed = JSON.parse(cleaned);
         return parsed.url === context.vars.url;
       weight: 1
 
