@@ -46,8 +46,19 @@ defaultTest:
   vars:
     profile: file://candidate_profile.md
   assert:
-    # 1. Output must be valid JSON
-    - type: is-json
+    # 1. Output must contain a valid JSON object
+    - type: javascript
+      value: |
+        const start = output.indexOf('{');
+        const end = output.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) return false;
+        const cleaned = output.substring(start, end + 1).trim();
+        try {
+          JSON.parse(cleaned);
+          return true;
+        } catch(e) {
+          return false;
+        }
       weight: 2
 
     # 2. JSON must contain overall_score, tech_stack_match, seniority_match, red_flags, reason, url

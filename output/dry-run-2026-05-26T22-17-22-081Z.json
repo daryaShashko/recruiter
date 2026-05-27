@@ -1,0 +1,582 @@
+[
+  {
+    "id": "justjoin_cksource-principal-ai-engineer-warszawa-javascript",
+    "title": "Principal AI Engineer",
+    "company": "CKSource",
+    "url": "https://justjoin.it/job-offer/cksource-principal-ai-engineer-warszawa-javascript",
+    "body": "Position: Principal AI Engineer\nCompany: CKSource\nExperience level: senior\nWork type: remote\nRequired skills: LLM (4/5), Backend (4/5), Node.js (4/5), AI (4/5)\nLocations: Warszawa, Kraków, Wrocław, Gdańsk, Poznań",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "38 000–45 000 PLN B2B/mo",
+    "tags": [
+      "llm",
+      "backend",
+      "node.js",
+      "ai"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_emagine-polska-frontend-developer-2d-3d--lisbon-javascript",
+    "title": "Frontend Developer (2D/3D)",
+    "company": "emagine Polska",
+    "url": "https://justjoin.it/job-offer/emagine-polska-frontend-developer-2d-3d--lisbon-javascript",
+    "body": "Position: Frontend Developer (2D/3D)\nCompany: emagine Polska\nExperience level: senior\nWork type: remote\nRequired skills: Cloud (4/5), TypeScript (4/5), Geographical Information System (GIS) (4/5), Project Management (4/5), Microsoft Excel (4/5), Web Development (4/5), frontend (4/5), JavaScript (4/5), Use Cases (4/5), Performance optimization (4/5)\nLocations: Lisbon",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "cloud",
+      "typescript",
+      "geographical information system (gis)",
+      "project management",
+      "microsoft excel",
+      "web development",
+      "frontend",
+      "javascript",
+      "use cases",
+      "performance optimization"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_unide-senior-fullstack-developer-node--warszawa-javascript",
+    "title": "Senior Fullstack Developer (Node)",
+    "company": "Unide",
+    "url": "https://justjoin.it/job-offer/unide-senior-fullstack-developer-node--warszawa-javascript",
+    "body": "Position: Senior Fullstack Developer (Node)\nCompany: Unide\nExperience level: senior\nWork type: remote\nRequired skills: EXt JS (5/5), Node.js (5/5), PostreSQL (4/5), Angular 2+ (4/5), Kafka (3/5)\nLocations: Warszawa",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "21 000–26 000 PLN B2B/mo",
+    "tags": [
+      "ext js",
+      "node.js",
+      "postresql",
+      "angular 2+",
+      "kafka"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_pirxey-senior-fullstack-developer-gdansk-javascript",
+    "title": "Senior FullStack Developer",
+    "company": "Pirxey",
+    "url": "https://justjoin.it/job-offer/pirxey-senior-fullstack-developer-gdansk-javascript",
+    "body": "Position: Senior FullStack Developer\nCompany: Pirxey\nExperience level: senior\nWork type: remote\nRequired skills: Node.js (5/5), React (5/5), TypeScript (4/5), JavaScript (4/5), Unit Testing (3/5), Analytical Thinking (3/5), Angular (1/5), .Net (1/5)\nLocations: Gdańsk, Warszawa, Kraków",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "9000–25 000 PLN B2B/mo",
+    "tags": [
+      "node.js",
+      "react",
+      "typescript",
+      "javascript",
+      "unit testing",
+      "analytical thinking",
+      "angular",
+      ".net"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_holisticon-connect-fullstack-engineer-react-node-js-python--wroclaw-javascript-ee335620",
+    "title": "Fullstack Engineer (React & Node.js & Python)",
+    "company": "Holisticon Connect",
+    "url": "https://justjoin.it/job-offer/holisticon-connect-fullstack-engineer-react-node-js-python--wroclaw-javascript-ee335620",
+    "body": "Position: Fullstack Engineer (React & Node.js & Python)\nCompany: Holisticon Connect\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), Node.js (4/5), Docker (4/5), Containers (4/5), Amazon AWS (4/5), React (4/5), Python (4/5)\nLocations: Wrocław",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "23 520–26 880 PLN B2B/mo",
+    "tags": [
+      "typescript",
+      "node.js",
+      "docker",
+      "containers",
+      "amazon aws",
+      "react",
+      "python"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_rits-professional-services-frontend-software-react-node-developer-1448--warszawa-javascript",
+    "title": "Frontend/Software (React + Node) Developer (1448)",
+    "company": "RITS Professional Services",
+    "url": "https://justjoin.it/job-offer/rits-professional-services-frontend-software-react-node-developer-1448--warszawa-javascript",
+    "body": "Position: Frontend/Software (React + Node) Developer (1448)\nCompany: RITS Professional Services\nExperience level: senior\nWork type: remote\nRequired skills: TailwindCSS (3/5), TypeScript (3/5), HTML, CSS (3/5), Node.js (3/5), Vitest (3/5), Jest (3/5), React (3/5), JavaScript (3/5)\nLocations: Warszawa",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "16 800–16 800 PLN B2B/h",
+    "tags": [
+      "tailwindcss",
+      "typescript",
+      "html, css",
+      "node.js",
+      "vitest",
+      "jest",
+      "react",
+      "javascript"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_speedapp-senior-frontend-developer-warszawa-javascript-09e7e372",
+    "title": "Senior Frontend Developer",
+    "company": "speedapp",
+    "url": "https://justjoin.it/job-offer/speedapp-senior-frontend-developer-warszawa-javascript-09e7e372",
+    "body": "Position: Senior Frontend Developer\nCompany: speedapp\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), React (4/5), RESTful API (4/5)\nLocations: Warszawa",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "typescript",
+      "react",
+      "restful api"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_framna-formerly-bright-inventions--senior-backend-engineer-security-domain--gdansk-javascript",
+    "title": "Senior Backend Engineer (Security Domain)",
+    "company": "Framna (formerly Bright Inventions)",
+    "url": "https://justjoin.it/job-offer/framna-formerly-bright-inventions--senior-backend-engineer-security-domain--gdansk-javascript",
+    "body": "Position: Senior Backend Engineer (Security Domain)\nCompany: Framna (formerly Bright Inventions)\nExperience level: senior\nWork type: hybrid\nRequired skills: Nest.js (4/5), TypeScript (4/5), Node.js (4/5), AI (3/5), GCP (1/5), React (1/5)\nLocations: Gdańsk",
+    "source": "justjoin",
+    "location": "Gdańsk",
+    "salary": "25 000–28 000 PLN B2B/mo",
+    "tags": [
+      "nest.js",
+      "typescript",
+      "node.js",
+      "ai",
+      "gcp",
+      "react"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_codepole-fullstack-react-node-developer-warszawa-javascript",
+    "title": "Fullstack React & Node Developer",
+    "company": "Codepole",
+    "url": "https://justjoin.it/job-offer/codepole-fullstack-react-node-developer-warszawa-javascript",
+    "body": "Position: Fullstack React & Node Developer\nCompany: Codepole\nExperience level: senior\nWork type: remote\nRequired skills: PostgreSQL (4/5), TypeScript (4/5), Node.js (4/5), React (4/5), Docker (3/5), Cloud (2/5)\nLocations: Warszawa, Wrocław, Kraków, Gdańsk, Poznań",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "20 000–30 000 PLN B2B/mo",
+    "tags": [
+      "postgresql",
+      "typescript",
+      "node.js",
+      "react",
+      "docker",
+      "cloud"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_toro-performance-sp-z-o-o--senior-principal-frontend-fullstack-engineer-poland-remote--javascript",
+    "title": "Senior/Principal Frontend (Fullstack) Engineer",
+    "company": "Toro Performance Sp. z o.o.",
+    "url": "https://justjoin.it/job-offer/toro-performance-sp-z-o-o--senior-principal-frontend-fullstack-engineer-poland-remote--javascript",
+    "body": "Position: Senior/Principal Frontend (Fullstack) Engineer\nCompany: Toro Performance Sp. z o.o.\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (5/5), React (5/5), REST API (4/5), Next.js (3/5)\nLocations: Poland (Remote)",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "typescript",
+      "react",
+      "rest api",
+      "next.js"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_billennium-starszy-programista-front-end-angular--poland-remote--javascript",
+    "title": "Starszy Programista Front-end (Angular)",
+    "company": "Billennium",
+    "url": "https://justjoin.it/job-offer/billennium-starszy-programista-front-end-angular--poland-remote--javascript",
+    "body": "Position: Starszy Programista Front-end (Angular)\nCompany: Billennium\nExperience level: senior\nWork type: remote\nRequired skills: WCAG (4/5), RWD (4/5), Angular 2+ (4/5)\nLocations: Poland (Remote)",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "wcag",
+      "rwd",
+      "angular 2+"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_ideo-sp-z-o-o--frontend-developer-senior-lead--rzeszow-javascript",
+    "title": "Frontend Developer (Senior / Lead)",
+    "company": "Ideo Sp. z o.o.",
+    "url": "https://justjoin.it/job-offer/ideo-sp-z-o-o--frontend-developer-senior-lead--rzeszow-javascript",
+    "body": "Position: Frontend Developer (Senior / Lead)\nCompany: Ideo Sp. z o.o.\nExperience level: senior\nWork type: remote\nRequired skills: Angular (5/5), JavaScript (5/5), React (3/5)\nLocations: Rzeszów",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "14 000–20 000 PLN B2B/mo",
+    "tags": [
+      "angular",
+      "javascript",
+      "react"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_inspeerity-senior-frontend-developer-react--warszawa-javascript",
+    "title": "Senior Frontend Developer (React)",
+    "company": "Inspeerity",
+    "url": "https://justjoin.it/job-offer/inspeerity-senior-frontend-developer-react--warszawa-javascript",
+    "body": "Position: Senior Frontend Developer (React)\nCompany: Inspeerity\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), HTML (4/5), React (4/5), CSS (4/5), JavaScript (4/5), Cloud (3/5), CI/CD (3/5), Next.js (3/5)\nLocations: Warszawa, Białystok, Rzeszów",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "15 120–23 520 PLN B2B/h",
+    "tags": [
+      "typescript",
+      "html",
+      "react",
+      "css",
+      "javascript",
+      "cloud",
+      "ci/cd",
+      "next.js"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_scalo-senior-frontend-software-engineer-krakow-javascript",
+    "title": "Senior Frontend Software Engineer",
+    "company": "SCALO",
+    "url": "https://justjoin.it/job-offer/scalo-senior-frontend-software-engineer-krakow-javascript",
+    "body": "Position: Senior Frontend Software Engineer\nCompany: SCALO\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), REST API (4/5), React (4/5), CSS (4/5), PostgreSQL (3/5), CI/CD (3/5)\nLocations: Kraków",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "20 160–21 840 PLN B2B/mo",
+    "tags": [
+      "typescript",
+      "rest api",
+      "react",
+      "css",
+      "postgresql",
+      "ci/cd"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_inspeerity-senior-frontend-developer-angular--warsaw-javascript",
+    "title": "Senior Frontend Developer (Angular)",
+    "company": "Inspeerity",
+    "url": "https://justjoin.it/job-offer/inspeerity-senior-frontend-developer-angular--warsaw-javascript",
+    "body": "Position: Senior Frontend Developer (Angular)\nCompany: Inspeerity\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), Angular (4/5), HTML (4/5), CSS (4/5), JavaScript (4/5), Cloud (3/5), CI/CD (3/5), Unit Testing (3/5)\nLocations: Warsaw, Białystok, Rzeszów",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "15 120–23 520 PLN B2B/h",
+    "tags": [
+      "typescript",
+      "angular",
+      "html",
+      "css",
+      "javascript",
+      "cloud",
+      "ci/cd",
+      "unit testing"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_craftware-senior-full-stack-developer-typescript-react-node-js-aws--warszawa-javascript",
+    "title": "Senior Full Stack Developer (TypeScript/React, Node.js, AWS)",
+    "company": "Craftware",
+    "url": "https://justjoin.it/job-offer/craftware-senior-full-stack-developer-typescript-react-node-js-aws--warszawa-javascript",
+    "body": "Position: Senior Full Stack Developer (TypeScript/React, Node.js, AWS)\nCompany: Craftware\nExperience level: senior\nWork type: remote\nRequired skills: AWS (4/5), PostgreSQL (4/5), TypeScript (4/5), Node.js (4/5), React (4/5), Docker (1/5)\nLocations: Warszawa",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "28 560–33 600 PLN B2B/h",
+    "tags": [
+      "aws",
+      "postgresql",
+      "typescript",
+      "node.js",
+      "react",
+      "docker"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_wayf-senior-full-stack-developer-poland-remote--javascript-552bc654",
+    "title": "Senior Full Stack Developer",
+    "company": "WAYF",
+    "url": "https://justjoin.it/job-offer/wayf-senior-full-stack-developer-poland-remote--javascript-552bc654",
+    "body": "Position: Senior Full Stack Developer\nCompany: WAYF\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (5/5), Node.js (4/5), PostgreSQL (3/5), Next.js (3/5), React (3/5), React Native (1/5)\nLocations: Poland (Remote), Warszawa, Kraków, Wrocław, Gdańsk",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "18 000–25 000 PLN B2B/mo",
+    "tags": [
+      "typescript",
+      "node.js",
+      "postgresql",
+      "next.js",
+      "react",
+      "react native"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_aura-senior-full-stack-engineer-warszawa-javascript",
+    "title": "Senior Full Stack Engineer",
+    "company": "AURA",
+    "url": "https://justjoin.it/job-offer/aura-senior-full-stack-engineer-warszawa-javascript",
+    "body": "Position: Senior Full Stack Engineer\nCompany: AURA\nExperience level: senior\nWork type: remote\nRequired skills: Software Engineering (5/5), HTML (4/5), CSS (4/5), TypeScript (3/5), React Native (3/5), iOS (1/5), Android (1/5), CI/CD (1/5), VPN (1/5), Jest (1/5)\nLocations: Warszawa, Wrocław, Kraków, Gdańsk, Katowice",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "software engineering",
+      "html",
+      "css",
+      "typescript",
+      "react native",
+      "ios",
+      "android",
+      "ci/cd",
+      "vpn",
+      "jest"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_wakacje-pl-senior-fullstack-software-engineer-gdansk-javascript",
+    "title": "Senior Fullstack Software Engineer",
+    "company": "Wakacje.pl",
+    "url": "https://justjoin.it/job-offer/wakacje-pl-senior-fullstack-software-engineer-gdansk-javascript",
+    "body": "Position: Senior Fullstack Software Engineer\nCompany: Wakacje.pl\nExperience level: senior\nWork type: hybrid\nRequired skills: TypeScript (5/5), Next.js (5/5), React (5/5), Node.js (4/5), Redis (2/5), Grafana (2/5), SEO (2/5), Bun (1/5)\nLocations: Gdańsk",
+    "source": "justjoin",
+    "location": "Gdańsk",
+    "tags": [
+      "typescript",
+      "next.js",
+      "react",
+      "node.js",
+      "redis",
+      "grafana",
+      "seo",
+      "bun"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_kingfisher-plc-senior-software-engineer-react--krakow-javascript",
+    "title": "Senior Software Engineer (React)",
+    "company": "Kingfisher plc",
+    "url": "https://justjoin.it/job-offer/kingfisher-plc-senior-software-engineer-react--krakow-javascript",
+    "body": "Position: Senior Software Engineer (React)\nCompany: Kingfisher plc\nExperience level: senior\nWork type: remote\nRequired skills: TypeScript (4/5), React (4/5), Remix (3/5), CI/CD (3/5), Microservices (3/5), JSON (3/5), REST API (3/5), Jest (3/5), GraphQL (3/5)\nLocations: Kraków",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "20 000–28 000 PLN PERMANENT/mo",
+    "tags": [
+      "typescript",
+      "react",
+      "remix",
+      "ci/cd",
+      "microservices",
+      "json",
+      "rest api",
+      "jest",
+      "graphql"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_first-connect-insurance-senior-backend-engineer-poland-remote--gdansk-javascript",
+    "title": "Senior Backend Engineer (Poland, Remote)",
+    "company": "First Connect Insurance",
+    "url": "https://justjoin.it/job-offer/first-connect-insurance-senior-backend-engineer-poland-remote--gdansk-javascript",
+    "body": "Position: Senior Backend Engineer (Poland, Remote)\nCompany: First Connect Insurance\nExperience level: senior\nWork type: remote\nRequired skills: PostgreSQL (4/5), TypeScript (4/5), Node.js (4/5), nestJS (4/5), AWS (3/5)\nLocations: Gdańsk, Warszawa, Wrocław, Kraków, Poznań",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "26 000–31 000 PLN B2B/mo",
+    "tags": [
+      "postgresql",
+      "typescript",
+      "node.js",
+      "nestjs",
+      "aws"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_cerebre-senior-frontend-developer-react--poznan-javascript",
+    "title": "Senior Frontend Developer (React)",
+    "company": "cerebre",
+    "url": "https://justjoin.it/job-offer/cerebre-senior-frontend-developer-react--poznan-javascript",
+    "body": "Position: Senior Frontend Developer (React)\nCompany: cerebre\nExperience level: senior\nWork type: remote\nRequired skills: JavaScript (5/5), TypeScript (4/5), Tailwind CSS (4/5), React (4/5), SVG (3/5), Next.js (3/5), RESTful APIs (3/5), GitLab (3/5)\nLocations: Poznań, Wrocław, Kraków, Warszawa, Trójmiasto",
+    "source": "justjoin",
+    "location": "Remote",
+    "tags": [
+      "javascript",
+      "typescript",
+      "tailwind css",
+      "react",
+      "svg",
+      "next.js",
+      "restful apis",
+      "gitlab"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "justjoin_p-p-solutions-senior-frontend-developer-angular--warszawa-javascript",
+    "title": "Senior Frontend Developer (Angular)",
+    "company": "P&P Solutions",
+    "url": "https://justjoin.it/job-offer/p-p-solutions-senior-frontend-developer-angular--warszawa-javascript",
+    "body": "Position: Senior Frontend Developer (Angular)\nCompany: P&P Solutions\nExperience level: senior\nWork type: remote\nRequired skills: NgRx (5/5), TypeScript (5/5), Angular (5/5), API (5/5), RxJS (5/5)\nLocations: Warszawa",
+    "source": "justjoin",
+    "location": "Remote",
+    "salary": "18 480–19 320 PLN B2B/h",
+    "tags": [
+      "ngrx",
+      "typescript",
+      "angular",
+      "api",
+      "rxjs"
+    ],
+    "scrapedAt": "2026-05-26T22:17:22.069Z"
+  },
+  {
+    "id": "nofluffjobs_QZCDI6GX",
+    "title": "Fullstack Programista/Programistka - Praca zdalna",
+    "company": "ASTEK Polska",
+    "url": "https://nofluffjobs.com/pl/praca/fullstack-programista-programistka-praca-zdalna-astek-polska-remote",
+    "body": "Position: Fullstack Programista/Programistka - Praca zdalna\nCompany: ASTEK Polska\nCategory: fullstack\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, java, spring\nLocations: Remote\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "18 480–21 840 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "java",
+      "spring"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.332Z"
+  },
+  {
+    "id": "nofluffjobs_VJHTLAXZ",
+    "title": "Fullstack Programista/Programistka  - Praca zdalna ",
+    "company": "ASTEK Polska",
+    "url": "https://nofluffjobs.com/pl/praca/fullstack-programista-programistka-praca-zdalna-astek-polska-remote-1",
+    "body": "Position: Fullstack Programista/Programistka  - Praca zdalna \nCompany: ASTEK Polska\nCategory: fullstack\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, java, spring\nLocations: Remote, Warszawa\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "12 000–15 300 PLN PERMANENT/mo",
+    "tags": [
+      "javascript",
+      "java",
+      "spring"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_D9LOAY3V",
+    "title": "Fullstack Developer with Java and JavaScript (f/m/x)",
+    "company": "Sii Polska",
+    "url": "https://nofluffjobs.com/pl/praca/fullstack-developer-with-java-and-javascript-f-m-x-sii-polska-remote",
+    "body": "Position: Fullstack Developer with Java and JavaScript (f/m/x)\nCompany: Sii Polska\nCategory: fullstack\nSeniority: Senior\nTechnology: Java\nSkills: praca, java\nLocations: Remote, Katowice, Gdańsk, Wrocław, Białystok, Bydgoszcz, Cracow, Łódź, Lublin, Piła, Poznań, Rzeszów, Szczecin, Toruń, Warszawa\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "20 000–23 500 PLN B2B/mo",
+    "tags": [
+      "praca",
+      "java"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_HS4UMKGA",
+    "title": "Programista Fullstack / Programistka Fullstack (.NET & Angular)",
+    "company": "ASTEK Polska",
+    "url": "https://nofluffjobs.com/pl/praca/programista-fullstack-programistka-fullstack-net-angular-astek-polska-remote",
+    "body": "Position: Programista Fullstack / Programistka Fullstack (.NET & Angular)\nCompany: ASTEK Polska\nCategory: fullstack\nSeniority: Senior\nTechnology: .NET\nSkills: javascript, praca, .net\nLocations: Remote\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "18 900–24 150 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "praca",
+      ".net"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_8KNMNQGL",
+    "title": "Lead Fullstack Developer (Backend focused, API, BFF)",
+    "company": "Upvanta",
+    "url": "https://nofluffjobs.com/pl/praca/lead-fullstack-developer-backend-focused-api-bff-upvanta-remote",
+    "body": "Position: Lead Fullstack Developer (Backend focused, API, BFF)\nCompany: Upvanta\nCategory: fullstack\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, praca, cache\nLocations: Remote\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "24 360–26 040 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "praca",
+      "cache"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_Z5WEMAMW",
+    "title": "Senior QA",
+    "company": "Devire",
+    "url": "https://nofluffjobs.com/pl/praca/senior-qa-devire-remote",
+    "body": "Position: Senior QA\nCompany: Devire\nCategory: testing\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, praca, qa engineer\nLocations: Remote\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "25 200–26 880 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "praca",
+      "qa engineer"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_UXTUOMM7",
+    "title": "Senior System / Business Analyst with (Java/Kafka)",
+    "company": "Square One Resources",
+    "url": "https://nofluffjobs.com/pl/praca/senior-system-business-analyst-with-java-kafka-square-one-resources-remote",
+    "body": "Position: Senior System / Business Analyst with (Java/Kafka)\nCompany: Square One Resources\nCategory: businessAnalyst\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, business analyst, uml\nLocations: Remote, Warsaw\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "23 520–26 880 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "business analyst",
+      "uml"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_1DZCWMK2",
+    "title": "Senior Fullstack Java",
+    "company": "Antal",
+    "url": "https://nofluffjobs.com/pl/praca/senior-fullstack-java-antal-remote",
+    "body": "Position: Senior Fullstack Java\nCompany: Antal\nCategory: fullstack\nSeniority: Senior\nTechnology: undefined\nSkills: javascript, praca, java\nLocations: Remote, Warszawa\nWork type: Remote",
+    "source": "nofluffjobs",
+    "location": "Remote",
+    "salary": "23 520–26 880 PLN B2B/mo",
+    "tags": [
+      "javascript",
+      "praca",
+      "java"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  },
+  {
+    "id": "nofluffjobs_ZFY2UOR3",
+    "title": "Wykładowca/Wykładowczyni – Programowanie",
+    "company": "Grupa Outworking",
+    "url": "https://nofluffjobs.com/pl/praca/wykladowca-wykladowczyni-programowanie-grupa-outworking-warszawa",
+    "body": "Position: Wykładowca/Wykładowczyni – Programowanie\nCompany: Grupa Outworking\nCategory: backend\nSeniority: Senior\nTechnology: Python\nSkills: javascript, praca, python\nLocations: Warszawa, Gdańsk, Wrocław, Poznań, Kraków",
+    "source": "nofluffjobs",
+    "location": "Gdańsk",
+    "tags": [
+      "javascript",
+      "praca",
+      "python"
+    ],
+    "scrapedAt": "2026-05-26T22:16:40.333Z"
+  }
+]

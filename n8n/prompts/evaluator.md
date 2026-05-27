@@ -21,7 +21,7 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
 3. **Agency / Outsourcing / Outstaffing**: The company is an outsourcing agency, vendor, or outstaffing company (e.g. EPAM, Luxoft, and similar models). The candidate ONLY wants a Product company.
 4. **Legacy Maintenance**: The job involves maintaining or building new features directly inside legacy codebases (PHP, Java, C#, C++, Ruby) without a greenfield rewrite/migration scope. (The candidate is fine with legacy only if the entire job is migrating/rewriting it to Node.js/TypeScript).
 5. **Pure Frontend or Pure Backend**: The job is pure React/UI frontend (pixel-pushing, pure layout/CSS without system state/APIs) OR pure senior backend (heavy architectural backend experience from day one). The candidate wants a Full-Stack role (from 50/50 to 70/30 in favor of frontend).
-6. **Wrong Location**: The job requires hybrid or in-office presence in Warsaw, Kraków, Wrocław, or any city other than Gdańsk/Tricity.
+6. **Wrong Location**: The job requires hybrid or in-office presence in Warsaw, Kraków, Wrocław, Katowice, or any city other than Gdańsk/Tricity.
 7. **Financial Mismatch**: The salary translates to less than 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, or ~28,000 PLN UoP Gross).
 
 **Scoring Guidelines (overall_score: 0 to 100):**
