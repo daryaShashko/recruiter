@@ -28,7 +28,7 @@ interfaces:
       url:
         type: string
         required: true
-        note: "PRIMARY KEY for Notion deduplication — must be the canonical job page URL"
+        note: "Job page URL. Used as fallback dedup key in Notion (OR filter). Primary dedup key is fingerprint (computed in n8n, not in scraper)."
       body:
         type: string
         required: true
@@ -108,6 +108,11 @@ interfaces:
       company:
         type: string (Notion Text)
         required: true
+      fingerprint:
+        type: string (Notion Text)
+        required: false
+        format: "16-character hex string (FNV1a64 hash)"
+        note: "Primary dedup key. FNV1a64(normalizeCompany::normalizeTitle). Written by Notion: Log to Eval Log node. Empty for records created before 2026-05-27."
       url:
         type: string (Notion URL)
         required: true
@@ -140,7 +145,13 @@ interfaces:
         type: select (Notion Select)
         required: false
         default: "Pending"
-        values: ["Correct", "Wrong – Should Match", "Wrong – Should Reject", "Pending"]
+        values:
+          [
+            "Correct",
+            "Wrong – Should Match",
+            "Wrong – Should Reject",
+            "Pending",
+          ]
         note: "Set manually by user after reviewing the LLM decision"
       tags:
         type: multi-select (Notion Multi-select)
@@ -148,7 +159,8 @@ interfaces:
         note: "Tech stack tags from vacancy, for pattern analysis"
     critical_notes:
       - "This is a Notion DB schema, not a TypeScript interface"
-      - "Log node placement: AFTER Code: Parse Ollama Response, BEFORE IF: Match?"
+      - "Log node placement: AFTER Code: Parse Ollama Response, BEFORE IF: Match? (in ingest.json — evaluate.json is deprecated)"
+      - "Fingerprint field must exist in Notion DB for fingerprint to be saved — add manually as Text property"
       - "Must log both match:true AND match:false decisions"
       - "Human Verdict defaults to Pending — updated via Telegram feedback or manual review"
 

@@ -148,9 +148,9 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P4-4` Создать Notion Integration Token, добавить в `.env` и GitHub Secrets
 
 #### 4.2 — Дедупликация
-- [x] `P4-5` Добавить узел Notion (Query): найти запись с `URL == $json.url`
-- [x] `P4-6` Добавить узел IF: запись существует → skip / не существует → create
-- [x] `P4-7` Протестировать дедупликацию: отправить одну вакансию дважды → в Notion одна запись
+- [x] `P4-5` Дедупликация — 3 уровня: `Code: Dedup Batch` (within-batch, fingerprint+URL) → HTTP Request к Notion API (OR: Fingerprint | urlNorm | url) → `Code: Check Duplicate` (isDuplicate flag) *(2026-05-27: переработано с нуля — исходный Notion getAll node был сломан по трём причинам; ADR-015)*
+- [x] `P4-6` IF: Already in Notion? проверяет `$json.isDuplicate === true` (boolean, strict)
+- [x] `P4-7` Семантический fingerprint: FNV1a64(normalizeCompany + "::" + normalizeTitle) — работает кросс-платформенно (один джоб на JustJoin и NoFluffJobs → один fingerprint → одна запись)
 
 #### 4.3 — Запись в Notion
 - [x] `P4-8` Добавить узел Notion (Create Page): заполнить все поля из `$json`
@@ -399,6 +399,7 @@ recruiter/
 | Cloud LLM rate limits | 429 Too Many Requests | Throttled Queue: Wait node 4s в n8n → ≤15 RPM. Fallback: переключение на второй провайдер |
 | VRAM утечка в Ollama | Память не освобождается | `"keep_alive": 0` в каждом запросе к `/api/chat` |
 | Слепая зона оценщика | Нет данных об отклонённых вакансиях | Evaluation Log (P8, ADR-012): логировать ВСЕ решения LLM в отдельную Notion DB |
+| Fingerprint поле пустое в Notion | Поле `Fingerprint` не заполняется в Evaluation Log | Добавить вручную свойство `Fingerprint` (тип **Text**) в Notion Evaluation Log DB. До этого дедупликация работает только по URL (fallback). |
 
 ---
 

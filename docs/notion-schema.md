@@ -35,14 +35,36 @@ Kanban view grouped by `Status`
 
 ## Deduplication Strategy
 
-Before creating a new page, n8n queries Notion:
-```
-filter: {
-  property: "URL",
-  url: { equals: <incoming_url> }
+Deduplication happens at **three levels** in `n8n/workflows/ingest.json`:
+
+### Level 1 — Within-batch (Code: Dedup Batch)
+Before processing, all jobs in the same webhook payload are deduplicated by `fingerprint` and `urlNorm` using in-memory Sets. Prevents wasting Ollama compute on duplicates inside a single scrape run.
+
+### Level 2 — Cross-batch, cross-platform (HTTP: Query Notion API)
+Before each job is sent to Ollama, n8n calls Notion API directly with a 3-condition OR filter:
+```json
+{
+  "filter": {
+    "or": [
+      { "property": "Fingerprint", "rich_text": { "equals": "<fingerprint>" } },
+      { "property": "URL", "url": { "equals": "<urlNorm>" } },
+      { "property": "URL", "url": { "equals": "<originalUrl>" } }
+    ]
+  },
+  "page_size": 1
 }
 ```
-If any result is returned -> skip (already exists).
+- `Fingerprint` match: catches the same job from different platforms (JustJoin vs NoFluffJobs) or reposted jobs with new URLs.
+- `URL` (normalized) match: catches same-platform reposts with tracking params stripped.
+- `URL` (original) match: backward compatibility for records created before normalization was added.
+
+### Fingerprint Generation
+```
+normalizeCompany(company)  →  lowercase, strip legal forms (Sp. z o.o., LLC, GmbH, etc.)
+normalizeTitle(title)      →  lowercase, strip seniority (Senior/Junior/Lead/etc.), normalize Full-Stack/Frontend/etc.
+fingerprint = FNV1a64(normalizedCompany + "::" + normalizedTitle).slice(16 hex chars)
+```
+Implemented in `Code: Normalize Jobs` using pure JavaScript (no external modules — n8n sandbox restriction).
 
 ## Integration Setup
 
@@ -77,6 +99,7 @@ Table view, sorted by `Evaluated At` descending
 |---|---|---|
 | `Title` | Title | Job title |
 | `Company` | Text | Company name |
+| `Fingerprint` | Text | FNV-1a 64-bit hash of `normalized_company::normalized_title` — primary dedup key, cross-platform |
 | `URL` | URL | Direct link to job posting |
 | `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual` |
 | `Match` | Checkbox | true = match (overall_score >= 50), false = reject (overall_score < 50) |

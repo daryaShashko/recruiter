@@ -441,6 +441,72 @@ decisions:
       n8n/workflows/feedback-handler.json — Notion Trigger only, active now.
       Blocked tasks: EVAL-6, EVAL-7, EVAL-8 → status: blocked_until_p7.
 
+  ADR-015:
+    title: "Semantic fingerprint deduplication replacing URL-only Notion query"
+    status: accepted
+    date: "2026-05-27"
+    context: >
+      The original dedup check (Notion getAll node, filter URL equals $json.url) was broken
+      in three independent ways:
+        1. Wrong filter field name: `urlValue` is used for writing page properties; the filter
+           condition for URL type requires the generic `value` field — Notion API received an
+           empty string, always returning 0 results.
+        2. Unreliable IF condition: `!!$json.id` — JobOffer has its own `id` field, so when
+           Notion returned no results and `alwaysOutputData: true` passed through the input
+           item, `$json.id` was truthy and the job was incorrectly treated as a duplicate.
+        3. URL-only matching fails cross-platform: the same job posted on JustJoin AND
+           NoFluffJobs has different URLs — dedup never fired.
+    decision: >
+      Replace the single Notion node dedup with a 3-level semantic deduplication system:
+        Level 1 (Code: Dedup Batch): within-batch dedup by fingerprint + urlNorm using
+          in-memory Sets — eliminates duplicates inside the same webhook payload before
+          any Notion API calls.
+        Level 2 (HTTP Request → Notion API): replace broken Notion node with direct
+          POST /databases/query using OR filter: fingerprint | urlNorm | originalUrl.
+          Backward-compatible: old records without Fingerprint still matched by URL.
+        Level 3 (Code: Check Duplicate): parse Notion API response, set isDuplicate flag.
+      Fingerprint = FNV1a64(normalizeCompany + "::" + normalizeTitle), 16 hex chars.
+      Normalization: strip legal forms (Sp. z o.o., LLC, GmbH, Ltd, Corp, etc.),
+        strip seniority prefixes (Senior, Junior, Lead, Principal, Staff, etc.),
+        normalize common abbreviations (full-stack→fullstack, node.js→nodejs, etc.).
+    rationale:
+      - "Cross-platform: same job on JustJoin + NoFluffJobs → same fingerprint → one record"
+      - "URL-invariant: job reposted with new URL / tracking params → same fingerprint"
+      - "Direct Notion API call bypasses n8n node's filter parsing — no field name ambiguity"
+      - "Backward compatible: OR filter includes URL conditions for pre-fingerprint records"
+      - "FNV-1a 64-bit is sufficient (collision probability negligible at <10k records)"
+    consequences:
+      positive:
+        - "Cross-platform and cross-run deduplication works reliably"
+        - "No wasted Ollama compute on previously evaluated jobs"
+        - "Fingerprint stored in Notion enables future similarity analytics"
+        - "Pure JS — no external modules (n8n sandbox restricts require)"
+      negative:
+        - "Requires manual addition of Fingerprint (Text) property to Evaluation Log Notion DB"
+        - "Old records have no fingerprint — URL fallback covers backward compat"
+        - "Company/title normalization is heuristic — very unusual names may not match"
+        - "require('crypto') disallowed in n8n Code node sandbox — SHA256 not available,
+          FNV-1a used instead (not cryptographically secure, but sufficient for dedup)"
+    implementation: >
+      n8n/workflows/ingest.json:
+        - Code: Normalize Jobs — added normalizeCompany(), normalizeTitle(), FNV1a64(),
+          normalizeUrl(); outputs urlNorm, fingerprint, dedupFilter per job
+        - Code: Dedup Batch — new node, within-batch dedup by fingerprint + urlNorm
+        - Notion: Find Existing URL — replaced Notion node with httpRequest node,
+          POST /databases/query, body: JSON.stringify($json.dedupFilter)
+        - Code: Check Duplicate — new node, isDuplicate = results.length > 0
+        - IF: Already in Notion? — condition: $json.isDuplicate === true (boolean, strict)
+        - Code: Parse Ollama Response — added fingerprint: job.fingerprint || '' to return
+        - Notion: Log to Eval Log — added Fingerprint|rich_text property write
+      docs/notion-schema.md — Fingerprint field added, Dedup Strategy section rewritten
+      context/modules/n8n.yaml — nodes_sequence + notion_field_mapping updated
+      context/roadmap.yaml — P4-5/6/7 notes updated with full rework history
+    manual_action_required: >
+      Add property `Fingerprint` (type: Text) to the Evaluation Log Notion database.
+      Without this, new records are created without fingerprint — dedup falls back to
+      URL-only matching until the field is added.
+    supersedes: "Part of ADR-008 (pre-LLM URL dedup) and ADR-003 (Notion dedup approach)"
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

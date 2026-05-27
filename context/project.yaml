@@ -61,8 +61,15 @@ architecture:
       output: "{ jobs: JobOffer[], meta: {...} }"
     - step: 3
       from: n8n Webhook
-      action: Normalize + deduplicate + split per job
-      output: "individual JobOffer items"
+      action: >
+        Normalize (urlNorm + fingerprint + dedupFilter per job) ->
+        Dedup Batch (within-batch fingerprint + URL dedup) ->
+        Split per job ->
+        HTTP query Notion API (OR: fingerprint | urlNorm | url) ->
+        Check Duplicate (isDuplicate flag)
+      output: "individual JobOffer items with isDuplicate=false (duplicates skipped)"
+      dedup_levels: 3
+      dedup_note: "ADR-015 — semantic fingerprint dedup, cross-platform capable"
     - step: 4
       from: n8n HTTP Request
       action: "Evaluate each job with LLM (local Ollama or cloud Groq/Gemini)"

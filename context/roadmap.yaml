@@ -1,5 +1,13 @@
 current_phase: P7
-current_focus: "P6 6/7 done (P6-7 awaits production data). P10 IN PROGRESS: P10-1…P10-4 DONE (promptfoo config + gold dataset + JS assertions). Next: P10-5…P10-6 (llm-rubric + local verification). P8 IN PROGRESS: EVAL-2/3/4 DONE (evaluate.json logging node added, schema+env docs ready). BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB). EVAL-6/7/8 BLOCKED until P7 — see ADR-014."
+current_focus: >
+  P6 6/7 done (P6-7 awaits production data).
+  DEDUP FIXED (2026-05-27): ingest.json полностью переработан — 3-уровневая семантическая
+  дедупликация: (1) Code:DedupBatch fingerprint within-batch, (2) HTTP Request к Notion API
+  с OR-фильтром (Fingerprint|urlNorm|url), (3) Code:CheckDuplicate isDuplicate flag.
+  Fingerprint = FNV1a64(normalizeCompany::normalizeTitle), pure JS (crypto недоступен в n8n sandbox).
+  Требует ручного добавления поля Fingerprint (Text) в Notion Evaluation Log.
+  P10 IN PROGRESS: P10-1…P10-4 DONE. Next: P10-5…P10-6.
+  P8 IN PROGRESS: EVAL-2/3/4 DONE. BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB).
 
 phases:
   P0:
@@ -259,14 +267,31 @@ phases:
           status: done,
           note: "Notion Integration Token created, added to .env and n8n",
         }
-      P4-5: { status: done, note: "n8n: Notion Query node for dedup by URL" }
+      P4-5:
+        status: done
+        note: >
+          REWORKED 2026-05-27: replaced Notion getAll node (broken filter, urlValue vs value bug)
+          with direct HTTP Request to Notion API. 3-level dedup:
+          (1) Code:Dedup Batch — within-batch, fingerprint + urlNorm Sets;
+          (2) HTTP POST /databases/query — OR filter: Fingerprint|urlNorm|url;
+          (3) Code:Check Duplicate — parses resp.results, outputs isDuplicate boolean.
+          Fingerprint = FNV1a64(normalizeCompany::normalizeTitle), 16 hex chars.
+          Normalization: strip legal forms (Sp. z o.o., LLC, GmbH), strip seniority prefix.
+          Enables cross-platform dedup: same job on JustJoin + NoFluffJobs → one record.
+          MANUAL ACTION REQUIRED: add Fingerprint (Text) property to Evaluation Log DB in Notion.
       P4-6:
-        { status: done, note: "n8n: IF exists → skip / not exists → create" }
+        status: done
+        note: >
+          IF: Already in Notion? now checks $json.isDuplicate === true (boolean, strict).
+          Previously broken: checked $json.object === 'page' (loose), before that !!$json.id
+          (unreliable — JobOffer has its own id field). Now isDuplicate set by Code:Check Duplicate.
       P4-7:
-        {
-          status: done,
-          note: "Dedup verified: same vacancy sent twice → 1 Notion record",
-        }
+        status: done
+        note: >
+          Verified working: fingerprint written to Notion Evaluation Log on each new job.
+          fingerprint field added to Code:Parse Ollama Response return (was missing, causing
+          Fingerprint to be empty in Notion). FNV1a64 fallback used instead of SHA256
+          (require('crypto') disallowed in n8n Code node sandbox).
       P4-8: { status: done, note: "n8n: Notion Create Page with all fields" }
       P4-9: { status: done, note: "Error handling: 400/401 from Notion API" }
       P4-10:
@@ -756,6 +781,38 @@ phases:
             status: pending
             title: "Scrape-анализ компании"
             note: "Парсинг company-domain/about и суммаризация через LLM"
+      "9.5 Structured LLM Output":
+        goal: "Eliminate fragile markdown-fence parsing by using native LLM JSON mode"
+        tasks:
+          IMP-9:
+            status: pending
+            title: "Enable Ollama JSON mode in Build Payload node"
+            owner_agent: n8n-specialist
+            skill: "n8n Code node + Ollama API"
+            inputs: ["n8n/workflows/ingest.json"]
+            output: "Updated Code: Build Ollama Payload with format:'json' field"
+            acceptance: "Ollama returns raw JSON without markdown fences; verified by sending test payload and checking response.message.content starts with '{'"
+            estimate: "0.2d"
+          IMP-10:
+            status: pending
+            title: "Simplify Parse Ollama Response node"
+            owner_agent: n8n-specialist
+            skill: "n8n Code node refactoring"
+            inputs: ["n8n/workflows/ingest.json"]
+            output: "Code: Parse Ollama Response without strip-fences logic"
+            acceptance: "Node contains no regex fence-stripping; JSON.parse succeeds on all 20 gold_dataset test cases"
+            estimate: "0.2d"
+          IMP-11:
+            status: pending
+            title: "Add JSON Schema to Ollama format for P11 multidimensional scoring"
+            owner_agent: n8n-specialist
+            skill: "JSON Schema + Ollama structured output"
+            inputs: ["n8n/workflows/ingest.json", "n8n/prompts/evaluator.md"]
+            output: "format field with full JSON Schema for {overall_score, tech_stack_match, seniority_match, red_flags}"
+            acceptance: "Ollama returns correctly typed integers and arrays without any post-processing; promptfoo eval passes all P11 assertions"
+            estimate: "0.3d"
+            blocked_by: ["P11-1"]
+
       "9.4 Универсальный ручной ввод":
         goal: "Оценка вакансий из любых источников через Telegram"
         tasks:

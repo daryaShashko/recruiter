@@ -24,13 +24,17 @@ workflows:
     architecture_note: >
       SINGLE MONOLITHIC WORKFLOW — contains the full pipeline end-to-end.
       No sub-workflows (evaluate.json and notify.json are deprecated/replaced).
-      Flow: Webhook → Respond 200 → IF zero jobs → Normalize → SplitInBatches(1) →
-      Switch(source) → Notion dedup → IF duplicate → Build Ollama Payload →
-      Ask Ollama → Parse Ollama Response → [LOG to Eval Log — P8] → IF Match? →
+      Flow: Webhook → Respond 200 → IF zero jobs → Normalize → Dedup Batch →
+      SplitInBatches(1) → Switch(source) → HTTP:QueryNotion(dedup) →
+      Code:CheckDuplicate → IF duplicate → Build Ollama Payload →
+      Ask Ollama → Parse Ollama Response → LOG to Eval Log → IF Match? →
       (true: Notion Create Page → Telegram alert → loop back to Split)
       (false: NoOp Discard → loop back to Split).
       SplitInBatches loops until all items processed.
       Key: NoOp:Skip Duplicate and NoOp:Discard BOTH loop back to Split.
+      Dedup is 3-level: within-batch fingerprint (Code:DedupBatch) +
+      cross-batch HTTP query (fingerprint OR urlNorm OR url) +
+      Code:CheckDuplicate parses Notion API response → isDuplicate boolean.
     nodes_sequence:
       - name: Webhook
         type: n8n-nodes-base.webhook
@@ -46,7 +50,17 @@ workflows:
       - name: Normalize Jobs
         type: n8n-nodes-base.code
         language: JavaScript
-        logic: "map $json.body.jobs → ensure all JobOffer fields present"
+        logic: >
+          map $json.body.jobs → normalizeUrl (strip query params) →
+          normalizeCompany (strip legal forms) → normalizeTitle (strip seniority) →
+          fingerprint = FNV1a64(compNorm::titleNorm).hex16 →
+          dedupFilter = {OR: [Fingerprint equals fp, URL equals urlNorm, URL equals url]}
+        output_fields: "id, title, company, url, urlNorm, fingerprint, dedupFilter, body, source, location, salary, scrapedAt"
+      - name: Code Dedup Batch
+        type: n8n-nodes-base.code
+        language: JavaScript
+        logic: "within-batch dedup: Set(seenFingerprints) + Set(seenUrls). Filters duplicates before Split."
+        note: "Level 1 dedup — prevents wasting Ollama compute on same-batch duplicates"
       - name: Split In Batches
         type: n8n-nodes-base.splitInBatches
         config: "batchSize: 1"
@@ -54,16 +68,23 @@ workflows:
       - name: Switch Route by Source
         type: n8n-nodes-base.switch
         routes:
-          0: justjoin → Call 'Evaluate Jobs (Ollama)'
-          1: nofluffjobs → Call 'Evaluate Jobs (Ollama)'
-          2: manual → Call 'Evaluate Jobs (Ollama)'
-          3: fallback → Code Unknown Source → Call 'Evaluate Jobs (Ollama)'
-        note: "Extensible: add new source → new output → new evaluate sub-workflow"
-      - name: Call Evaluate Jobs Ollama
-        type: n8n-nodes-base.executeWorkflow
-        target_workflow: evaluate.json
-        config: "waitForSubWorkflow: true"
-        loopback: "output → Split In Batches (continues loop)"
+          0: justjoin → Notion Find Existing URL
+          1: nofluffjobs → Notion Find Existing URL
+          2: manual → Notion Find Existing URL
+          3: fallback → Code Unknown Source → Notion Find Existing URL
+        note: "All routes converge on the dedup check"
+      - name: Notion Find Existing URL
+        type: n8n-nodes-base.httpRequest
+        note: "Level 2 dedup — POST /databases/{id}/query with dedupFilter OR conditions"
+        config: "POST https://api.notion.com/v1/databases/36c747f7.../query, auth: notionApi predefined"
+        body: "JSON.stringify($json.dedupFilter)"
+      - name: Code Check Duplicate
+        type: n8n-nodes-base.code
+        logic: >
+          resp.results.length > 0 → isDuplicate=true.
+          Restores job data from Split In Batches: 1 context.
+          Logs match reason (fingerprint / url / notion-match).
+        output: "{...job, isDuplicate: boolean}"
 
   evaluate:
     file: n8n/workflows/evaluate.json
@@ -199,13 +220,15 @@ notion_field_mapping:
   Title: "{{ $json.title }}"
   Company: "{{ $json.company }}"
   URL: "{{ $json.url }}"
+  Fingerprint: "{{ $json.fingerprint }}"  # FNV1a64 hash — primary dedup key
   Source: "{{ $json.source }}"
   Match_Reason: "{{ $json.reason }}"
   Salary: "{{ $json.salary }}"
   Status: "New"
   Location: "{{ $json.location }}"
   Scraped_At: "{{ $json.scrapedAt }}"
-  dedup_key: URL # Notion is queried by URL before insert
+  dedup_key: Fingerprint  # primary; URL (norm + original) as fallback for old records
+  dedup_strategy: "3-level: batch fingerprint → Notion API OR query → isDuplicate flag"
 
 telegram_alert_format: |
   🟢 *{{ $json.title }}* @ {{ $json.company }}
