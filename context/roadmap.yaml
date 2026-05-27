@@ -1,5 +1,5 @@
 current_phase: P7
-current_focus: "P6 6/7 done (P6-7 awaits production data). P10 IN PROGRESS: P10-1…P10-4 DONE (promptfoo config + gold dataset + JS assertions). Next: P10-5…P10-6 (llm-rubric + local verification). P8 IN PROGRESS: EVAL-2/3/4 DONE (evaluate.json logging node added, schema+env docs ready). BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB)."
+current_focus: "P6 6/7 done (P6-7 awaits production data). P10 IN PROGRESS: P10-1…P10-4 DONE (promptfoo config + gold dataset + JS assertions). Next: P10-5…P10-6 (llm-rubric + local verification). P8 IN PROGRESS: EVAL-2/3/4 DONE (evaluate.json logging node added, schema+env docs ready). BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB). EVAL-6/7/8 BLOCKED until P7 — see ADR-014."
 
 phases:
   P0:
@@ -613,31 +613,41 @@ phases:
               {text: '👎 Wrong', callback_data: 'wrong:<url>'}]].
             estimate: "0.5d"
           EVAL-6:
-            status: pending
+            status: blocked_until_p7
             title: "Create Feedback Handler workflow"
             owner_agent: n8n-specialist
+            blocked_by: "ADR-014 — Telegram setWebhook requires stable HTTPS (available after P7 CLOUD-8)"
             note: >
-              New n8n workflow: Telegram Trigger (callback_query) →
-              Parse callback_data (correct/wrong + url) →
-              Notion Update Page (set Human Verdict in Evaluation Log) →
-              Telegram Answer Callback Query (acknowledge button press).
-            acceptance: "Pressing 👍 or 👎 updates Human Verdict in Notion"
+              Workflow JSON prepared: n8n/workflows/telegram-trigger.json (combined bot
+              handles message + callback_query in one Telegram Trigger). Cannot be activated
+              locally because: (1) telegramTrigger requires HTTPS webhook URL, (2) only ONE
+              webhook per bot token — occupied by the main ingest/telegram-trigger workflow.
+              Polling mode (additionalFields.mode) is ignored by installed n8n version UI.
+              Workaround: set Human Verdict manually in Notion UI — Notion Trigger in
+              feedback-handler.json still routes verdict actions automatically.
+            resolved_by: "P7 CLOUD-8 (stable HTTPS) + CLOUD-10 (import telegram-trigger.json to cloud n8n)"
             estimate: "1d"
           EVAL-7:
-            status: pending
+            status: blocked_until_p7
             title: "Add /rejected and /wrong commands to Telegram trigger"
             owner_agent: n8n-specialist
+            blocked_by: "ADR-014 — same Telegram webhook blocker as EVAL-6"
             note: >
               /rejected [N] — query Evaluation Log, filter Match=false,
               sort by Evaluated At desc, return last N (default 10) as Telegram messages.
               /wrong <url> — find entry in Evaluation Log by URL,
               set Human Verdict = 'Wrong – Should Match'.
+              Will be added to telegram-trigger.json message branch after P7.
             estimate: "1d"
           EVAL-8:
-            status: pending
+            status: blocked_until_p7
             title: "Export new workflows to n8n/workflows/"
             owner_agent: n8n-specialist
-            note: "Export feedback-handler.json"
+            blocked_by: "ADR-014 — nothing to export until EVAL-6/7 are activated"
+            note: >
+              telegram-trigger.json already exported (combined bot, active: false).
+              Final export after P7 activation will update active: true and add
+              workflow IDs from cloud n8n instance.
             estimate: "0.5d"
 
       "8.3 Accuracy Reporting (Level 3)":
@@ -1218,6 +1228,25 @@ github_actions_deactivation_plan:
 known_blockers:
   - "For GitHub Actions mode only: public webhook URL must be reachable from runner (tunnel or hosted n8n); local mode has no blocker"
   - "P7 will resolve tunnel blocker by providing stable cloud HTTPS endpoint"
+  - id: "BLOCKER-TG-WEBHOOK"
+    title: "Telegram callback_query handler (EVAL-6/7/8) cannot be activated locally"
+    affected_tasks: ["EVAL-6", "EVAL-7", "EVAL-8"]
+    root_cause: >
+      n8n's telegramTrigger uses Telegram's setWebhook API which requires a public HTTPS URL.
+      Local n8n (localhost:5678) + localtunnel is unreliable: N8N_WEBHOOK_URL env var does
+      not consistently propagate to webhook registration, and localtunnel returns 400 from
+      Telegram API. Additionally, Telegram allows only ONE webhook per bot token — the
+      existing telegram-trigger workflow already occupies that slot.
+      The telegramTrigger polling mode (additionalFields.mode: polling) is documented but
+      not exposed in the installed n8n UI version.
+    workaround: >
+      Human Verdict can be set manually in Notion Evaluation Log UI.
+      Notion Trigger in feedback-handler.json is active and routes verdict actions
+      automatically (Wrong-Match → create in Board, Wrong-Reject → mark Rejected)
+      when Human Verdict changes in Notion, even without Telegram buttons.
+    resolved_by: "P7 — CLOUD-8 (Caddy + Let's Encrypt stable HTTPS) + CLOUD-10 (import telegram-trigger.json)"
+    adr: "ADR-014"
+    prepared_fix: "n8n/workflows/telegram-trigger.json — combined bot ready to import, active: false"
 
 # ============================================================
 # SYNC RULE

@@ -358,6 +358,89 @@ decisions:
       ADR file: docs/adr/ADR-012-evaluator-observability.md.
       New Notion DB: Evaluation Log. New env var: NOTION_EVAL_LOG_DB_ID.
 
+  ADR-013:
+    title: "Promptfoo as lightweight prompt evaluation framework"
+    status: accepted
+    date: "2026-05"
+    context: >
+      Prompt tuning is currently manual and lacks regression guardrails.
+      Model changes (ADR-011: Ollama → Groq/Gemini) may shift evaluation behavior
+      undetected. Need automated accuracy measurement before and after prompt edits.
+    decision: >
+      Use Promptfoo with a gold dataset (20 curated test cases) + deterministic JS
+      assertions for match field + optional llm-rubric via Gemini Flash for reason text.
+      Integrate into GitHub Actions PR workflow for regression prevention.
+    rationale:
+      - "Zero infra — runs locally or in CI with one command"
+      - "JS assertions are free and deterministic (no API calls)"
+      - "Gold dataset serves as living spec for evaluator behavior"
+      - "F1/precision/recall metrics enable data-driven prompt tuning"
+    consequences:
+      positive:
+        - "Catch prompt regressions before deploy"
+        - "Objective accuracy baseline for model migration"
+        - "PR-gated prompt deploy via Telegram inline keyboard"
+      negative:
+        - "Gold dataset must be maintained as real vacancies change"
+        - "Overfitting risk if dataset is too small"
+    implementation: >
+      n8n/prompts/promptfooconfig.yaml, n8n/prompts/gold_dataset.yaml.
+      Phase 10 (P10-1…P10-13) in roadmap.yaml.
+
+  ADR-014:
+    title: "Telegram callback_query handling deferred to P7 (Cloud Migration)"
+    status: accepted
+    date: "2026-05"
+    context: >
+      EVAL-6 (Feedback Handler) requires a Telegram Trigger node in n8n to receive
+      callback_query events (👍/👎 button presses). n8n's telegramTrigger node works
+      exclusively via Telegram's setWebhook API, which requires:
+        1. A publicly accessible HTTPS URL
+        2. Only ONE webhook per bot token (Telegram API limitation)
+      Current local setup: n8n on localhost:5678 + localtunnel tunnel.
+      Problems encountered:
+        - localtunnel subdomain instability causes setWebhook to fail with 400
+        - N8N_WEBHOOK_URL env var doesn't reliably propagate to webhook registration
+        - The main ingest/telegram-trigger workflow already occupies the single webhook slot
+        - Activating a second telegramTrigger workflow for the same bot always fails
+      Polling mode (additionalFields.mode: polling) exists in n8n docs but is not
+      exposed in the UI for the installed n8n version — the node ignores the JSON param.
+    decision: >
+      Defer Telegram callback_query handling (EVAL-6, EVAL-7, EVAL-8) to P7.
+      After Oracle Cloud migration (ADR-010), n8n will have a stable HTTPS URL
+      (Caddy + Let's Encrypt), making setWebhook registration reliable.
+      In the meantime:
+        - feedback-handler.json Telegram Trigger node is REMOVED (only Notion Trigger kept)
+        - telegram-trigger.json rebuilt to handle BOTH message and callback_query
+          in ONE workflow — ready to import after P7
+        - Human Verdict can still be set manually in Notion UI as a workaround
+    rationale:
+      - "Tunnel instability makes webhook registration non-deterministic"
+      - "One webhook per bot is a hard Telegram API constraint — can't have two workflows"
+      - "P7 (Oracle Cloud + Caddy) solves the root cause: stable HTTPS URL"
+      - "Combined telegram-trigger.json is already prepared — P7 import is 5 minutes of work"
+      - "Notion UI manual fallback covers the gap without data loss"
+    consequences:
+      positive:
+        - "No more webhook registration failures blocking workflow activation"
+        - "Combined workflow is cleaner architecture (one trigger, one bot slot)"
+        - "P7 unblocks this along with all other tunnel-dependent issues"
+      negative:
+        - "👍/👎 buttons in Telegram are inactive until P7"
+        - "Human Verdict must be set manually in Notion until P7"
+        - "Feedback loop (EVAL-6…EVAL-8) delayed"
+    workaround: >
+      Manual: open Evaluation Log in Notion, find entry, set Human Verdict field directly.
+      Notion Trigger in feedback-handler.json remains active — verdict routing
+      (Wrong-Match → add to Board, Wrong-Reject → mark Rejected) still fires automatically
+      when Human Verdict is changed in Notion, even without Telegram buttons.
+    resolved_by: "P7 — CLOUD-8 (stable HTTPS) + CLOUD-10 (workflow import to cloud n8n)"
+    implementation: >
+      n8n/workflows/telegram-trigger.json — combined bot (message + callback_query),
+        ready to import after P7. active: false until then.
+      n8n/workflows/feedback-handler.json — Notion Trigger only, active now.
+      Blocked tasks: EVAL-6, EVAL-7, EVAL-8 → status: blocked_until_p7.
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

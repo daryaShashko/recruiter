@@ -391,7 +391,8 @@ recruiter/
 
 | Проблема | Симптом | Решение |
 |---|---|---|
-| Cloudflare WAF | 403 / 0 bytes | Playwright с browser fingerprint, перехват XHR вместо прямых запросов |
+| Telegram 👍/👎 кнопки не работают | `BadWebHook` при активации Feedback Handler воркфлоу | **До P7:** устанавливать Human Verdict вручную в Notion. Notion Trigger в feedback-handler.json активен и автоматически роутит вердикты. **После P7:** импортировать `telegram-trigger.json` в cloud n8n — файл готов. Детали: ADR-014 |
+| Один вебхук на бота | n8n `telegramTrigger` требует HTTPS + Telegram разрешает только один вебхук на токен | Все Telegram-команды (`/check`, callback_query) объединены в один воркфлоу `telegram-trigger.json`. Активировать можно только после P7 (стабильный HTTPS) |
 | NoFluffJobs SSR (2026-05) | Нет XHR с данными | SSR-экстрактор из `<script id="serverApp-state">` |
 | Tunnel недоступен | `503 Tunnel Unavailable` / `404` от публичного webhook | Для локального запуска использовать `WEBHOOK_URL=http://localhost:5678/webhook/jobs/ingest`; P7 решит эту проблему полностью (Oracle Cloud) |
 | localtunnel subdomain занят | `--subdomain ai-recruiter` недоступен | Запустить без `--subdomain`, обновить `WEBHOOK_URL` в GitHub Secrets |
