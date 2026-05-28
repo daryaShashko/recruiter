@@ -507,6 +507,96 @@ decisions:
       URL-only matching until the field is added.
     supersedes: "Part of ADR-008 (pre-LLM URL dedup) and ADR-003 (Notion dedup approach)"
 
+  ADR-016:
+    title: "LLM Provider Adapter Pattern — model-agnostic evaluation pipeline"
+    status: proposed
+    date: "2026-05-28"
+    extends: "ADR-011 (formalizes and implements LLM_PROVIDER env vars)"
+    context: >
+      All model-specific code is hardcoded for Ollama in 5 places: URL, auth, request body
+      format, structured output mechanism (format:{schema}), and response parse path
+      (response.message.content). ADR-011 proposed LLM_PROVIDER/LLM_API_KEY/LLM_MODEL env
+      vars but provided no adapter implementation. Switching to Gemini, Anthropic, or Bedrock
+      requires simultaneous changes across n8n workflow JSON and promptfoo config.
+      ADR-010 (Oracle Cloud) and ADR-011 (cloud LLM) make this urgent: Oracle ARM has no GPU.
+    decision: >
+      Extract all provider-specific logic into n8n/providers/ adapter modules:
+        _interface.ts  — LLMRequest, LLMResponse, LLMProvider interface (the contract)
+        ollama.ts      — OllamaAdapter: Ollama HTTP API + format:{schema} grammar
+        gemini.ts      — GeminiAdapter: generateContent API + responseSchema
+        anthropic.ts   — AnthropicAdapter: Messages API + output_config.format
+        index.ts       — getProvider(name) factory, reads LLM_PROVIDER env var
+      n8n: single LLM Router Code Node replaces hardcoded HTTP Request: Ask Ollama node.
+      promptfoo: provider via LLM_PROVIDER env var; remove assistant prefill from
+      evaluator-template.json (Ollama-specific, breaks Gemini/Anthropic).
+      AWS Bedrock: deferred — requires IAM SigV4 auth + AWS SDK, separate ADR needed.
+    rationale:
+      - "One .env change switches provider for both n8n and promptfoo"
+      - "Adding a new provider: create one file only (n8n/providers/new.ts)"
+      - "Downstream pipeline unchanged — all nodes receive normalized {content, provider, model}"
+      - "Formalizes ADR-011 env vars with actual routing implementation"
+      - "PE techniques (ADR-017) require per-provider structured output hook"
+    consequences:
+      positive:
+        - "LLM_PROVIDER=gemini LLM_API_KEY=xxx → n8n works without workflow JSON changes"
+        - "Provider-specific bugs isolated to one file, not scattered across n8n nodes"
+        - "npm run eval tests any provider without config changes"
+      negative:
+        - "n8n LLM Router Code Node larger than simple HTTP Request (mitigated: ~15 lines/adapter)"
+        - "Loses assistant prefill — compensated by few-shot examples in P13 (ADR-017)"
+        - "Bedrock deferred — needs follow-up ADR with AWS SDK decision"
+    implementation: >
+      Phase P12 tasks: P12-1 through P12-8 (see context/roadmap.yaml P12).
+      New files: n8n/providers/_interface.ts, ollama.ts, gemini.ts, anthropic.ts, index.ts
+      Updated: n8n/workflows/ingest.json, n8n/prompts/promptfooconfig.yaml,
+               n8n/prompts/evaluator-template.json, .env.example
+      New docs: docs/adr/ADR-016-llm-provider-adapter-pattern.md,
+                docs/llm-provider-switching.md
+
+  ADR-017:
+    title: "Prompt Engineering Best Practices — structured output, few-shot, CoT, retry loop"
+    status: proposed
+    date: "2026-05-28"
+    depends_on: "ADR-016 (provider adapters implement per-provider structured output)"
+    context: >
+      Current evaluator has 4 systemic weaknesses:
+        1. Structural: format:'json' is unreliable — per-provider schema enforcement needed
+           (resolved by ADR-016 adapters).
+        2. Logic contradictions pass CI: score=85 with red_flags:["Crypto industry"] is
+           structurally valid but semantically wrong — no cross-field validation exists.
+        3. Silent failures: parse error in n8n → job lost, no log, no retry.
+        4. Zero-shot for edge cases: boundary jobs need examples to calibrate scoring.
+      Anthropic prompt engineering docs recommend: structured output via schema enforcement,
+      few-shot examples, chain-of-thought reasoning, validation + retry, multi-pass review.
+    decision: >
+      Apply 5-level PE maturity stack to evaluator:
+        L1 — Structured Output: per-provider JSON Schema via ADR-016 adapters (no p() parser)
+        L2 — Few-Shot: 3 curated examples in system prompt (hot match, force reject, edge case)
+        L3 — Chain of Thought: <thinking> XML block before JSON output
+        L4 — Retry Loop: n8n semantic validator Code Node + re-prompt with error context (max 2)
+        L5 — Review Pass: Gemini Flash second call for borderline scores (50-79 only)
+      Convergence criterion: F1 >= 0.90 on gold_dataset, 0 semantic violations.
+    rationale:
+      - "L1: guarantees schema-valid JSON — eliminates p() parser hack from all assertions"
+      - "L2: few-shot calibrates edge cases without adding evaluation cost"
+      - "L3: CoT forces explicit FORCE REJECT rule-checking before committing to score"
+      - "L4: retry converts silent parse/semantic failures into self-correcting loop"
+      - "L5: review limited to 50-79 range — minimizes Gemini API calls (free tier safe)"
+    consequences:
+      positive:
+        - "Zero silent failures in n8n — all errors produce log entry or trigger retry"
+        - "Edge case accuracy improves (few-shot + CoT show measurable lift in promptfoo)"
+        - "FORCE REJECT semantic invariants enforced at runtime via retry loop"
+      negative:
+        - "System prompt grows ~500 tokens (few-shot) — acceptable latency tradeoff"
+        - "CoT adds ~100 tokens/response — JSON extraction needs regex update in n8n"
+        - "L5 review pass requires GOOGLE_API_KEY — free tier 15 RPM, sequential only"
+    implementation: >
+      Phase P13 tasks: P13-1 through P13-12 (see context/roadmap.yaml P13).
+      Updated: n8n/prompts/evaluator.md, evaluator-template.json, promptfooconfig.yaml,
+               gold_dataset.yaml (+5 semantic cases), n8n/workflows/ingest.json
+      New: docs/prompt-engineering-sop.md
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

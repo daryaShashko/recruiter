@@ -37,6 +37,9 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
 - [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(6/13 done — P10-1…P10-6 ✅)*
+- [ ] **PHASE 11** — Multidimensional Scoring & Intelligent Routing 📋 *(blocked by P8+P10)*
+- [ ] **PHASE 12** — LLM Provider Adapter Pattern 📋 [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) *(blocked by P10)*
+- [ ] **PHASE 13** — Prompt Engineering Best Practices Stack 📋 [ADR-017] *(blocked by P10+P12)*
 
 ---
 
@@ -301,6 +304,77 @@ Telegram (ручная ссылка)  ──────────────
 #### 10.5 — Downstream Generalization
 - [ ] `P10-12` Обобщить конфигурацию `promptfooconfig.yaml` для оценки промптов `company_analyzer` и `entity_extractor`
 - [ ] `P10-13` Создать специализированные золотые датасеты и ассерты для анализа компаний и извлечения данных
+
+---
+
+### PHASE 11 — Multidimensional Scoring & Intelligent Routing 📋
+> Цель: заменить бинарный классификатор на мультимерную систему скоринга 0–100 с трёхуровневым роутингом.
+> Блокер: P8 (Evaluation Log) + P10 (promptfoo baseline)
+
+#### 11.1 — Core Prompt & Notion MVP
+- [ ] `P11-1` Переписать system prompt под 0–100 скоринг (overall_score, tech_stack_match, seniority_match, red_flags)
+- [ ] `P11-2` Обновить схемы Notion DB: добавить поля Score (Number), Red Flags (Multi-select), Tech Stack Match (Number)
+- [ ] `P11-3` Реализовать Switch нод в n8n: >=80 → Telegram+Notion Hot, 50–79 → Notion Review (silent), <50 → Eval Log
+
+#### 11.2 — QA Validation & CI Hardening
+- [ ] `P11-4` Обновить `promptfooconfig.yaml` ассерты: проверка overall_score, tech_stack_match, seniority_match, red_flags
+- [ ] `P11-5` Обновить `gold_dataset.yaml`: >=80 для T, >=50 для E, <50 с red_flags для F кейсов
+- [ ] `P11-6` Прогнать `npm run eval` локально: проверить точность скоринга и F1-score
+
+#### 11.3 — Observability & Tuning
+- [ ] `P11-7` Написать `docs/scoring-tuning-guide.md`: SOP по настройке порогов маршрутизации
+- [ ] `P11-8` Интегрировать Telegram каллбеки (👍/👎) с нумерическими метриками скоринга
+- [ ] `P11-9` Добавить в еженедельный дайджест средние значения скоров и распределения red flags
+
+---
+
+### PHASE 12 — LLM Provider Adapter Pattern 📋
+> Цель: сделать pipeline модель-агностичным. Одно изменение `.env` = смена провайдера для n8n + promptfoo.
+> ADR: [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) | Блокер: P10
+
+#### 12.1 — Contract & Interface
+- [ ] `P12-1` Финализировать ADR-016 (файл создан, нужно принять)
+- [ ] `P12-2` Создать `n8n/providers/_interface.ts` и `index.ts` (интерфейс LLMProvider + фабрика getProvider)
+
+#### 12.2 — Provider Adapters
+- [ ] `P12-3` Реализовать `n8n/providers/ollama.ts` — OllamaAdapter (Ollama HTTP API + format:{schema})
+- [ ] `P12-4` Реализовать `n8n/providers/gemini.ts` — GeminiAdapter (generateContent + responseSchema)
+- [ ] `P12-5` Реализовать `n8n/providers/anthropic.ts` — AnthropicAdapter (Messages API + output_config.format)
+
+#### 12.3 — n8n & promptfoo Integration
+- [ ] `P12-6` Заменить нод «HTTP Request: Ask Ollama» на «LLM Router» Code Node в `ingest.json`
+- [ ] `P12-7` Перевести `promptfooconfig.yaml` на env-driven провайдер; удалить assistant prefill из `evaluator-template.json`
+- [ ] `P12-8` Обновить `.env.example`; создать `docs/llm-provider-switching.md`
+
+---
+
+### PHASE 13 — Prompt Engineering Best Practices Stack 📋
+> Цель: 5 уровней PE-зрелости: Structured Output → Few-Shot → Chain of Thought → Retry Loop → Review Pass.
+> ADR: ADR-017 | Блокер: P10 + P12
+
+#### 13.1 — L1: Structured Output (JSON Schema)
+- [ ] `P13-1` Переключить OllamaAdapter на `format:{schema_object}`
+- [ ] `P13-2` Рефакторинг: удалить `p()` хелпер из всех ассертов, заменить на `JSON.parse(output)`
+- [ ] `P13-3` Обновить парсер в `ingest.json` (удалить dual-format парсер, оставить прямой `JSON.parse`)
+
+#### 13.2 — L2: Few-Shot Prompting
+- [ ] `P13-4` Добавить 3 примера (хорошее совпадение, критический отказ, граничный кейс) в `evaluator.md`
+- [ ] `P13-5` Замерить прирост latency, записать в `docs/pe-tuning-log.md`
+
+#### 13.3 — L3: Chain of Thought
+- [ ] `P13-6` Добавить `<thinking>` XML CoT блок в system prompt (reason first, then JSON)
+- [ ] `P13-7` Обновить `ingest.json`: извлекать JSON после `</thinking>`
+
+#### 13.4 — L4: Retry Loop
+- [ ] `P13-8` Добавить Code Node «Semantic Validator»: FORCE REJECT cross-field проверки
+- [ ] `P13-9` Реализовать retry loop (max 2): повторный LLM вызов с errorContext при семантической ошибке
+
+#### 13.5 — L5: Review Pass
+- [ ] `P13-10` Gemini Flash второй проход для overall_score 50–79 (только для Review тиера)
+
+#### 13.6 — L6: Continuous Improvement
+- [ ] `P13-11` Написать `docs/prompt-engineering-sop.md` с таксономией ошибок и SOP цикла итераций
+- [ ] `P13-12` Добавить 5 семантических кейсов в `gold_dataset.yaml` (итог: 27+ тестов)
 
 ---
 

@@ -3,7 +3,7 @@ current_focus: >
   P6 6/7 done (P6-7 awaits production data).
   DEDUP FIXED (2026-05-27): 3-уровневая семантическая дедупликация в ingest.json.
   P10 IN PROGRESS: P10-1…P10-6 DONE (2026-05-28).
-    Key changes: assistant prefill {role:assistant, content:"{"} in evaluator-template.json
+    Key changes: assistant prefill {role:assistant, content:"{"}  in evaluator-template.json
     forces model to start JSON directly (no preamble/markdown fences).
     Dual-format JSON parser in all assertions and ingest.json Code:Parse Ollama Response
     handles both full JSON {"key":val} and prefill continuation "key":val,…}.
@@ -11,7 +11,13 @@ current_focus: >
     Grading model: google:gemini-3.1-flash-lite (500 RPD free tier, 15 RPM).
     Gold dataset: 22 tests, all pass 22/22. F09 assertion fixed (old indexOf pattern).
     ingest.json: assistant prefill added to messages array + parser updated.
-  Next: P10-7 (GHA prompt-eval.yml workflow) or P7 (Cloud Migration, no blockers).
+  PLANNED (2026-05-28): P12 (LLM Provider Adapter Pattern, ADR-016) and
+    P13 (PE Best Practices Stack, ADR-017) added to roadmap.
+    Execution order: P10 → P12 → P13 → P11.
+    P12 unblocks: model-agnostic n8n + promptfoo (Ollama/Gemini/Anthropic switchable).
+    P13 unblocks: structured output, few-shot, CoT, retry loop, review pass.
+  Next: P10-7 (GHA prompt-eval.yml workflow) or P7 (Cloud Migration, no blockers)
+    or P12-1 (ADR-016 review+accept, then P12-2 interface implementation).
   P8 IN PROGRESS: EVAL-2/3/4 DONE. BLOCKED on EVAL-1 (manual: create Notion Evaluation Log DB).
 
 phases:
@@ -1081,6 +1087,395 @@ phases:
       - "n8n pipeline routes jobs safely to Telegram and Notion boards based on thresholds"
       - "All 20 test cases in gold_dataset are validated with scoring assertions and CI passes"
       - "Weekly statistics track score metrics and red flag distributions"
+
+  P12:
+    name: "LLM Provider Adapter Pattern"
+    status: pending
+    goal: "Extract all provider-specific code (URL, auth, body, structured output, response path) into isolated adapter modules. Single .env change switches provider for both n8n and promptfoo."
+    blocked_by: ["P10"]
+    depends_on: ["P10"]
+    adrs: ["ADR-016"]
+    problem_statement: >
+      All model-specific code is hardcoded for Ollama in 5 places across n8n and promptfoo.
+      ADR-011 defined LLM_PROVIDER/LLM_API_KEY/LLM_MODEL env vars but no adapter
+      implementation exists. Oracle Cloud migration (ADR-010) will move to CPU-only ARM
+      with no GPU — switching to cloud LLM is mandatory. Without adapters, every provider
+      change requires simultaneous edits in n8n workflow JSON and promptfoo config.
+
+    sub_phases:
+      "12.1 Contract and Interface":
+        goal: "Define LLMProvider interface, write ADR-016, create directory structure"
+        tasks:
+          P12-1:
+            status: pending
+            title: "Write ADR-016: LLM Provider Adapter Pattern"
+            owner_agent: architect
+            skill: "Architecture Decision Records"
+            inputs:
+              - "docs/adr/ADR-011-cloud-llm-migration.md"
+              - "n8n/prompts/evaluator.md"
+              - "n8n/prompts/promptfooconfig.yaml"
+            output: "docs/adr/ADR-016-llm-provider-adapter-pattern.md (already created 2026-05-28)"
+            acceptance: >-
+              ADR covers: LLMRequest/LLMResponse interface; provider comparison table
+              (Ollama/Gemini/Anthropic/Bedrock) for all 5 coupling points;
+              Bedrock deferred rationale; migration path from ADR-011.
+            estimate: "0.3d"
+            note: "File created 2026-05-28 as part of planning session — review and accept"
+
+          P12-2:
+            status: pending
+            title: "Create n8n/providers/ directory with LLMProvider interface types"
+            owner_agent: developer
+            skill: "TypeScript interfaces"
+            inputs: ["docs/adr/ADR-016-llm-provider-adapter-pattern.md"]
+            output: "n8n/providers/_interface.ts, n8n/providers/index.ts, n8n/providers/README.md"
+            acceptance: >-
+              LLMProvider interface: complete(req: LLMRequest): Promise<LLMResponse>;
+              getProvider('unknown') throws descriptive error listing supported providers;
+              TypeScript compiles without errors.
+            estimate: "0.2d"
+
+      "12.2 Provider Adapters":
+        goal: "Implement OllamaAdapter, GeminiAdapter, AnthropicAdapter"
+        tasks:
+          P12-3:
+            status: pending
+            title: "Implement OllamaAdapter"
+            owner_agent: developer
+            skill: "Ollama HTTP API, TypeScript"
+            inputs: ["n8n/providers/_interface.ts", "n8n/prompts/evaluator.md"]
+            output: "n8n/providers/ollama.ts implementing LLMProvider"
+            acceptance: >-
+              POST to LLM_BASE_URL/api/chat; maps outputSchema to Ollama format:{schema};
+              response path .message.content; unit test with mocked HTTP passes.
+            estimate: "0.4d"
+
+          P12-4:
+            status: pending
+            title: "Implement GeminiAdapter"
+            owner_agent: developer
+            skill: "Gemini generateContent API, TypeScript"
+            inputs: ["n8n/providers/_interface.ts"]
+            output: "n8n/providers/gemini.ts implementing LLMProvider"
+            acceptance: >-
+              POST to generativelanguage.googleapis.com with ?key= auth;
+              maps outputSchema to generationConfig.responseSchema;
+              response path .candidates[0].content.parts[0].text;
+              unit test with mocked HTTP passes.
+            estimate: "0.4d"
+
+          P12-5:
+            status: pending
+            title: "Implement AnthropicAdapter"
+            owner_agent: developer
+            skill: "Anthropic Messages API, TypeScript"
+            inputs: ["n8n/providers/_interface.ts"]
+            output: "n8n/providers/anthropic.ts implementing LLMProvider"
+            acceptance: >-
+              POST to api.anthropic.com/v1/messages with x-api-key header;
+              systemPrompt maps to system parameter (not in messages array);
+              maps outputSchema to output_config.format;
+              response path .content[0].text; unit test passes.
+            estimate: "0.4d"
+
+      "12.3 n8n and promptfoo Integration":
+        goal: "Wire adapters into n8n workflow and update promptfoo config to env-driven"
+        tasks:
+          P12-6:
+            status: pending
+            title: "Replace n8n Ask Ollama node with LLM Router Code Node"
+            owner_agent: n8n-specialist
+            skill: "n8n Code Node, provider pattern"
+            inputs: ["n8n/providers/index.ts", "n8n/workflows/ingest.json"]
+            output: "ingest.json: LLM Router Code Node replaces HTTP Request: Ask Ollama"
+            acceptance: >-
+              LLM_PROVIDER=ollama: 5 manual test jobs produce correct scores;
+              LLM_PROVIDER=gemini: same 5 jobs produce structurally valid JSON;
+              no Ollama-specific code outside the ollama adapter block.
+            estimate: "0.5d"
+
+          P12-7:
+            status: pending
+            title: "Refactor promptfooconfig.yaml to env-driven provider selection"
+            owner_agent: prompt-engineer
+            skill: "promptfoo multi-provider config"
+            inputs:
+              - "n8n/prompts/promptfooconfig.yaml"
+              - "n8n/prompts/evaluator-template.json"
+            output: "promptfooconfig.yaml: provider via LLM_PROVIDER env; evaluator-template.json: assistant prefill removed"
+            acceptance: >-
+              LLM_PROVIDER=ollama:chat:llama3.1:latest npm run eval passes 22/22;
+              LLM_PROVIDER=google:gemini-2.5-flash npm run eval passes (requires GOOGLE_API_KEY);
+              zero Ollama-specific config remains in promptfooconfig.yaml.
+            estimate: "0.3d"
+
+          P12-8:
+            status: pending
+            title: "Update .env.example and create docs/llm-provider-switching.md"
+            owner_agent: devops
+            skill: "Environment configuration, documentation"
+            inputs:
+              [
+                "n8n/providers/index.ts",
+                "docs/adr/ADR-016-llm-provider-adapter-pattern.md",
+              ]
+            output: ".env.example updated; docs/llm-provider-switching.md created"
+            acceptance: >-
+              .env.example contains LLM_PROVIDER, LLM_API_KEY, LLM_MODEL, LLM_BASE_URL
+              with provider-specific examples in comments;
+              docs/llm-provider-switching.md has one-command switch table for each provider.
+            estimate: "0.2d"
+
+    execution_order:
+      - "P12-1 (ADR accept) + P12-2 (interface) — sequential"
+      - "P12-3 + P12-4 + P12-5 — parallel (disjoint files)"
+      - "P12-6 → P12-7 → P12-8 — sequential (n8n then promptfoo then docs)"
+    primary_risks:
+      - "Gemini responseSchema and Anthropic output_config.format have different JSON Schema
+        subsets — some Ollama-valid schemas may need trimming; test each adapter individually"
+      - "Removing assistant prefill may reduce quality on first-token JSON start for Ollama;
+        compensated by L2 few-shot in P13"
+    definition_of_done:
+      - "Single LLM_PROVIDER env change switches provider for both n8n workflow and promptfoo eval"
+      - "All 3 adapters (Ollama/Gemini/Anthropic) pass gold_dataset eval with F1 >= 0.85"
+      - "Zero Ollama-specific code outside n8n/providers/ollama.ts"
+      - "ADR-016 accepted and linked from project.yaml"
+      - "Adding a 4th provider requires creating one new file only"
+
+  P13:
+    name: "Prompt Engineering Best Practices Stack"
+    status: pending
+    goal: "Apply 5-level PE maturity to evaluator: structured output enforcement, few-shot examples, chain-of-thought, retry loop, and semantic review pass. Each level is independently deployable."
+    blocked_by: ["P10", "P12"]
+    depends_on: ["P10", "P12"]
+    adrs: ["ADR-017"]
+    problem_statement: >
+      Current evaluator: zero-shot prompting, unreliable format:'json', no few-shot
+      examples, no chain-of-thought, no semantic validation, no retry on failure.
+      This causes: silent parse failures in n8n, logic contradictions that pass CI
+      (score=85 with Crypto flag), and poor edge case accuracy on borderline jobs.
+      ADR-016 adapters provide the per-provider structured output hook needed for L1.
+
+    sub_phases:
+      "13.1 Level 1 - Structured Output (JSON Schema)":
+        goal: "Replace format:'json' with per-provider JSON Schema enforcement via adapters"
+        tasks:
+          P13-1:
+            status: pending
+            title: "Switch Ollama adapter to JSON Schema format parameter"
+            owner_agent: prompt-engineer
+            skill: "Ollama grammar-constrained output"
+            inputs:
+              - "n8n/providers/ollama.ts"
+              - "n8n/prompts/promptfooconfig.yaml"
+            output: "OllamaAdapter uses format:{schema_object}; all p() helpers removed from assertions"
+            acceptance: >-
+              npm run eval passes 22/22 without p() parser; JSON.parse(output) works
+              directly in every assertion; Ollama output always structurally valid.
+            estimate: "0.3d"
+
+          P13-2:
+            status: pending
+            title: "Refactor all promptfoo assertions to use JSON.parse(output)"
+            owner_agent: qa-engineer
+            skill: "promptfoo JS assertions refactor"
+            inputs:
+              [
+                "n8n/prompts/promptfooconfig.yaml",
+                "n8n/prompts/gold_dataset.yaml",
+              ]
+            output: "All assertions use JSON.parse(output); p() helper deleted from all files"
+            acceptance: >-
+              Zero occurrences of 'function p(' in promptfooconfig.yaml and gold_dataset.yaml;
+              assertion code reduced by >30%; CI green.
+            estimate: "0.2d"
+
+          P13-3:
+            status: pending
+            title: "Update n8n ingest.json response parsing for structured output"
+            owner_agent: n8n-specialist
+            skill: "Ollama HTTP API, n8n Code Node"
+            inputs: ["n8n/workflows/ingest.json", "n8n/providers/ollama.ts"]
+            output: "ingest.json Code: Parse LLM Response uses JSON.parse(content) directly"
+            acceptance: >-
+              5 manual test jobs produce valid JSON; no dual-format parser logic remains;
+              Code node does not contain the p() extraction pattern.
+            estimate: "0.2d"
+
+      "13.2 Level 2 - Few-Shot Prompting":
+        goal: "Add 3 gold examples to system prompt for hot match, force reject, and edge case"
+        tasks:
+          P13-4:
+            status: pending
+            title: "Add few-shot examples to evaluator.md and evaluator-template.json"
+            owner_agent: prompt-engineer
+            skill: "Few-shot example design"
+            inputs:
+              - "n8n/prompts/gold_dataset.yaml"
+              - "n8n/prompts/evaluator.md"
+            output: "3 input/output example pairs in system prompt: T01 (>=80), F03 (score=0 crypto), E02 (50-79)"
+            acceptance: >-
+              System prompt contains exactly 3 <example> XML blocks with full input and output;
+              npm run eval edge case accuracy improves by >=5% on E01-E05 vs baseline;
+              token count increase documented in pe-tuning-log.md.
+            estimate: "0.5d"
+
+          P13-5:
+            status: pending
+            title: "Measure and document latency impact of few-shot examples"
+            owner_agent: n8n-specialist
+            skill: "Ollama performance benchmarking"
+            inputs:
+              [
+                "n8n/workflows/ingest.json",
+                "n8n/prompts/evaluator-template.json",
+              ]
+            output: "docs/pe-tuning-log.md: latency with/without few-shot documented"
+            acceptance: >-
+              Average Ollama response time measured and logged; if latency >30s, reduce to 2 examples;
+              all 5 manual test jobs produce semantically correct scores.
+            estimate: "0.3d"
+
+      "13.3 Level 3 - Chain of Thought":
+        goal: "Add XML thinking section so model reasons before committing to numeric score"
+        tasks:
+          P13-6:
+            status: pending
+            title: "Add <thinking> XML CoT block to evaluator system prompt"
+            owner_agent: prompt-engineer
+            skill: "Chain of Thought prompting, XML structuring"
+            inputs:
+              [
+                "n8n/prompts/evaluator.md",
+                "n8n/prompts/evaluator-template.json",
+              ]
+            output: "System prompt instructs model to reason in <thinking> before JSON; template updated"
+            acceptance: >-
+              Ollama output contains <thinking> block before JSON; JSON.parse correctly
+              extracts JSON after </thinking>; edge case (E01-E05) pass rate improves vs baseline;
+              llm-rubric reason field passes (more specific reasoning).
+            estimate: "0.5d"
+
+          P13-7:
+            status: pending
+            title: "Update n8n ingest.json to extract JSON from CoT output"
+            owner_agent: n8n-specialist
+            skill: "n8n Code Node, regex extraction"
+            inputs: ["n8n/workflows/ingest.json"]
+            output: "Code: Parse LLM Response extracts JSON after </thinking> tag if present"
+            acceptance: >-
+              5 manual test jobs with CoT output parse correctly in n8n;
+              thinking content is discarded (not sent to Notion);
+              jobs without <thinking> still parse correctly (backward compatible).
+            estimate: "0.3d"
+
+      "13.4 Level 4 - Retry Loop":
+        goal: "Add n8n semantic validation + self-correction retry (max 2 attempts)"
+        tasks:
+          P13-8:
+            status: pending
+            title: "Add Semantic Validator Code Node to ingest.json"
+            owner_agent: n8n-specialist
+            skill: "n8n Code Node, semantic validation"
+            inputs:
+              [
+                "n8n/workflows/ingest.json",
+                "n8n/prompts/evaluator-template.json",
+              ]
+            output: "n8n Code Node 'Semantic Validator' with FORCE REJECT cross-field checks"
+            acceptance: >-
+              Validator flags: (1) overall_score > 0 AND red_flags contains FORCE REJECT keyword;
+              (2) overall_score = 0 AND red_flags empty; (3) seniority_match < 40 AND score >= 80.
+              Correctly flags 3 injected contradiction test cases;
+              correctly passes 5 valid real-world job evaluations.
+            estimate: "0.5d"
+
+          P13-9:
+            status: pending
+            title: "Implement retry loop in n8n with error context injection"
+            owner_agent: n8n-specialist
+            skill: "n8n loop pattern, prompt injection"
+            inputs: ["n8n/workflows/ingest.json"]
+            output: "ingest.json retry flow: re-call LLM with error context if semantic validation fails (max 2)"
+            acceptance: >-
+              Retry fires when Semantic Validator returns retryNeeded=true;
+              second attempt succeeds on >80% of contradiction cases in manual testing;
+              after 2 failed retries, job logged to Notion Eval Log with status='review_needed'.
+            estimate: "0.5d"
+
+      "13.5 Level 5 - Review Pass":
+        goal: "Add Gemini Flash second-pass review for borderline scores (50-79 range only)"
+        tasks:
+          P13-10:
+            status: pending
+            title: "Add Gemini Flash review node for Review-tier jobs"
+            owner_agent: n8n-specialist
+            skill: "Gemini Flash API, n8n HTTP Request"
+            inputs:
+              [
+                "n8n/workflows/ingest.json",
+                "n8n/prompts/evaluator-template.json",
+              ]
+            output: "n8n HTTP node fires Gemini review call only for jobs where overall_score is 50-79"
+            acceptance: >-
+              Review call fires only for 50-79 scores; result stored in Notion review_note property;
+              rate limit respected (sequential, not parallel, max 15 RPM);
+              Hot Matches (>=80) and Discards (<50) are NOT reviewed.
+            estimate: "0.5d"
+
+      "13.6 Level 6 - Continuous Improvement SOP":
+        goal: "Formalize prompt iteration process as a documented, repeatable workflow"
+        tasks:
+          P13-11:
+            status: pending
+            title: "Write prompt-engineering-sop.md with error taxonomy"
+            owner_agent: business-analyst
+            skill: "Technical documentation, PE methodology"
+            inputs:
+              - "n8n/prompts/gold_dataset.yaml"
+              - "n8n/prompts/promptfooconfig.yaml"
+            output: "docs/prompt-engineering-sop.md"
+            acceptance: >-
+              Document covers: 4-type error taxonomy (Structural/Semantic/Boundary/Drift);
+              iteration loop (run eval → classify → fix → commit → re-run);
+              convergence criterion (F1 >= 0.90, 0 semantic violations);
+              checklist for adding new gold_dataset cases from production failures.
+            estimate: "0.3d"
+
+          P13-12:
+            status: pending
+            title: "Add 5 semantic contradiction test cases to gold_dataset.yaml"
+            owner_agent: qa-engineer
+            skill: "Test case design"
+            inputs:
+              - "n8n/prompts/gold_dataset.yaml"
+              - "docs/prompt-engineering-sop.md"
+            output: "gold_dataset.yaml: +5 semantic cases (total 27+)"
+            acceptance: >-
+              5 new cases: 1 FORCE REJECT contradiction, 1 CoT reasoning mismatch,
+              1 borderline salary, 1 legacy migration ambiguity, 1 remote/hybrid edge case;
+              all 5 pass with correct semantic assertions; npm run eval green.
+            estimate: "0.3d"
+
+    execution_order:
+      - "P13-1 → P13-2 → P13-3 (L1 Structured Output foundation)"
+      - "P13-4 → P13-5 (L2 Few-Shot on top of structured output)"
+      - "P13-6 → P13-7 (L3 CoT on top of few-shot)"
+      - "P13-8 → P13-9 (L4 Retry loop — can run in parallel with L3)"
+      - "P13-10 (L5 Review — requires P11-3 routing in place)"
+      - "P13-11 + P13-12 (L6 SOP — can run in parallel with any level)"
+    primary_risks:
+      - "Ollama grammar-constrained decoding may conflict with CoT <thinking> prefix — test P13-6 carefully"
+      - "Few-shot examples increase token count ~500 tokens — measure latency in P13-5"
+      - "Gemini review pass (L5) requires GOOGLE_API_KEY and respects 15 RPM free limit"
+    definition_of_done:
+      - "Ollama consistently returns schema-valid JSON without p() parser helper"
+      - "Few-shot examples improve edge case accuracy on E01-E05 in promptfoo eval"
+      - "CoT <thinking> section present in responses; llm-rubric reason quality improves"
+      - "Retry loop fires and self-corrects on 3 semantic contradiction test cases"
+      - "docs/prompt-engineering-sop.md exists and is actionable"
+      - "gold_dataset.yaml contains 27+ cases with semantic assertion coverage"
 
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
