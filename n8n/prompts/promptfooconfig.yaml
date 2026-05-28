@@ -30,6 +30,27 @@ providers:
     label: "{{env.LLM_PROVIDER}}"
     config:
       temperature: 0
+      # Ollama only — other providers ignore this field and use their own structured-output mechanisms.
+      # Enforces clean JSON output without markdown fences via Ollama's native `format` parameter.
+      # Schema matches EvaluationResult interface (n8n/providers/_interface.ts).
+      format:
+        type: object
+        required:
+          [
+            overall_score,
+            tech_stack_match,
+            seniority_match,
+            red_flags,
+            reason,
+            url,
+          ]
+        properties:
+          overall_score: { type: number, minimum: 0, maximum: 100 }
+          tech_stack_match: { type: number, minimum: 0, maximum: 100 }
+          seniority_match: { type: number, minimum: 0, maximum: 100 }
+          red_flags: { type: array, items: { type: string } }
+          reason: { type: string }
+          url: { type: string }
 
 # ─── Default Assertions (P10-4, P10-5) ────────────────────
 # Applied to EVERY test case automatically.

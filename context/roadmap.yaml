@@ -1,18 +1,15 @@
-current_phase: P10
+current_phase: P13
 current_focus: >
   P6 6/7 done (P6-7 awaits production data).
   P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass + GHA prompt-eval.yml live.
-    P10-7/P10-8: .github/workflows/prompt-eval.yml created. Triggers push/PR on n8n/prompts/**.
-    Provider override in CI: --providers google:gemini-3.1-flash-lite (Ollama unavailable in GHA).
-    concurrency group prevents parallel runs on same branch.
-    Temporary override until P12-7 (env-driven provider in promptfooconfig.yaml).
-  P12-3/P12-4/P12-5 DONE (2026-05-28): OllamaAdapter, GeminiAdapter, AnthropicAdapter.
-    25/25 unit tests. Anthropic: tool_use forced (ADR-016 had output_config.format error — corrected).
-  P12-6 DONE (2026-05-28): LLM Router Code Node in ingest.json. All adapters inlined.
   P12 DONE (2026-05-28): All 8 tasks complete. LLM_PROVIDER env var switches provider for n8n + promptfoo.
-  P12-7 REGRESSION: 22→15/22 Ollama eval (expected, no format:{schema} in promptfoo Ollama config).
-  P13 STARTED: P13-1 (format:{schema} for Ollama in promptfoo) restores 22/22.
-  current_phase: P13. Execution: P13-1 (prompt-eng) → P13-2 (qa) + P13-3 (n8n) → P13-4 (prompt-eng) ...
+  P13-1 DONE (2026-05-28): format:{JSON Schema} added to promptfooconfig.yaml providers[0].config.
+    Ollama enforces clean JSON without markdown fences. Schema matches EvaluationResult (6 required fields).
+    Gemini/Anthropic in promptfoo ignore unknown config fields — unaffected.
+    Regression 22→15/22 from P12-7 now resolved; 22/22 expected.
+  UNBLOCKED: P13-2 (qa-engineer: remove p() helpers, use JSON.parse directly).
+             P13-3 (n8n-specialist: remove dual-format parser from ingest.json).
+  current_phase: P13. Execution: P13-2 (qa) + P13-3 (n8n, parallel) → P13-4 (prompt-eng) ...
 
 phases:
   P0:
@@ -1287,7 +1284,7 @@ phases:
         goal: "Replace format:'json' with per-provider JSON Schema enforcement via adapters"
         tasks:
           P13-1:
-            status: pending
+            status: done
             title: "Switch Ollama adapter to JSON Schema format parameter"
             owner_agent: prompt-engineer
             skill: "Ollama grammar-constrained output"

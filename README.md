@@ -39,7 +39,7 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(6/13 done — P10-1…P10-6 ✅)*
 - [ ] **PHASE 11** — Multidimensional Scoring & Intelligent Routing 📋 *(blocked by P8+P10)*
 - [ ] **PHASE 12** — LLM Provider Adapter Pattern 📋 [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) *(blocked by P10)*
-- [ ] **PHASE 13** — Prompt Engineering Best Practices Stack 📋 [ADR-017] *(blocked by P10+P12)*
+- [~] **PHASE 13** — Prompt Engineering Best Practices Stack 🔄 [ADR-017] *(1/12 done)*
 
 ---
 
@@ -353,7 +353,7 @@ Telegram (ручная ссылка)  ──────────────
 > ADR: ADR-017 | Блокер: P10 + P12
 
 #### 13.1 — L1: Structured Output (JSON Schema)
-- [ ] `P13-1` Переключить OllamaAdapter на `format:{schema_object}`
+- [x] `P13-1` Переключить OllamaAdapter на `format:{schema_object}` ✅ (2026-05-28: JSON Schema в `providers[0].config.format`; регрессия 22→15/22 устранена)
 - [ ] `P13-2` Рефакторинг: удалить `p()` хелпер из всех ассертов, заменить на `JSON.parse(output)`
 - [ ] `P13-3` Обновить парсер в `ingest.json` (удалить dual-format парсер, оставить прямой `JSON.parse`)
 
