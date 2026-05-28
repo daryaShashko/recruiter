@@ -36,7 +36,7 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
-- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(4/13 done)*
+- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(6/13 done — P10-1…P10-6 ✅)*
 
 ---
 
@@ -286,8 +286,8 @@ Telegram (ручная ссылка)  ──────────────
 
 #### 10.2 — Hybrid Assertions & Local Verification
 - [x] `P10-4` Внедрить детерминированные JavaScript-ассерты для быстрой и бесплатной проверки поля `match` (true/false) ✅ (3 default + per-test assertions)
-- [ ] `P10-5` Настроить проверки `llm-rubric` через бесплатный лимит Gemini 1.5 Flash для валидации текстового поля `reason`
-- [ ] `P10-6` Прогнать локальные тесты: `npx promptfoo eval` и убедиться в успешной генерации отчетов в CLI/HTML
+- [x] `P10-5` Настроить проверки `llm-rubric` через Gemini 3.1 Flash Lite (500 RPD free tier) для валидации текстового поля `reason` ✅ (2026-05-28: `google:gemini-3.1-flash-lite`, rubric фокусируется на качестве reason, не на формате)
+- [x] `P10-6` Прогнать локальные тесты: `npx promptfoo eval` ✅ (2026-05-28: 22/22 тестов проходят; assistant prefill техника; dual-format JSON parser; red_flags правила усилены с WRONG→CORRECT примерами)
 
 #### 10.3 — GitHub Actions Workflow
 - [ ] `P10-7` Создать workflow `.github/workflows/prompt-eval.yml`, запускающийся на Pull Request при изменении промптов

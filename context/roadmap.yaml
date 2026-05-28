@@ -1,13 +1,18 @@
 current_phase: P7
 current_focus: >
   P6 6/7 done (P6-7 awaits production data).
-  DEDUP FIXED (2026-05-27): ingest.json полностью переработан — 3-уровневая семантическая
-  дедупликация: (1) Code:DedupBatch fingerprint within-batch, (2) HTTP Request к Notion API
-  с OR-фильтром (Fingerprint|urlNorm|url), (3) Code:CheckDuplicate isDuplicate flag.
-  Fingerprint = FNV1a64(normalizeCompany::normalizeTitle), pure JS (crypto недоступен в n8n sandbox).
-  Требует ручного добавления поля Fingerprint (Text) в Notion Evaluation Log.
-  P10 IN PROGRESS: P10-1…P10-4 DONE. Next: P10-5…P10-6.
-  P8 IN PROGRESS: EVAL-2/3/4 DONE. BLOCKED on EVAL-1 (manual: user must create Notion Evaluation Log DB).
+  DEDUP FIXED (2026-05-27): 3-уровневая семантическая дедупликация в ingest.json.
+  P10 IN PROGRESS: P10-1…P10-6 DONE (2026-05-28).
+    Key changes: assistant prefill {role:assistant, content:"{"} in evaluator-template.json
+    forces model to start JSON directly (no preamble/markdown fences).
+    Dual-format JSON parser in all assertions and ingest.json Code:Parse Ollama Response
+    handles both full JSON {"key":val} and prefill continuation "key":val,…}.
+    red_flags prompt: WRONG→CORRECT examples, 2-4 words MAX, no commas rule reinforced.
+    Grading model: google:gemini-3.1-flash-lite (500 RPD free tier, 15 RPM).
+    Gold dataset: 22 tests, all pass 22/22. F09 assertion fixed (old indexOf pattern).
+    ingest.json: assistant prefill added to messages array + parser updated.
+  Next: P10-7 (GHA prompt-eval.yml workflow) or P7 (Cloud Migration, no blockers).
+  P8 IN PROGRESS: EVAL-2/3/4 DONE. BLOCKED on EVAL-1 (manual: create Notion Evaluation Log DB).
 
 phases:
   P0:
@@ -884,16 +889,30 @@ phases:
             note: "3 default assertions in promptfooconfig.yaml (is-json, schema validation, URL echo) + per-test match=true/false JS assertion in each gold_dataset test case. All zero-cost, no API calls. npm scripts: eval, eval:view added to scraper/package.json."
             estimate: "0.5d"
           P10-5:
-            status: pending
+            status: done
             title: "Integrate Gemini Flash for llm-rubric assertions"
             owner_agent: developer
-            note: "Add llm-rubric checks using free Gemini Flash API to validate the reasoning text field."
+            note: >-
+              2026-05-28: google:gemini-3.1-flash-lite (500 RPD free tier, 15 RPM — optimal for
+              gold dataset of 22 tests). llm-rubric assertion added to defaultTest evaluates ONLY
+              reason quality (not format). Rubric accepts: tech name, location, seniority level,
+              salary level, industry, OR spam identification as concrete details.
+              gold_dataset.yaml: 4 per-test llm-rubric assertions (T01 simplified, E01/E02/F02).
+              GOOGLE_API_KEY in scraper/.env required to activate.
             estimate: "0.5d"
           P10-6:
-            status: pending
+            status: done
             title: "Verify local execution runner"
             owner_agent: qa
-            note: "Run npx promptfoo eval and assert CLI/HTML report generation works without issues."
+            note: >-
+              2026-05-28: 22/22 gold dataset tests pass. Root causes fixed:
+              (1) assistant prefill {role:assistant,content:"{"} — model starts JSON directly;
+              (2) dual-format parser p(o) handles both full JSON and prefill continuation;
+              (3) red_flags WRONG→CORRECT examples in prompt; 2-4 words MAX rule;
+              (4) F09 assertion updated from old indexOf pattern to p() function;
+              (5) llm-rubric rubric focused on reason quality not output format.
+              Grading model: gemini-3.1-flash-lite (was gemini-2.0-flash-lite, wrong model).
+              eval runs in ~8 min (22 tests × ~12s Ollama + Gemini grading in parallel).
             estimate: "0.3d"
 
       "10.3 GitHub Actions Workflow":

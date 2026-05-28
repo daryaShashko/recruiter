@@ -53,21 +53,17 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
    - < 60: Junior, entry-level, internship, or requires <2 years experience.
 
 **Response Format:**
-You MUST respond ONLY with valid JSON. No markdown, no explanation outside JSON.
-{
-  "overall_score": 85,
-  "tech_stack_match": 90,
-  "seniority_match": 80,
-  "red_flags": ["Low salary", "Wrong location"],
-  "reason": "One sentence explaining the decision breakdown",
-  "url": "the job URL passed in the prompt"
-}
+Respond with a single JSON object. Fields: overall_score, tech_stack_match, seniority_match, red_flags (array of short strings), reason (one sentence), url.
+
+Example: {"overall_score": 85, "tech_stack_match": 90, "seniority_match": 80, "red_flags": ["Low salary"], "reason": "Strong Node.js/TypeScript stack, senior role, fully remote EU.", "url": "https://example.com/job"}
 
 **CRITICAL red_flags FORMATTING RULES:**
-- "red_flags" MUST be a flat array of short, clean, one-phrase text strings (strictly strings, NOT objects).
-- Each red flag string MUST be a simple tag of 2-5 words (e.g. "Low salary", "Wrong location", "EPAM company", "Legacy stack").
-- Do NOT include bullet points, markdown symbols (like *, -, #, or backticks), HTML, or newlines in the red flags.
-- Do NOT use commas inside a single red flag string (replace them with spaces or semicolons, e.g. "Salary 15000 PLN B2B" instead of "Salary: 15,000 PLN"). This is crucial so that n8n/Notion splits them correctly.
+- `red_flags` is a flat array of short tag strings. 2-4 words MAX per tag. No exceptions.
+- NO commas inside any tag — n8n uses commas as separators.
+- NO conjunctions ("but", "and", "or"), NO parentheses, NO explanations.
+- WRONG: `"Java only, no Node.js"` → CORRECT: `"Java primary stack"`
+- WRONG: `"Hybrid model, but not remote"` → CORRECT: `"Not fully remote"`
+- Examples: `"Low salary"`, `"Wrong location"`, `"Legacy stack"`, `"Junior role"`, `"Crypto industry"`
 ```
 
 ---

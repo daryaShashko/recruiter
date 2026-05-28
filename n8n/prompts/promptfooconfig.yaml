@@ -10,12 +10,14 @@
 # Prerequisites:
 #   - Ollama running locally with llama3.1:latest pulled
 #   - npm install in /scraper (promptfoo is a devDependency)
+#   - GOOGLE_API_KEY env var set (free tier: aistudio.google.com) — for llm-rubric grading only
+#   - Note: llm-rubric assertions fail without GOOGLE_API_KEY
 # ─────────────────────────────────────────────────────────
 
 description: "AI Recruiter — Evaluator Prompt v1"
 
 # ─── Prompt ──────────────────────────────────────────────
-# Chat-format template: system prompt (from evaluator.md) + user message
+# Chat-format template: system prompt + user message + assistant prefill "{"
 # Variables: {{title}}, {{company}}, {{location}}, {{salary}}, {{url}}, {{body}}
 prompts:
   - file://evaluator-template.json
@@ -28,87 +30,118 @@ providers:
       temperature: 0
       format: "json"
 
-# ─── Optional: Grading provider for llm-rubric assertions ──
-# Uncomment and set GOOGLE_API_KEY env var to enable
-# reasoning quality checks via Gemini Flash (free tier).
-#
-# defaultTest:
-#   options:
-#     provider:
-#       id: google:gemini-1.5-flash
-#       config:
-#         temperature: 0
-
-# ─── Default Assertions (P10-4) ─────────────────────────
+# ─── Default Assertions (P10-4, P10-5) ────────────────────
 # Applied to EVERY test case automatically.
-# Zero-cost JavaScript checks — no API calls, instant execution.
+# JS checks are zero-cost; llm-rubric requires GOOGLE_API_KEY.
+#
+# Parser helper used in every assertion:
+#   p(output) — handles two cases:
+#     1. Full JSON:    output = '{"key": val}'   → extract from { to last }
+#     2. Prefill cont: output = '"key": val, ...}' → prepend { (Ollama omits the prefilled '{')
 defaultTest:
   vars:
     profile: file://candidate_profile.md
+  options:
+    provider:
+      id: google:gemini-3.1-flash-lite
+      config:
+        temperature: 0
   assert:
-    # 1. Output must contain a valid JSON object
+    # 1. Output must parse as a valid JSON object
     - type: javascript
       value: |
-        const start = output.indexOf('{');
-        const end = output.lastIndexOf('}');
-        if (start === -1 || end === -1 || end < start) return false;
-        const cleaned = output.substring(start, end + 1).trim();
-        try {
-          JSON.parse(cleaned);
-          return true;
-        } catch(e) {
-          return false;
+        function p(o) {
+          const end = o.lastIndexOf('}');
+          if (end === -1) return null;
+          const s = o.indexOf('{');
+          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
+          catch(e) { return null; }
         }
+        return p(output) !== null;
       weight: 2
 
-    # 2. JSON must contain overall_score, tech_stack_match, seniority_match, red_flags, reason, url
+    # 2. JSON must contain all required fields with correct types
     - type: javascript
       value: |
-        const start = output.indexOf('{');
-        const end = output.lastIndexOf('}');
-        if (start === -1 || end === -1 || end < start) return false;
-        const cleaned = output.substring(start, end + 1).trim();
-        const parsed = JSON.parse(cleaned);
-        const hasOverall = typeof parsed.overall_score === 'number' && parsed.overall_score >= 0 && parsed.overall_score <= 100;
-        const hasTech = typeof parsed.tech_stack_match === 'number' && parsed.tech_stack_match >= 0 && parsed.tech_stack_match <= 100;
-        const hasSeniority = typeof parsed.seniority_match === 'number' && parsed.seniority_match >= 0 && parsed.seniority_match <= 100;
-        const hasRedFlags = Array.isArray(parsed.red_flags) && parsed.red_flags.every(x => typeof x === 'string');
-        const hasReason = typeof parsed.reason === 'string' && parsed.reason.length > 0;
-        const hasUrl = typeof parsed.url === 'string' && parsed.url.length > 0;
-        return hasOverall && hasTech && hasSeniority && hasRedFlags && hasReason && hasUrl;
+        function p(o) {
+          const end = o.lastIndexOf('}');
+          if (end === -1) return null;
+          const s = o.indexOf('{');
+          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
+          catch(e) { return null; }
+        }
+        const j = p(output);
+        if (!j) return false;
+        return typeof j.overall_score === 'number' && j.overall_score >= 0 && j.overall_score <= 100
+          && typeof j.tech_stack_match === 'number' && j.tech_stack_match >= 0 && j.tech_stack_match <= 100
+          && typeof j.seniority_match === 'number' && j.seniority_match >= 0 && j.seniority_match <= 100
+          && Array.isArray(j.red_flags) && j.red_flags.every(x => typeof x === 'string')
+          && typeof j.reason === 'string' && j.reason.length > 0
+          && typeof j.url === 'string' && j.url.length > 0;
       weight: 2
 
-    # 3. URL in LLM response must echo back the input URL
+    # 3. URL in response must echo back the input URL
     - type: javascript
       value: |
-        const start = output.indexOf('{');
-        const end = output.lastIndexOf('}');
-        if (start === -1 || end === -1 || end < start) return false;
-        const cleaned = output.substring(start, end + 1).trim();
-        const parsed = JSON.parse(cleaned);
-        return parsed.url === context.vars.url;
+        function p(o) {
+          const end = o.lastIndexOf('}');
+          if (end === -1) return null;
+          const s = o.indexOf('{');
+          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
+          catch(e) { return null; }
+        }
+        const j = p(output);
+        return j !== null && j.url === context.vars.url;
       weight: 1
 
-    # 4. Red flags formatting validation (no commas, no markdown, length limit)
+    # 4. red_flags: flat string array, no commas/markdown, 1-6 words per item
     - type: javascript
       value: |
-        const start = output.indexOf('{');
-        const end = output.lastIndexOf('}');
-        if (start === -1 || end === -1 || end < start) return false;
-        const cleaned = output.substring(start, end + 1).trim();
-        const parsed = JSON.parse(cleaned);
-        if (!Array.isArray(parsed.red_flags)) return false;
-        for (const flag of parsed.red_flags) {
+        function p(o) {
+          const end = o.lastIndexOf('}');
+          if (end === -1) return null;
+          const s = o.indexOf('{');
+          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
+          catch(e) { return null; }
+        }
+        const j = p(output);
+        if (!j || !Array.isArray(j.red_flags)) return false;
+        for (const flag of j.red_flags) {
           if (typeof flag !== 'string') return false;
           if (flag.includes(',')) return false;
-          if (flag.includes('*') || flag.includes('_') || flag.includes('`') || flag.includes('\n') || flag.includes('\r')) return false;
-          const wordCount = flag.trim().split(/\s+/).length;
-          if (wordCount < 1 || wordCount > 6) return false;
+          if (/[*_`\n\r]/.test(flag)) return false;
+          const words = flag.trim().split(/\s+/).length;
+          if (words < 1 || words > 6) return false;
         }
         return true;
       weight: 2
 
+    # 5. LLM-rubric: quality of the "reason" field only (P10-5)
+    #    Ignores format issues (markdown, preamble) — those are JS assertions' job.
+    #    Requires GOOGLE_API_KEY.
+    - type: llm-rubric
+      value: >-
+        Extract the "reason" field from the JSON in the output (ignore any surrounding
+        text or markdown fences). Evaluate ONLY that reason string.
+        The reason MUST: (1) be written in English, (2) be one concise sentence,
+        (3) reference at least one specific concrete detail — either a technology name
+        (e.g. "Java", "Angular"), a location (e.g. "Warsaw on-site"),
+        a seniority level (e.g. "junior", "entry-level", "no experience required"),
+        a salary level (e.g. "below 18k", "financial mismatch"),
+        an industry (e.g. "blockchain/crypto"),
+        OR clearly state the vacancy is invalid/spam/not a job posting.
+        PASS if the reason is specific and informative, or correctly identifies spam.
+        FAIL if the reason is purely generic (e.g. "does not match the profile")
+        with no concrete detail whatsoever.
+      weight: 1
+
+# ─── Evaluate Options ───────────────────────────────────
+# maxConcurrency:1 — sequential execution, natural rate limiter for Gemini grading.
+# Ollama takes ~12s/test → ~5 Gemini grading calls/min, safely under 15 RPM limit.
+evaluateOptions:
+  maxConcurrency: 1
+
 # ─── Test Cases ──────────────────────────────────────────
-# Gold dataset: 20 curated test cases (8 true, 7 false, 5 edge cases)
+# Gold dataset: 22 curated test cases (8 true, 9 false, 5 edge cases)
 # Source: evaluator.md criteria + real-world patterns from dry-runs
 tests: file://gold_dataset.yaml

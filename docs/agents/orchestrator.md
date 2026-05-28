@@ -25,22 +25,36 @@ against the project roadmap.
 
 The project is an automated AI recruiter pipeline with the following architecture:
   GitHub Actions (Playwright scraper) → POST webhook → n8n → Ollama (Llama 3.1 8B)
-                                                              ↓ match: true
-  Telegram alert ←─────────────────────────────── n8n → Notion (Kanban board)
+                                                              ↓ overall_score >= 80
+  Telegram alert ←───────────── n8n → Notion (Kanban board + Evaluation Log)
+                                        ↓ overall_score 50-79
+                                       Notion (silent review queue)
 
 Tech stack: TypeScript, Node.js 20, Playwright, n8n, Ollama, Notion API, Telegram Bot API,
-GitHub Actions.
+GitHub Actions. Prompt evaluation: Promptfoo + Gemini 3.1 Flash Lite (llm-rubric grading).
 
 Repository layout:
   /scraper        — Playwright-based job scraper (TypeScript)
   /n8n            — n8n workflow exports (JSON) and LLM prompts
-  /docs           — Architecture docs, Notion schema, agent skill files
+  /docs           — Architecture docs, Notion schema, agent skill files, ADRs
   /.github        — GitHub Actions workflows
 
 Core data types (from scraper/src/types.ts):
   JobOffer        { id, title, company, url, body, source, location?, salary?, tags?, scrapedAt }
   WebhookPayload  { jobs: JobOffer[], meta: { source, count, sentAt } }
-  EvaluationResult { match: boolean, reason: string, url: string }
+  EvaluationResult (multidimensional, from n8n Code: Parse Ollama Response):
+    { overall_score: number (0-100), tech_stack_match: number (0-100),
+      seniority_match: number (0-100), red_flags: string[],
+      reason: string, url: string, match: boolean }
+  Routing: overall_score >= 80 → Telegram + Notion Board
+           overall_score 50-79 → Notion Board (silent)
+           overall_score < 50  → Evaluation Log only (Discard)
+
+Prompt evaluation (Promptfoo, Phase 10):
+  n8n/prompts/promptfooconfig.yaml   — eval config, Ollama provider, Gemini grading
+  n8n/prompts/gold_dataset.yaml      — 22 gold test cases (8 true, 9 false, 5 edge)
+  n8n/prompts/evaluator-template.json — chat template with assistant prefill {
+  Run: cd scraper && npm run eval
 ```
 
 ---
@@ -56,17 +70,29 @@ Current phases and task IDs (from README.md). You MUST reference these IDs in al
   [x] PHASE 1  — Scraper: GitHub Actions + Playwright (P1-1 … P1-26)  ✅ DONE
          dry-run 2026-05-22: 210 offers (JustJoin 199 + NoFluffJobs 11), 31/31 unit tests ✅
   [x] PHASE 2  — n8n Webhook Pipeline (P2-1 … P2-10)  ✅ DONE
-         Note: P2-2 (GitHub Secret WEBHOOK_URL) still requires manual update on tunnel restart.
   [x] PHASE 3  — Ollama Evaluation Integration (P3-1 … P3-12)  ✅ DONE
-         evaluate.json exported; llama3.1:latest, keep_alive:0
-  [ ] PHASE 4  — Notion Database Integration (P4-1 … P4-10)  🔄 IN PROGRESS
-         P4-2 (notion-schema.md), P4-3 (fields defined) — DONE
-         BLOCKED: P4-1 (create Notion DB) and P4-4 (integration token) — manual user actions
-         PENDING: P4-5 … P4-10 (n8n workflow + dedup + export)
-  [ ] PHASE 5  — Telegram Bot (P5-1 … P5-10)  BLOCKED by P4
-  [ ] PHASE 6  — E2E Hardening & Monitoring (P6-1 … P6-7)  BLOCKED by P5
+         Multidimensional scoring: overall_score, tech_stack_match, seniority_match, red_flags
+  [x] PHASE 4  — Notion Database Integration (P4-1 … P4-10)  ✅ DONE
+         3-level semantic dedup: FNV1a64 fingerprint + urlNorm + url (ingest.json)
+  [x] PHASE 5  — Telegram Bot (P5-1 … P5-10)  ✅ DONE
+  [~] PHASE 6  — E2E Hardening & Monitoring  🔄 6/7 DONE
+         P6-7 (post-mortem): awaiting 7 days production data
+  [ ] PHASE 7  — Cloud Migration: Oracle Cloud + Cloud LLM  📋 PENDING (no blockers)
+         CLOUD-1…CLOUD-16: Oracle Cloud VM + Docker Compose + Caddy + Cloud LLM API
+         ADR-010 (cloud infra), ADR-011 (cloud LLM). Resolves tunnel dependency.
+  [ ] PHASE 8  — Evaluator Observability & Feedback Loop  🔄 IN PROGRESS
+         EVAL-2/3/4 DONE. BLOCKED: EVAL-1 (manual: create Notion Evaluation Log DB)
+         EVAL-6/7/8 blocked until P7 (need stable HTTPS for Telegram webhook). ADR-012.
+  [ ] PHASE 9  — Incremental Improvements & POC Backlog  📋 PENDING
+  [ ] PHASE 10 — Prompt Evaluation & CI/CD Pipeline (Promptfoo)  🔄 IN PROGRESS
+         P10-1…P10-6 DONE (2026-05-28): 22/22 gold tests pass, Gemini grading active
+         Techniques: assistant prefill, dual-format parser, red_flags WRONG→CORRECT examples
+         PENDING: P10-7 (GHA workflow), P10-8…P10-13
+         ADR-013. Run: cd scraper && npm run eval
+  [ ] PHASE 11 — Multidimensional Scoring & Intelligent Routing  📋 BLOCKED by P8+P10
 
 At the start of every session, report the current phase and which tasks are open.
+The current active phases are P6 (finishing), P7 (cloud, no blockers), P8 (blocked on EVAL-1), P10 (continuing).
 ```
 
 ---
