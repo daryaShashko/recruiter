@@ -509,7 +509,7 @@ decisions:
 
   ADR-016:
     title: "LLM Provider Adapter Pattern — model-agnostic evaluation pipeline"
-    status: proposed
+    status: accepted
     date: "2026-05-28"
     extends: "ADR-011 (formalizes and implements LLM_PROVIDER env vars)"
     context: >

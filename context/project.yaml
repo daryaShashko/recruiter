@@ -91,7 +91,7 @@ structure:
   n8n/: "n8n workflow JSONs + LLM prompts"
   scripts/: "Local run entrypoints (run-local preflight + health summary)"
   docs/: "Architecture diagrams, schemas, ADRs, agent skill files"
-  docs/adr/: "Architecture Decision Records (ADR-001 through ADR-012)"
+  docs/adr/: "Architecture Decision Records (ADR-001 through ADR-016)"
   docs/agents/: "AI agent system prompt files (8 agents)"
   context/: "THIS — project context manifests (YAML)"
   .github/: "GitHub Actions CI/CD workflows"

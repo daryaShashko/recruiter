@@ -3,7 +3,7 @@
 ─────────────────────────────────────────────────────────
 **ADR-016:** Extract all LLM provider-specific code into isolated adapters
 **Date:** 2026-05-28
-**Status:** Proposed
+**Status:** Accepted
 **Extends:** ADR-011 (formalizes and implements LLM_PROVIDER env vars)
 ─────────────────────────────────────────────────────────
 
