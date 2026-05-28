@@ -597,6 +597,46 @@ decisions:
                gold_dataset.yaml (+5 semantic cases), n8n/workflows/ingest.json
       New: docs/prompt-engineering-sop.md
 
+  ADR-018:
+    title: "Manual Job URL Checker — Telegram /check command with LLM field extraction"
+    status: proposed
+    date: "2026-05-28"
+    context: >
+      The automated pipeline only covers JustJoin.it and NoFluffJobs.
+      Corporate job sites (e.g. Scompler, Appify) are invisible to the scraper.
+      The user must manually read these pages, copy data into Notion, and assess fit —
+      a 20-40 minute task per vacancy.
+      Existing infrastructure already supports this: source='manual' is defined in
+      interfaces.yaml (JobOffer.source) and routed in ingest.json Switch node (route=2).
+      telegram_trigger.json was planned in P5 but never implemented (status: not_created).
+    decision: >
+      Implement Telegram /check <url> trigger as a new n8n workflow (telegram-trigger.json).
+      Flow: Telegram Trigger → HTTP fetch URL → strip HTML to plain text → LLM extract_job_fields
+      prompt → POST to existing /webhook/jobs/ingest with source='manual' → existing pipeline
+      handles dedup + evaluation + Notion creation. Bot replies with result summary.
+      Safe fallbacks: SPA detection (charCount < 500), HTTP error handling, LLM JSON parse fallback.
+    rationale:
+      - "source='manual' already in interfaces.yaml and ingest.json Switch — zero backend changes"
+      - "Reuses existing LLM evaluator, Notion write, Telegram alert — only new code is trigger + extraction"
+      - "Two-step LLM approach: extract_job_fields (new) → existing evaluator — clean separation of concerns"
+      - "HTTP fetch (no Playwright) is lean: corporate sites with SSR render correctly; SPA detected gracefully"
+      - "After P12 (LLM Adapter), extraction prompt automatically supports Gemini — free future compatibility"
+    consequences:
+      positive:
+        - "User submits corporate URL in Telegram → Notion page in <30 seconds, zero manual work"
+        - "No new services, no new databases — stays at $0/month"
+        - "Closes P5 planned-but-unimplemented gap (telegram_trigger.json)"
+      negative:
+        - "SPA/JS-only sites (CSR) return near-empty HTML — user must paste text manually as fallback"
+        - "LLM extraction quality varies by page structure — tested on Scompler/Appify, not guaranteed universally"
+        - "Adds second LLM call per manual job (extract + evaluate) — acceptable latency tradeoff"
+    implementation: >
+      Phase P14 tasks: P14-1 through P14-7 (see context/roadmap.yaml P14).
+      New files: n8n/workflows/telegram-trigger.json, n8n/prompts/extract-job-fields.md,
+                 n8n/prompts/extract-job-fields-template.json
+      Updated: context/modules/n8n.yaml (telegram_trigger status → created, phase → P14)
+      No changes to: ingest.json, interfaces.yaml, types.ts (source='manual' already present)
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

@@ -90,6 +90,15 @@ Current phases and task IDs (from README.md). You MUST reference these IDs in al
          PENDING: P10-7 (GHA workflow), P10-8…P10-13
          ADR-013. Run: cd scraper && npm run eval
   [ ] PHASE 11 — Multidimensional Scoring & Intelligent Routing  📋 BLOCKED by P8+P10
+  [ ] PHASE 12 — LLM Provider Adapter Pattern  📋 BLOCKED by P10
+         P12-1…P12-8: интерфейс LLMProvider, адаптеры Ollama/Gemini/Anthropic, n8n LLM Router,
+         env-driven promptfoo provider. ADR-016.
+  [ ] PHASE 13 — Prompt Engineering Best Practices Stack  📋 BLOCKED by P10+P12
+         P13-1…P13-12: Structured Output → Few-Shot → CoT → Retry Loop → Review Pass.
+         Semantic Validator, Gemini 2nd-pass для 50-79, SOP документ, 27+ gold tests. ADR-017.
+  [ ] PHASE 14 — Manual Job URL Checker  📋 PENDING (no blockers stated)
+         P14-1…P14-7: Telegram `/check <url>` → HTTP fetch → LLM extract_job_fields → ingest
+         pipeline → Notion (source=manual) → Telegram reply. Edge cases: SPA, HTTP 403, invalid JSON.
 
 At the start of every session, report the current phase and which tasks are open.
 The current active phases are P6 (finishing), P7 (cloud, no blockers), P8 (blocked on EVAL-1), P10 (continuing).

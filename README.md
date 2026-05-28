@@ -378,6 +378,24 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
+### PHASE 14 — Manual Job URL Checker 📋
+> Цель: проверка любого корпоративного URL через Telegram `/check <url>` — LLM-извлечение полей вакансии, оценка через существующий ingest pipeline, запись в Notion с `source=manual`.
+> ADR: [ADR-018](docs/adr/ADR-018-manual-url-checker.md) | Блокер: P8
+> Примечание: `source='manual'` уже поддержан в `interfaces.yaml` и `ingest.json` (Switch route=2). `telegram_trigger.json` был запланирован в P5, но не реализован.
+
+#### 14.1 — MVP: Telegram → Notion
+- [ ] `P14-1` Создать `n8n/workflows/telegram-trigger.json` — Telegram Trigger + парсинг `/check <url>`
+- [ ] `P14-2` HTTP fetch Code Node — `fetch(url)`, strip HTML до plain text, детект SPA (`charCount < 500`)
+- [ ] `P14-3` Написать промпт `extract_job_fields` (`n8n/prompts/extract-job-fields.md`)
+- [ ] `P14-4` Подключить extracted `JobOffer` → POST на `/webhook/jobs/ingest` с `source='manual'`
+- [ ] `P14-5` Telegram confirmation reply с кратким итогом (title, stack, remote, Notion queued)
+
+#### 14.2 — Edge Cases & QA
+- [ ] `P14-6` Safe JSON fallback при ошибке парсинга LLM extraction (по образцу evaluator)
+- [ ] `P14-7` QA тест-сьют: 5 сценариев (happy path, HTTP 403, SPA, invalid JSON, empty tech_stack)
+
+---
+
 ## Структура репозитория
 
 ```

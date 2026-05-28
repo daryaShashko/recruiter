@@ -1477,6 +1477,149 @@ phases:
       - "docs/prompt-engineering-sop.md exists and is actionable"
       - "gold_dataset.yaml contains 27+ cases with semantic assertion coverage"
 
+  P14:
+    name: "Manual Job URL Checker"
+    status: pending
+    goal: >
+      Allow user to submit any corporate job URL via Telegram /check command.
+      Extract structured job fields (tech_stack, remote, description) via LLM,
+      evaluate against profile via existing ingest pipeline (source=manual route
+      already present in ingest.json Switch node), and save to Notion with source=manual.
+    blocked_by: ["P8"]
+    depends_on: ["P8"]
+    adrs: ["ADR-018"]
+    note: >
+      telegram_trigger.json was originally planned in P5 (status: not_created in n8n.yaml).
+      source='manual' is already supported: interfaces.yaml and ingest.json Switch route=2.
+      P14 closes this planned-but-unimplemented gap without touching the downstream pipeline.
+
+    sub_phases:
+      "14.1 MVP — Telegram /check → Notion":
+        goal: "End-to-end: user sends /check URL in Telegram, Notion page created within 30s"
+        tasks:
+          P14-1:
+            status: pending
+            title: "Create telegram-trigger.json n8n workflow"
+            owner_agent: n8n-specialist
+            skill: "n8n Telegram Trigger node"
+            inputs: ["n8n/workflows/ingest.json", "context/modules/n8n.yaml"]
+            output: "n8n/workflows/telegram-trigger.json — workflow handling /check <url> messages"
+            acceptance: >
+              Sending '/check https://example.com/jobs/1' to Telegram bot triggers n8n execution.
+              Variable $json.url is extracted and available for downstream nodes.
+              Workflow sends 'Processing...' reply within 2 seconds of message receipt.
+            estimate: "0.3d"
+
+          P14-2:
+            status: pending
+            title: "HTTP fetch and HTML-to-plain-text Code node"
+            owner_agent: developer
+            skill: "n8n Code node, HTML strip, fetch API"
+            inputs: ["n8n/workflows/telegram-trigger.json"]
+            output: "n8n Code node returning { rawText: string, charCount: number, fetchError: boolean, spaDetected: boolean }"
+            acceptance: >
+              Given a valid corporate job URL: returns >500 chars of readable plain text (HTML tags stripped).
+              On HTTP 4xx/5xx or timeout: returns { rawText: '', fetchError: true }. Does NOT throw.
+              On charCount < 500: sets spaDetected=true flag for downstream fallback branch.
+            estimate: "0.3d"
+
+          P14-3:
+            status: pending
+            title: "Write extract_job_fields LLM prompt"
+            owner_agent: prompt-engineer
+            skill: "Structured extraction prompt, few-shot design"
+            inputs: ["n8n/prompts/evaluator.md", "context/interfaces.yaml"]
+            output: "n8n/prompts/extract-job-fields.md + n8n/prompts/extract-job-fields-template.json"
+            acceptance: >
+              Given raw corporate job page plain text, LLM returns ONLY valid JSON:
+              { title: string, company: string, tech_stack: string[], remote: 'remote'|'hybrid'|'on-site',
+                description: string, seniority: string, salary: string|null, location: string }.
+              Fields title, company, tech_stack, remote always present (best-effort fill).
+              Manually tested on Scompler and Appify job page texts before wiring into n8n.
+            estimate: "0.5d"
+
+          P14-4:
+            status: pending
+            title: "Wire extracted JobOffer into existing ingest webhook"
+            owner_agent: n8n-specialist
+            skill: "n8n HTTP Request, WebhookPayload schema"
+            inputs:
+              [
+                "n8n/workflows/telegram-trigger.json",
+                "n8n/prompts/extract-job-fields-template.json",
+                "context/interfaces.yaml",
+              ]
+            output: "telegram-trigger.json POSTs valid WebhookPayload to /webhook/jobs/ingest with source='manual'"
+            acceptance: >
+              POST body contains: { jobs: [{ id: 'manual_<timestamp>', title, company, url,
+              body: description, source: 'manual', location, salary, scrapedAt }], meta: { source: 'manual', count: 1, sentAt } }.
+              ingest.json processes the job: dedup → LLM evaluate → Notion create.
+              Notion page appears in AI Recruiter Board with Source='manual'.
+            estimate: "0.2d"
+
+          P14-5:
+            status: pending
+            title: "Send Telegram confirmation reply"
+            owner_agent: n8n-specialist
+            skill: "Telegram Bot API, n8n"
+            inputs: ["n8n/workflows/telegram-trigger.json"]
+            output: "Bot replies in the same chat with processing result"
+            acceptance: >
+              Success reply: '✅ [Title] @ [Company]\n🛠 Stack: TypeScript, Node.js\n🌍 Remote: Yes\n📎 Notion page queued\n🔗 [URL]'.
+              SPA reply: '⚠️ Сайт требует JS-рендеринга. Скопируй текст вакансии и пришли напрямую.'.
+              Fetch error reply: '❌ Не удалось загрузить страницу (HTTP [code]). Проверь URL.'.
+            estimate: "0.2d"
+
+      "14.2 Edge Cases & QA":
+        goal: "Graceful failure on SPA sites, blocked pages, and malformed LLM output"
+        tasks:
+          P14-6:
+            status: pending
+            title: "Add safe JSON fallback for LLM extraction failures"
+            owner_agent: n8n-specialist
+            skill: "n8n Code node, JSON safety, markdown fence stripping"
+            inputs: ["n8n/workflows/telegram-trigger.json"]
+            output: "Code node strips markdown fences; returns safe fallback JobOffer on parse failure"
+            acceptance: >
+              On invalid JSON from LLM: returns fallback { title: '[Manual - parse error]',
+              source: 'manual', url: original_url, body: '[extraction failed]' }.
+              Pipeline continues — Notion page created with partial data.
+              Telegram reply: '⚠️ Не удалось распознать поля. Страница сохранена для ручной проверки.'.
+            estimate: "0.2d"
+
+          P14-7:
+            status: pending
+            title: "QA test suite for manual URL checker"
+            owner_agent: qa-engineer
+            skill: "n8n workflow testing, HTTP mock"
+            inputs:
+              [
+                "n8n/workflows/telegram-trigger.json",
+                "n8n/prompts/extract-job-fields.md",
+              ]
+            output: "5 documented test scenarios with mock responses"
+            acceptance: >
+              Tests cover: (1) happy path — valid URL, all fields extracted, Notion page created;
+              (2) HTTP 403 — fetchError=true, Telegram error reply sent, no crash;
+              (3) SPA page — charCount<500, spaDetected=true, appropriate warning sent;
+              (4) LLM returns invalid JSON — fallback fires, Notion page saved with partial data;
+              (5) LLM returns empty tech_stack — fallback to [] without error.
+            estimate: "0.3d"
+
+    execution_order:
+      - "P14-1 → P14-2 → P14-3 (can run in parallel: prompt independently)"
+      - "P14-4 → P14-5 (wire-up after all inputs ready)"
+      - "P14-6 → P14-7 (hardening after MVP is live)"
+    primary_risks:
+      - "CSR/SPA sites return <500 chars HTML (Scompler/Appify may be affected). Mitigation: spaDetected flag + user guidance."
+      - "LLM extraction quality varies by site structure. Mitigation: manual test on both target sites before P14-4."
+    definition_of_done:
+      - "/check https://scompler.com/... → Notion page with source=manual within 30 seconds"
+      - "Notion page has: Title, Company, Tech Stack (in body), Remote info, Source=manual"
+      - "On fetch error or parse error: Telegram warns, workflow does not crash"
+      - "All 5 QA scenarios documented and passing"
+      - "context/modules/n8n.yaml updated: telegram_trigger.json status → created"
+
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
   objective: "Полностью локальный, бесплатный и управляемый запуск: schedule + manual Run Now через Telegram + catch-up после офлайна"
