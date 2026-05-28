@@ -328,9 +328,9 @@ Telegram (ручная ссылка)  ──────────────
 
 ---
 
-### PHASE 12 — LLM Provider Adapter Pattern 📋
+### PHASE 12 — LLM Provider Adapter Pattern ✅
 > Цель: сделать pipeline модель-агностичным. Одно изменение `.env` = смена провайдера для n8n + promptfoo.
-> ADR: [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) | Блокер: P10
+> ADR: [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) | Завершена 2026-05-28
 
 #### 12.1 — Contract & Interface
 - [x] `P12-1` Финализировать ADR-016 ✅ (2026-05-28: файл создан и принят, Status: Accepted)
@@ -343,7 +343,7 @@ Telegram (ручная ссылка)  ──────────────
 
 #### 12.3 — n8n & promptfoo Integration
 - [x] `P12-6` Заменить нод «HTTP Request: Ask Ollama» на «LLM Router» Code Node в `ingest.json` ✅ (2026-05-28: инлайн-адаптеры ollama/gemini/anthropic, AbortController timeout, assistant prefill удалён)
-- [ ] `P12-7` Перевести `promptfooconfig.yaml` на env-driven провайдер; удалить assistant prefill из `evaluator-template.json`
+- [x] `P12-7` Перевести `promptfooconfig.yaml` на env-driven провайдер; удалить assistant prefill из `evaluator-template.json` ✅ (2026-05-28: `{{env.LLM_PROVIDER}}` без fallback; регрессия 22→15/22 — ожидаемая, устраняется в P13-1)
 - [x] `P12-8` Обновить `.env.example`; создать `docs/llm-provider-switching.md` ✅ (2026-05-28: LLM-блок с комментариями, `OLLAMA_HOST` legacy, `groq` удалён из env.yaml, quick-ref таблица + гайд добавления провайдера)
 
 ---

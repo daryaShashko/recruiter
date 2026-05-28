@@ -9,7 +9,10 @@ current_focus: >
   P12-3/P12-4/P12-5 DONE (2026-05-28): OllamaAdapter, GeminiAdapter, AnthropicAdapter.
     25/25 unit tests. Anthropic: tool_use forced (ADR-016 had output_config.format error — corrected).
   P12-6 DONE (2026-05-28): LLM Router Code Node in ingest.json. All adapters inlined.
-  Next (P12): P12-7 (prompt-engineer) + P12-8 (devops) — parallel, disjoint write scopes.
+  P12 DONE (2026-05-28): All 8 tasks complete. LLM_PROVIDER env var switches provider for n8n + promptfoo.
+  P12-7 REGRESSION: 22→15/22 Ollama eval (expected, no format:{schema} in promptfoo Ollama config).
+  P13 STARTED: P13-1 (format:{schema} for Ollama in promptfoo) restores 22/22.
+  current_phase: P13. Execution: P13-1 (prompt-eng) → P13-2 (qa) + P13-3 (n8n) → P13-4 (prompt-eng) ...
 
 phases:
   P0:
@@ -632,13 +635,17 @@ phases:
         effort: "4-6 hours"
         tasks:
           EVAL-5:
-            status: pending
+            status: blocked_until_p7
             title: "Add inline keyboard buttons to Telegram match alerts"
             owner_agent: n8n-specialist
+            blocked_by: "EVAL-6 (Feedback Handler) — buttons without handler = dead UX. EVAL-6 requires P7 HTTPS."
             note: >
-              Replace Telegram Send Message node with HTTP Request to api.telegram.org.
-              Add inline_keyboard: [[{text: '👍 Correct', callback_data: 'correct:<url>'},
-              {text: '👎 Wrong', callback_data: 'wrong:<url>'}]].
+              Technically: sending inline_keyboard is outgoing HTTP, no HTTPS needed.
+              Practically: buttons appear in Telegram but clicks do nothing until EVAL-6 is active.
+              Dead buttons are worse than no buttons. Implement together with EVAL-6 after P7.
+              Implementation: Replace Telegram Send Message node with HTTP Request to api.telegram.org.
+              Add inline_keyboard: [[{text: '\U0001f44d Correct', callback_data: 'correct:<url>'},
+              {text: '\U0001f44e Wrong', callback_data: 'wrong:<url>'}]].
             estimate: "0.5d"
           EVAL-6:
             status: blocked_until_p7
@@ -1082,7 +1089,7 @@ phases:
 
   P12:
     name: "LLM Provider Adapter Pattern"
-    status: pending
+    status: done
     goal: "Extract all provider-specific code (URL, auth, body, structured output, response path) into isolated adapter modules. Single .env change switches provider for both n8n and promptfoo."
     blocked_by: ["P10"]
     depends_on: ["P10"]
@@ -1197,7 +1204,7 @@ phases:
               Assistant prefill removed. context/modules/n8n.yaml updated.
 
           P12-7:
-            status: pending
+            status: done
             title: "Refactor promptfooconfig.yaml to env-driven provider selection"
             owner_agent: prompt-engineer
             skill: "promptfoo multi-provider config"
@@ -1209,6 +1216,14 @@ phases:
               LLM_PROVIDER=ollama:chat:llama3.1:latest npm run eval passes 22/22;
               LLM_PROVIDER=google:gemini-2.5-flash npm run eval passes (requires GOOGLE_API_KEY);
               zero Ollama-specific config remains in promptfooconfig.yaml.
+            note: >-
+              Done 2026-05-28. {{env.LLM_PROVIDER}} with no fallback (explicit error if unset).
+              Removed: hardcoded ollama:chat:llama3.1:latest, format:"json", Ollama label.
+              evaluator-template.json: assistant prefill {role:assistant, content:"{"} deleted.
+              REGRESSION: 22/22 → 15/22 (Ollama). Expected per ADR-016 — without prefill,
+              llama3.1:8b wraps output in markdown prose when no JSON schema enforced.
+              p() parser finds no '{', 7 tests fail. Compensated by P13-1 (format:{schema})
+              + P13-4 (few-shot). Acceptance criterion 22/22 deferred to P13-1 completion.
             estimate: "0.3d"
 
           P12-8:
@@ -1253,7 +1268,7 @@ phases:
 
   P13:
     name: "Prompt Engineering Best Practices Stack"
-    status: pending
+    status: in_progress
     goal: "Apply 5-level PE maturity to evaluator: structured output enforcement, few-shot examples, chain-of-thought, retry loop, and semantic review pass. Each level is independently deployable."
     blocked_by: ["P10", "P12"]
     depends_on: ["P10", "P12"]
