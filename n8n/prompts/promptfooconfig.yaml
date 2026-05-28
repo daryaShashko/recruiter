@@ -23,12 +23,13 @@ prompts:
   - file://evaluator-template.json
 
 # ─── Providers ───────────────────────────────────────────
+# Provider is selected via LLM_PROVIDER env var (required, no default).
+# Example: LLM_PROVIDER=ollama:chat:llama3.1:latest npm run eval
 providers:
-  - id: ollama:chat:llama3.1:latest
-    label: "Llama 3.1 8B (local Ollama)"
+  - id: "{{env.LLM_PROVIDER}}"
+    label: "{{env.LLM_PROVIDER}}"
     config:
       temperature: 0
-      format: "json"
 
 # ─── Default Assertions (P10-4, P10-5) ────────────────────
 # Applied to EVERY test case automatically.

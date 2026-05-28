@@ -6,9 +6,5 @@
   {
     "role": "user",
     "content": "Job Title: {{title}}\nCompany: {{company}}\nLocation: {{location}}\nSalary: {{salary}}\nURL: {{url}}\n\nJob Description:\n{{body}}"
-  },
-  {
-    "role": "assistant",
-    "content": "{"
   }
 ]

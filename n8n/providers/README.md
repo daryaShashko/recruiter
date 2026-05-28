@@ -1,0 +1,72 @@
+# n8n/providers — LLM Provider Adapters
+
+This directory implements the **Adapter Pattern** for LLM providers used in the AI Recruiter pipeline (ADR-016). It decouples the n8n evaluation workflow from any specific model API, so switching providers requires only an environment variable change.
+
+## Contract
+
+All adapters implement the `LLMProvider` interface from `_interface.ts`:
+
+```typescript
+interface LLMProvider {
+  complete(req: LLMRequest): Promise<LLMResponse>;
+}
+```
+
+| Type | Fields |
+|---|---|
+| `LLMRequest` | `systemPrompt: string`, `userMessage: string`, `outputSchema: object` |
+| `LLMResponse` | `content: string`, `provider: string`, `model: string` |
+
+`content` is always a raw string; the caller is responsible for `JSON.parse()`.
+
+## Selecting a provider
+
+```typescript
+import { getProvider } from './index';
+
+const provider = getProvider(process.env.LLM_PROVIDER ?? 'ollama');
+const result = await provider.complete({ systemPrompt, userMessage, outputSchema });
+```
+
+`getProvider` throws `Error` with the list of supported providers if the name is unknown.
+
+## Current adapters
+
+| Name | File | Status |
+|---|---|---|
+| `ollama` | `ollama.ts` | Stub — P12-3 |
+| `gemini` | `gemini.ts` | Stub — P12-4 |
+| `anthropic` | `anthropic.ts` | Stub — P12-5 |
+
+## How to add a new adapter
+
+1. **Create `n8n/providers/<name>.ts`** and implement `LLMProvider`:
+
+   ```typescript
+   import type { LLMProvider, LLMRequest, LLMResponse } from './_interface';
+
+   export class MyAdapter implements LLMProvider {
+     async complete(req: LLMRequest): Promise<LLMResponse> {
+       // Call the provider API here.
+       // Return { content: rawString, provider: 'myprovider', model: 'model-name' }.
+     }
+   }
+   ```
+
+2. **Register it in `index.ts`**:
+   - Import the class: `import { MyAdapter } from './myprovider';`
+   - Add `'myprovider'` to the `SUPPORTED_PROVIDERS` tuple.
+   - Add `myprovider: new MyAdapter()` to `registry`.
+
+3. **Set the env var** and restart n8n:
+   ```
+   LLM_PROVIDER=myprovider
+   LLM_API_KEY=<your-key>
+   LLM_MODEL=<model-name>
+   ```
+
+No other files need to change — the n8n LLM Router Code Node calls `getProvider(LLM_PROVIDER)` and the rest of the pipeline is unaffected.
+
+## No external dependencies
+
+This directory uses only TypeScript built-ins. Individual adapter files may use the Node.js built-in `https`/`http` modules or the `fetch` global (Node 18+). No third-party packages are allowed here.

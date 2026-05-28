@@ -116,14 +116,20 @@ workflows:
         on_false: "Code: Build Ollama Payload"
       - name: Build Ollama Payload
         type: n8n-nodes-base.code
-        config: "builds ollamaBody with system prompt inline + job fields"
-      - name: Ask Ollama
-        type: n8n-nodes-base.httpRequest
-        config:
-          method: POST
-          url: "http://127.0.0.1:11434/api/chat"
-          timeout: 300000
-          on_error: "Continue (using error output)"
+        config: "builds systemPrompt (from candidate_profile.md) + userMessage from job fields"
+        note: "P12-6: renamed conceptually to Build LLM Payload; node name unchanged for ref compatibility.
+               No ollamaBody, no assistant prefill. Returns { ...job, systemPrompt, userMessage }."
+      - name: Code: LLM Router
+        type: n8n-nodes-base.code
+        phase: P12-6
+        config: >-
+          Reads $env.LLM_PROVIDER (default: ollama) and dispatches to inline adapter:
+          ollama → POST {LLM_BASE_URL}/api/chat (timeout 300s, format=outputSchema);
+          gemini → POST generateContent?key= (timeout 60s, responseSchema);
+          anthropic → POST /v1/messages with tool_use (timeout 60s).
+          Returns { message: { content: rawString } } — compatible with Parse Ollama Response.
+        on_error: "Continue (using error output)"
+        replaces: "HTTP Request: Ask Ollama"
       - name: Parse Ollama Response
         type: n8n-nodes-base.code
         logic: "strip markdown fences, JSON.parse, validate match:boolean, fallback to match=false"
@@ -201,6 +207,13 @@ workflows:
 ollama:
   endpoint: "http://localhost:11434/api/chat"
   model: "llama3.1:8b"
+  note: "P12-6: LLM is now provider-agnostic via Code: LLM Router. Ollama remains default."
+  env_vars:
+    LLM_PROVIDER: "ollama | gemini | anthropic (default: ollama)"
+    LLM_API_KEY:  "API key for Gemini/Anthropic (default: empty)"
+    LLM_MODEL:    "model name (default: provider-specific)"
+    LLM_BASE_URL: "Ollama base URL (default: http://localhost:11434)"
+    setup_note:   "Set via n8n Settings → Variables (NOT host .env file)"
   request_template:
     model: "llama3.1:8b"
     stream: false

@@ -232,10 +232,10 @@ Telegram (ручная ссылка)  ──────────────
 > Проблема: сейчас ~180 отклонённых вакансий/день уходят в чёрную дыру (`NoOp: Discard`).
 
 #### 8.1 — Evaluation Log (Level 1 — приоритет)
-- [ ] `EVAL-1` Создание Notion DB `Evaluation Log` (схема: [notion-schema.md](docs/notion-schema.md))
-- [ ] `EVAL-2` Добавление узла Notion Log в evaluate.json (перед `IF: Match?`)
-- [ ] `EVAL-3` Обновление docs/notion-schema.md
-- [ ] `EVAL-4` Добавление `NOTION_EVAL_LOG_DB_ID` в env vars
+- [x] `EVAL-1` Создание Notion DB `Evaluation Log` ✅ (схема: [notion-schema.md](docs/notion-schema.md); добавлено поле `Fingerprint` (Text) для дедупликации)
+- [x] `EVAL-2` Добавление узла Notion Log в evaluate.json (перед `IF: Match?`) ✅
+- [x] `EVAL-3` Обновление docs/notion-schema.md ✅
+- [x] `EVAL-4` Добавление `NOTION_EVAL_LOG_DB_ID` в env vars ✅
 
 #### 8.2 — Telegram Feedback (Level 2)
 - [ ] `EVAL-5` Inline-кнопки 👍/👎 на Telegram-алертах
@@ -293,8 +293,8 @@ Telegram (ручная ссылка)  ──────────────
 - [x] `P10-6` Прогнать локальные тесты: `npx promptfoo eval` ✅ (2026-05-28: 22/22 тестов проходят; assistant prefill техника; dual-format JSON parser; red_flags правила усилены с WRONG→CORRECT примерами)
 
 #### 10.3 — GitHub Actions Workflow
-- [ ] `P10-7` Создать workflow `.github/workflows/prompt-eval.yml`, запускающийся на Pull Request при изменении промптов
-- [ ] `P10-8` Настроить в GHA шаги установки окружения, запуска promptfoo-тестов и экспорта результатов в JSON
+- [x] `P10-7` Создать workflow `.github/workflows/prompt-eval.yml`, запускающийся на Pull Request при изменении промптов ✅ (2026-05-28: push/PR на `n8n/prompts/**`, `workflow_dispatch`, concurrency group)
+- [x] `P10-8` Настроить в GHA шаги установки окружения, запуска promptfoo-тестов и экспорта результатов в JSON ✅ (2026-05-28: `--providers google:gemini-3.1-flash-lite`, `GOOGLE_API_KEY` secret, artifact + Telegram failure alert)
 
 #### 10.4 — Telegram GitOps Merge Hook
 - [ ] `P10-9` Разработать воркфлоу n8n для отправки сводки тестов (F1-score, diff промпта) и кнопок аппрува в Telegram
@@ -333,18 +333,18 @@ Telegram (ручная ссылка)  ──────────────
 > ADR: [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) | Блокер: P10
 
 #### 12.1 — Contract & Interface
-- [ ] `P12-1` Финализировать ADR-016 (файл создан, нужно принять)
-- [ ] `P12-2` Создать `n8n/providers/_interface.ts` и `index.ts` (интерфейс LLMProvider + фабрика getProvider)
+- [x] `P12-1` Финализировать ADR-016 ✅ (2026-05-28: файл создан и принят, Status: Accepted)
+- [x] `P12-2` Создать `n8n/providers/_interface.ts` и `index.ts` ✅ (2026-05-28: `LLMProvider`, `getProvider()` фабрика со `makeStub()` + `NotImplementedError`, `tsc --noEmit` strict exit 0)
 
 #### 12.2 — Provider Adapters
-- [ ] `P12-3` Реализовать `n8n/providers/ollama.ts` — OllamaAdapter (Ollama HTTP API + format:{schema})
-- [ ] `P12-4` Реализовать `n8n/providers/gemini.ts` — GeminiAdapter (generateContent + responseSchema)
-- [ ] `P12-5` Реализовать `n8n/providers/anthropic.ts` — AnthropicAdapter (Messages API + output_config.format)
+- [x] `P12-3` Реализовать `n8n/providers/ollama.ts` ✅ (2026-05-28: POST `/api/chat`, `format:outputSchema`, `stream:false keep_alive:0`, 8 тестов)
+- [x] `P12-4` Реализовать `n8n/providers/gemini.ts` ✅ (2026-05-28: `system_instruction` + `generationConfig.responseSchema`, `candidates[0]...text`, 9 тестов)
+- [x] `P12-5` Реализовать `n8n/providers/anthropic.ts` ✅ (2026-05-28: `tool_use` forced, `JSON.stringify(content[0].input)`, `x-api-key`, 8 тестов)
 
 #### 12.3 — n8n & promptfoo Integration
-- [ ] `P12-6` Заменить нод «HTTP Request: Ask Ollama» на «LLM Router» Code Node в `ingest.json`
+- [x] `P12-6` Заменить нод «HTTP Request: Ask Ollama» на «LLM Router» Code Node в `ingest.json` ✅ (2026-05-28: инлайн-адаптеры ollama/gemini/anthropic, AbortController timeout, assistant prefill удалён)
 - [ ] `P12-7` Перевести `promptfooconfig.yaml` на env-driven провайдер; удалить assistant prefill из `evaluator-template.json`
-- [ ] `P12-8` Обновить `.env.example`; создать `docs/llm-provider-switching.md`
+- [x] `P12-8` Обновить `.env.example`; создать `docs/llm-provider-switching.md` ✅ (2026-05-28: LLM-блок с комментариями, `OLLAMA_HOST` legacy, `groq` удалён из env.yaml, quick-ref таблица + гайд добавления провайдера)
 
 ---
 
@@ -490,8 +490,8 @@ recruiter/
 | localtunnel subdomain занят | `--subdomain ai-recruiter` недоступен | Запустить без `--subdomain`, обновить `WEBHOOK_URL` в GitHub Secrets |
 | Cloud LLM rate limits | 429 Too Many Requests | Throttled Queue: Wait node 4s в n8n → ≤15 RPM. Fallback: переключение на второй провайдер |
 | VRAM утечка в Ollama | Память не освобождается | `"keep_alive": 0` в каждом запросе к `/api/chat` |
-| Слепая зона оценщика | Нет данных об отклонённых вакансиях | Evaluation Log (P8, ADR-012): логировать ВСЕ решения LLM в отдельную Notion DB |
-| Fingerprint поле пустое в Notion | Поле `Fingerprint` не заполняется в Evaluation Log | Добавить вручную свойство `Fingerprint` (тип **Text**) в Notion Evaluation Log DB. До этого дедупликация работает только по URL (fallback). |
+| Слепая зона оценщика | Нет данных об отклонённых вакансиях | ✅ **Решено (EVAL-1..4):** Evaluation Log в Notion создан, нод `Notion: Log to Eval Log` активен, логируются все решения LLM |
+| Fingerprint поле пустое в Notion | Поле `Fingerprint` не заполняется в Evaluation Log | ✅ **Решено:** поле `Fingerprint` (Text) добавлено в Notion DB вручную |
 
 ---
 

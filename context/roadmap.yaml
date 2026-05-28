@@ -1,24 +1,15 @@
-current_phase: P7
+current_phase: P10
 current_focus: >
   P6 6/7 done (P6-7 awaits production data).
-  DEDUP FIXED (2026-05-27): 3-уровневая семантическая дедупликация в ingest.json.
-  P10 IN PROGRESS: P10-1…P10-6 DONE (2026-05-28).
-    Key changes: assistant prefill {role:assistant, content:"{"}  in evaluator-template.json
-    forces model to start JSON directly (no preamble/markdown fences).
-    Dual-format JSON parser in all assertions and ingest.json Code:Parse Ollama Response
-    handles both full JSON {"key":val} and prefill continuation "key":val,…}.
-    red_flags prompt: WRONG→CORRECT examples, 2-4 words MAX, no commas rule reinforced.
-    Grading model: google:gemini-3.1-flash-lite (500 RPD free tier, 15 RPM).
-    Gold dataset: 22 tests, all pass 22/22. F09 assertion fixed (old indexOf pattern).
-    ingest.json: assistant prefill added to messages array + parser updated.
-  PLANNED (2026-05-28): P12 (LLM Provider Adapter Pattern, ADR-016) and
-    P13 (PE Best Practices Stack, ADR-017) added to roadmap.
-    Execution order: P10 → P12 → P13 → P11.
-    P12 unblocks: model-agnostic n8n + promptfoo (Ollama/Gemini/Anthropic switchable).
-    P13 unblocks: structured output, few-shot, CoT, retry loop, review pass.
-  Next: P10-7 (GHA prompt-eval.yml workflow) or P7 (Cloud Migration, no blockers)
-    or P12-1 (ADR-016 review+accept, then P12-2 interface implementation).
-  P8 IN PROGRESS: EVAL-2/3/4 DONE. BLOCKED on EVAL-1 (manual: create Notion Evaluation Log DB).
+  P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass + GHA prompt-eval.yml live.
+    P10-7/P10-8: .github/workflows/prompt-eval.yml created. Triggers push/PR on n8n/prompts/**.
+    Provider override in CI: --providers google:gemini-3.1-flash-lite (Ollama unavailable in GHA).
+    concurrency group prevents parallel runs on same branch.
+    Temporary override until P12-7 (env-driven provider in promptfooconfig.yaml).
+  P12-3/P12-4/P12-5 DONE (2026-05-28): OllamaAdapter, GeminiAdapter, AnthropicAdapter.
+    25/25 unit tests. Anthropic: tool_use forced (ADR-016 had output_config.format error — corrected).
+  P12-6 DONE (2026-05-28): LLM Router Code Node in ingest.json. All adapters inlined.
+  Next (P12): P12-7 (prompt-engineer) + P12-8 (devops) — parallel, disjoint write scopes.
 
 phases:
   P0:
@@ -604,15 +595,16 @@ phases:
         effort: "1-2 hours"
         tasks:
           EVAL-1:
-            status: pending
-            title: "Create Notion Database: Evaluation Log"
+            status: done
+            title: "Create Notion Evaluation Log database"
             owner_agent: n8n-specialist
-            note: >
-              New Notion DB (separate from AI Recruiter Board).
-              Fields: Title, Company, URL, Source, Match (checkbox), Reason (text),
-              Model (text), Batch ID (text), Evaluated At (date),
-              Human Verdict (select: Correct/Wrong–Should Match/Wrong–Should Reject/Pending),
-              Tags (multi-select).
+            note: >-
+              Done (manually). Notion DB 'Evaluation Log' created with all required fields
+              including Fingerprint (Text, FNV1a64 hash — added by user beyond original schema).
+              Fields: Title, Company, Fingerprint, URL, Source, Match, Reason, Score,
+              Tech Stack Match, Seniority Match, Red Flags, Model, Batch ID, Evaluated At,
+              Human Verdict, Tags.
+              NOTION_EVAL_LOG_DB_ID set in n8n env.
             estimate: "0.5d"
           EVAL-2:
             status: done
@@ -628,10 +620,10 @@ phases:
             note: "docs/notion-schema.md already contains full Evaluation Log schema (added in prior session)."
             estimate: "0.5d"
           EVAL-4:
-            status: partial
+            status: done
             title: "Add NOTION_EVAL_LOG_DB_ID to env vars"
             owner_agent: devops
-            note: "context/env.yaml: done. .env.example + .env: user adds NOTION_EVAL_LOG_DB_ID=<id> manually (see docs/eval-log-setup.md step 4-5). GitHub Secret: manual after EVAL-1."
+            note: "Done. context/env.yaml done. NOTION_EVAL_LOG_DB_ID set in n8n env and .env. GitHub Secret: manual step (done by user)."
             estimate: "0.5d"
 
       "8.2 Telegram Feedback (Level 2)":
@@ -926,16 +918,16 @@ phases:
         priority: MEDIUM
         tasks:
           P10-7:
-            status: pending
+            status: done
             title: "Create prompt-eval.yml GHA workflow"
             owner_agent: devops
-            note: "Triggers on any system prompt modification in feature branches. Runs promptfoo."
+            note: "Done 2026-05-28. .github/workflows/prompt-eval.yml created. Triggers push/PR on n8n/prompts/**, workflow_dispatch. concurrency group cancels stale runs."
             estimate: "0.5d"
           P10-8:
-            status: pending
+            status: done
             title: "Configure promptfoo test execution in GHA"
             owner_agent: devops
-            note: "Set up dependencies, local Ollama or cloud tokens, run evaluations, and export JSON results."
+            note: "Done 2026-05-28. npm ci → npx promptfoo eval --providers google:gemini-3.1-flash-lite (Ollama unavailable in GHA). GOOGLE_API_KEY via env secret. Artifact upload (if:always, retention 7d). Telegram failure notification."
             estimate: "0.5d"
 
       "10.4 Telegram GitOps Merge Hook":
@@ -1107,7 +1099,7 @@ phases:
         goal: "Define LLMProvider interface, write ADR-016, create directory structure"
         tasks:
           P12-1:
-            status: pending
+            status: done
             title: "Write ADR-016: LLM Provider Adapter Pattern"
             owner_agent: architect
             skill: "Architecture Decision Records"
@@ -1121,26 +1113,27 @@ phases:
               (Ollama/Gemini/Anthropic/Bedrock) for all 5 coupling points;
               Bedrock deferred rationale; migration path from ADR-011.
             estimate: "0.3d"
-            note: "File created 2026-05-28 as part of planning session — review and accept"
+            note: "Done 2026-05-28. ADR-016 created and accepted (Status: Accepted in file)."
 
           P12-2:
-            status: pending
+            status: done
             title: "Create n8n/providers/ directory with LLMProvider interface types"
             owner_agent: developer
             skill: "TypeScript interfaces"
             inputs: ["docs/adr/ADR-016-llm-provider-adapter-pattern.md"]
-            output: "n8n/providers/_interface.ts, n8n/providers/index.ts, n8n/providers/README.md"
+            output: "n8n/providers/_interface.ts, n8n/providers/index.ts, n8n/providers/README.md, n8n/providers/tsconfig.json"
             acceptance: >-
               LLMProvider interface: complete(req: LLMRequest): Promise<LLMResponse>;
               getProvider('unknown') throws descriptive error listing supported providers;
               TypeScript compiles without errors.
             estimate: "0.2d"
+            note: "Done 2026-05-28. SUPPORTED_PROVIDERS as const + isSupportedProvider type-guard (no any). makeStub() factory with NotImplementedError. tsc --noEmit strict exit 0."
 
       "12.2 Provider Adapters":
         goal: "Implement OllamaAdapter, GeminiAdapter, AnthropicAdapter"
         tasks:
           P12-3:
-            status: pending
+            status: done
             title: "Implement OllamaAdapter"
             owner_agent: developer
             skill: "Ollama HTTP API, TypeScript"
@@ -1150,9 +1143,10 @@ phases:
               POST to LLM_BASE_URL/api/chat; maps outputSchema to Ollama format:{schema};
               response path .message.content; unit test with mocked HTTP passes.
             estimate: "0.4d"
+            note: "Done 2026-05-28. fetch built-in Node 20; stream:false keep_alive:0; isOllamaResponseBody type-guard; 8 tests (happy path + non-2xx + invalid shape + json() reject)."
 
           P12-4:
-            status: pending
+            status: done
             title: "Implement GeminiAdapter"
             owner_agent: developer
             skill: "Gemini generateContent API, TypeScript"
@@ -1164,9 +1158,10 @@ phases:
               response path .candidates[0].content.parts[0].text;
               unit test with mocked HTTP passes.
             estimate: "0.4d"
+            note: "Done 2026-05-28. system_instruction + contents format; isGeminiResponseBody type-guard (checks SAFETY block / empty candidates); 9 tests."
 
           P12-5:
-            status: pending
+            status: done
             title: "Implement AnthropicAdapter"
             owner_agent: developer
             skill: "Anthropic Messages API, TypeScript"
@@ -1175,15 +1170,16 @@ phases:
             acceptance: >-
               POST to api.anthropic.com/v1/messages with x-api-key header;
               systemPrompt maps to system parameter (not in messages array);
-              maps outputSchema to output_config.format;
-              response path .content[0].text; unit test passes.
+              structured output via tool_use (not output_config.format — ADR-016 had error);
+              response content = JSON.stringify(content[0].input); unit test passes.
             estimate: "0.4d"
+            note: "Done 2026-05-28. Forced tool_use via tools + tool_choice={type:tool,name:structured_output}; JSON.stringify(content[0].input). ADR-016 output_config.format was incorrect — tool_use is the real Anthropic structured output API. 8 tests."
 
       "12.3 n8n and promptfoo Integration":
         goal: "Wire adapters into n8n workflow and update promptfoo config to env-driven"
         tasks:
           P12-6:
-            status: pending
+            status: done
             title: "Replace n8n Ask Ollama node with LLM Router Code Node"
             owner_agent: n8n-specialist
             skill: "n8n Code Node, provider pattern"
@@ -1194,6 +1190,11 @@ phases:
               LLM_PROVIDER=gemini: same 5 jobs produce structurally valid JSON;
               no Ollama-specific code outside the ollama adapter block.
             estimate: "0.5d"
+            note: >-
+              Done 2026-05-28. Code: Build Ollama Payload returns {systemPrompt, userMessage}.
+              Code: LLM Router inline adapters (ollama/gemini/anthropic). AbortController timeouts
+              (300s Ollama, 60s cloud). Returns {message:{content}} for downstream compat.
+              Assistant prefill removed. context/modules/n8n.yaml updated.
 
           P12-7:
             status: pending
@@ -1226,6 +1227,13 @@ phases:
               with provider-specific examples in comments;
               docs/llm-provider-switching.md has one-command switch table for each provider.
             estimate: "0.2d"
+            status: done
+            note: >-
+              Done 2026-05-28. .env.example: LLM block with per-provider comments;
+              OLLAMA_HOST marked legacy. context/env.yaml: groq removed, LLM_BASE_URL added,
+              LLM_MODEL defaults for all 3 providers, planned:true removed from LLM_API_KEY.
+              docs/llm-provider-switching.md: quick-ref table, per-provider examples,
+              rate limits, "Adding a new provider" (3 steps), secrets storage table.
 
     execution_order:
       - "P12-1 (ADR accept) + P12-2 (interface) — sequential"

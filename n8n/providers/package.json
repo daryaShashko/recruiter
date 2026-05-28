@@ -1,0 +1,23 @@
+{
+  "name": "ai-recruiter-llm-providers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LLM provider adapters for the AI Recruiter pipeline (ADR-016)",
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "jest": "^29.7.0",
+    "nock": "^13.5.4",
+    "ts-jest": "^29.2.2",
+    "typescript": "^5.5.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testTimeout": 10000
+  }
+}

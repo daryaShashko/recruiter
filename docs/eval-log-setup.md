@@ -26,6 +26,7 @@
 |---|---|---|
 | `Title` | **Title** | *(уже есть — оставь как есть)* |
 | `Company` | **Text** | — |
+| `Fingerprint` | **Text** | FNV1a64 hash `normalizeCompany::normalizeTitle` (16 hex chars) — primary dedup key |
 | `URL` | **URL** | — |
 | `Source` | **Select** | Варианты: `justjoin`, `nofluffjobs`, `linkedin`, `manual` |
 | `Match` | **Checkbox** | — |
@@ -171,15 +172,15 @@ Code: Parse Ollama Response  →  [NEW] Notion: Log to Eval Log  →  IF: Match?
 
 ## Итоговый чеклист
 
-- [ ] **Шаг 1** — Создана база `Evaluation Log` в Notion с 11 полями
-- [ ] **Шаг 2** — Интеграция "AI Recruiter" подключена к базе
-- [ ] **Шаг 3** — Скопирован ID базы данных
-- [ ] **Шаг 4** — `NOTION_EVAL_LOG_DB_ID=<id>` добавлен в `.env`
-- [ ] **Шаг 5** — Строка добавлена в `.env.example`
-- [ ] **Шаг 6a** — Плейсхолдер `YOUR_EVAL_LOG_DB_ID_HERE` заменён в `ingest.json`
-- [ ] **Шаг 6b** — Воркфлоу **Ingest Jobs** импортирован и активирован в n8n
+- [x] **Шаг 1** — Создана база `Evaluation Log` в Notion (включая поле `Fingerprint`)
+- [x] **Шаг 2** — Интеграция «AI Recruiter» подключена к базе
+- [x] **Шаг 3** — Скопирован ID базы данных
+- [x] **Шаг 4** — `NOTION_EVAL_LOG_DB_ID=<id>` добавлен в `.env`
+- [x] **Шаг 5** — Строка добавлена в `.env.example`
+- [x] **Шаг 6a** — Плейсхолдер `YOUR_EVAL_LOG_DB_ID_HERE` заменён в `ingest.json`
+- [x] **Шаг 6b** — Воркфлоу **Ingest Jobs** импортирован и активирован в n8n
 - [ ] **Шаг 7** — *(опционально)* GitHub Secret добавлен
-- [ ] **Шаг 8** — Тест: записи появляются в Notion
+- [x] **Шаг 8** — Тест: записи появляются в Notion
 
 ---
 
