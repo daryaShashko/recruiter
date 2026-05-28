@@ -942,16 +942,18 @@ phases:
         priority: MEDIUM
         tasks:
           P10-9:
-            status: pending
+            status: blocked_until_p7
             title: "Create n8n PR notification workflow"
             owner_agent: n8n-specialist
-            note: "Parses GHA promptfoo JSON. Sends F1-score/diff reports and inline keyboard to Telegram."
+            blocked_by: "P10-10 — notification alone has limited value; full flow (send + merge) requires Telegram callback_query handler which needs stable HTTPS (P7)"
+            note: "Parses GHA promptfoo JSON. Sends F1-score/diff reports and inline keyboard to Telegram. Also requires devops to add curl step to prompt-eval.yml (P10-11). Defer until P7 — implement together with P10-10 + EVAL-5/6 as one Telegram-callback wave."
             estimate: "0.5d"
           P10-10:
-            status: pending
+            status: blocked_until_p7
             title: "Build GitHub API PR Merge webhook in n8n"
             owner_agent: n8n-specialist
-            note: "Sends POST request to GitHub pulls merge API on clicking Apply Prompt."
+            blocked_by: "Telegram callback_query requires stable HTTPS webhook (one per bot token). Available after P7 CLOUD-8."
+            note: "Sends POST request to GitHub pulls merge API on clicking Apply Prompt. Same blocker as EVAL-6/7/8."
             estimate: "0.5d"
           P10-11:
             status: pending
