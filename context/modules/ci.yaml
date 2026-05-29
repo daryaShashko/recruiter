@@ -31,7 +31,7 @@ workflows:
     steps:
       - { name: "Checkout", action: "actions/checkout@v4" }
       - {
-          name: "Setup Node.js 20",
+          name: "Setup Node.js 24",
           action: "actions/setup-node@v4",
           cache: "npm",
           cache_path: "scraper/package-lock.json",
@@ -60,7 +60,6 @@ workflows:
     known_gaps:
       - "No concurrency group — parallel runs possible if manual trigger used"
       - "No unit test step"
-      - "No Telegram notification on failure"
       - "Artifact path was scraper/output/ but code writes to repo-root output/ — fixed in workflow"
 
   test.yml:
@@ -77,7 +76,7 @@ workflows:
     steps:
       - { name: "Checkout", action: "actions/checkout@v4" }
       - {
-          name: "Setup Node.js 20",
+          name: "Setup Node.js 24",
           action: "actions/setup-node@v4",
           cache: "npm",
           cache_path: "scraper/package-lock.json",
@@ -92,6 +91,53 @@ workflows:
     status: exists # Created as part of SYNC system
     purpose: "Warn on PR if context YAML files are stale after code changes"
     triggers: [pull_request]
+
+  prompt-eval.yml:
+    path: .github/workflows/prompt-eval.yml
+    status: exists
+    purpose: "Run promptfoo eval (22 gold test cases) against the evaluator prompt using Gemini"
+    triggers:
+      push:
+        paths: ["n8n/prompts/**"]
+      pull_request:
+        paths: ["n8n/prompts/**"]
+      manual: "workflow_dispatch"
+    job:
+      name: "Run promptfoo Eval"
+      runner: ubuntu-latest
+      timeout: 15 minutes
+      working_directory: scraper/
+    steps:
+      - { name: "Checkout", action: "actions/checkout@v4" }
+      - {
+          name: "Setup Node.js 24",
+          action: "actions/setup-node@v4",
+          cache: "npm",
+          cache_path: "scraper/package-lock.json",
+        }
+      - { name: "Install deps", run: "npm ci" }
+      - {
+          name: "Run promptfoo eval",
+          run: "npx promptfoo eval -c ../n8n/prompts/promptfooconfig.yaml --providers google:gemini-3.1-flash-lite --output promptfoo-results.json",
+          env: { GOOGLE_API_KEY: "${{ secrets.GOOGLE_API_KEY }}" },
+        }
+      - {
+          name: "Upload artifact",
+          action: "actions/upload-artifact@v4",
+          path: "scraper/promptfoo-results.json",
+          retention: "7 days",
+          if: always,
+        }
+      - {
+          name: "Notify Telegram on failure",
+          run: "curl Telegram API",
+          if: failure,
+        }
+    last_result: "21/22 (95.45%) — 2026-05-29"
+    notes:
+      - "Provider overridden to gemini-3.1-flash-lite via --providers flag (Ollama unavailable in GHA)"
+      - "Gold dataset: 22 cases (8 true, 9 false, 5 edge) in n8n/prompts/gold_dataset.yaml"
+      - "Grading provider: google:gemini-2.5-flash-lite (in promptfooconfig.yaml defaultTest)"
 
 pending_improvements:
   concurrency_group:
@@ -123,11 +169,12 @@ secrets_management:
   principle: "Secrets ONLY via env: ${{ secrets.NAME }} — never hardcoded"
   required_in_github:
     - WEBHOOK_URL
+    - GOOGLE_API_KEY # prompt-eval.yml grading
+    - TELEGRAM_BOT_TOKEN # failure notifications
+    - TELEGRAM_CHAT_ID # failure notifications
   not_needed_in_ci:
     - NOTION_TOKEN
-    - TELEGRAM_BOT_TOKEN
     - NOTION_DB_ID
-    - TELEGRAM_CHAT_ID
   local_dev: ".env file (gitignored)"
 
 # ============================================================

@@ -239,11 +239,18 @@ ollama:
 
 evaluator_prompt:
   file: n8n/prompts/evaluator.md
+  template_file: n8n/prompts/evaluator-template.json
   status: written
+  last_updated: "2026-05-29"
+  eval_results: "21/22 (95.45%) — promptfoo gold dataset, gemini-3.1-flash-lite"
   model_notes:
     - "llama3.1:8b responds well to explicit role-playing ('You are an expert IT recruiter')"
-    - "Must include 'respond ONLY with valid JSON' — model tends to add explanation"
-    - "Body truncation to ~1500 chars recommended (8k context window)"
+    - "CRITICAL: model must return raw JSON — explicitly prohibit markdown fences in prompt"
+    - "Rule 5 revised: Node.js-only backend → score 60-75 (Review), NOT rejected"
+    - "Node.js as PRIMARY (80%+) in mixed stack → score >= 80 if all other criteria match"
+    - "Outsourcing rule: only flag with explicit evidence, not by company name assumption"
+    - "Missing body: evaluate on title + salary only; do NOT infer company type"
+    - "reason field MUST contain specific concrete detail (tech name, salary, location)"
     - "keep_alive: 0 on every request is mandatory"
 
 notion_field_mapping:

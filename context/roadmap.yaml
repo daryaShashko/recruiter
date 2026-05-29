@@ -1,16 +1,21 @@
 current_phase: P13
 current_focus: >
   P6 6/7 done (P6-7 awaits production data).
-  P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass + GHA prompt-eval.yml live.
+  P10 DONE (2026-05-28): GHA prompt-eval.yml live. Node.js upgraded to 24 (2026-05-29).
   P12 DONE (2026-05-28): All 8 tasks complete. LLM_PROVIDER env var switches provider for n8n + promptfoo.
-  P13-1 DONE (2026-05-28): passthrough.format:{JSON Schema} in promptfooconfig.yaml (corrected from format:).
-    Ollama enforces clean JSON without markdown fences. Schema matches EvaluationResult (6 required fields).
-    Regression 22→15/22 from P12-7 resolved.
-  P13-2 DONE (2026-05-28): 26 JS assertions refactored (4 defaultTest + 22 gold_dataset).
-    p() helper removed. try { JSON.parse(output) } catch { return false } pattern throughout.
-    Multiline YAML blocks (|) required — promptfoo buildFunctionBody() adds return-prefix to single-line, breaking try{}.
-    21/22 pass; E02 transient Gemini RPM error (not code issue).
+  P13-1 DONE (2026-05-28): passthrough.format:{JSON Schema} in promptfooconfig.yaml.
+  P13-2 DONE (2026-05-28): 26 JS assertions refactored. try/catch JSON.parse pattern throughout.
   P13-3 DONE (2026-05-28): JSON.parse(raw) in Code: Parse Ollama Response; dual-format wrapper removed.
+  P13-PROMPT DONE (2026-05-29): Major evaluator-template.json fixes — eval 3/22→21/22 (95%).
+    Root cause: model wrapped JSON in markdown fences → JSON.parse() failed on 13/22 tests.
+    Fix 1: CRITICAL OUTPUT FORMAT RULE added — prohibit fences, first char must be {.
+    Fix 2: Rule 5 revised — Node.js backend-only → Review (60-75), NOT rejected.
+    Fix 3: Node.js PRIMARY in mixed stack → score >= 80.
+    Fix 4: Outsourcing rule — only flag with explicit evidence.
+    Fix 5: Missing description → evaluate title only, no company assumptions.
+    Fix 6: reason MUST contain concrete detail (tech/salary/location).
+    Dataset: T01/T06 → score 50-79, T08 → score >= 70.
+    Remaining: 1/22 (E04 edge case — no stack in title AND body → < 50 still borderline).
   Level 1 (Structured Output) COMPLETE. P13-4 (Few-Shot) UNBLOCKED.
   current_phase: P13. Next: P13-4 (prompt-engineer) → P13-5 (n8n-specialist).
   P15 ADDED (2026-05-29): Cloud LLM activation — Gemini 2.0 Flash primary + OpenRouter fallback.

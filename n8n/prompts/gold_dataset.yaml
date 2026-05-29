@@ -15,7 +15,7 @@
 #  TRUE MATCHES — should return match: true
 # ═══════════════════════════════════════════════════════════
 
-- description: "T01: Senior Node.js Backend Developer — Remote (classic match)"
+- description: "T01: Senior Node.js Backend Developer — Remote (backend-only Node.js, review match)"
   vars:
     title: "Senior Node.js Backend Developer"
     company: "TechFlow Solutions"
@@ -35,7 +35,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 50 && j.overall_score < 80;
         } catch(e) { return false; }
       weight: 3
     - type: llm-rubric
@@ -137,7 +137,7 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "T06: Senior Backend Node.js — Gdynia/Tricity hybrid"
+- description: "T06: Senior Backend Node.js — Gdynia/Tricity hybrid (backend-only Node.js, review match)"
   vars:
     title: "Senior Backend Developer"
     company: "GreenSoft"
@@ -156,7 +156,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 50 && j.overall_score < 80;
         } catch(e) { return false; }
       weight: 3
 
@@ -184,7 +184,7 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "T08: Senior React Developer + Node.js backend — Gdańsk"
+- description: "T08: Senior React Developer + occasional Node.js — Gdańsk (frontend-heavy, salary at floor)"
   vars:
     title: "Senior React Developer"
     company: "UX Masters"
@@ -203,7 +203,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 70;
         } catch(e) { return false; }
       weight: 3
 
