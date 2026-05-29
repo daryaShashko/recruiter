@@ -1,0 +1,24 @@
+# Caddyfile — HTTPS reverse proxy для n8n
+# Caddy автоматически получит и обновит Let's Encrypt сертификат
+#
+# ЗАМЕНИ: your-subdomain.duckdns.org → свой домен
+# Скопируй этот файл на сервер рядом с docker-compose.yml
+
+{
+  # Email для Let's Encrypt (получишь уведомления об истечении сертификата)
+  # Необязательно, но рекомендуется
+  # email your@email.com
+}
+
+n8n-recruiter.duckdns.org {
+  # Проксируем на n8n (имя сервиса из docker-compose network)
+  reverse_proxy n8n:5678
+
+  # Логи (опционально)
+  log {
+    output file /data/access.log {
+      roll_size 10mb
+      roll_keep 5
+    }
+  }
+}
