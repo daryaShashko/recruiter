@@ -7,10 +7,38 @@
 
 module: n8n
 path: n8n/
-type: local_workflow_engine
-run_command: "npx n8n start --tunnel"
-api_base: "http://localhost:5678"
-webhook_base: "https://{hash}.hooks.n8n.cloud"
+type: local_workflow_engine  # → migrating to cloud (P7 in_progress)
+run_command: "npx n8n start --tunnel"  # local; cloud: docker compose up -d
+api_base: "http://localhost:5678"      # local; cloud: https://n8n-recruiter.duckdns.org
+webhook_base: "https://{hash}.hooks.n8n.cloud"  # local tunnel; cloud: https://n8n-recruiter.duckdns.org
+
+cloud_deployment:  # P7 — in_progress (2026-05-29)
+  status: in_progress
+  domain: "n8n-recruiter.duckdns.org"
+  webhook_url: "https://n8n-recruiter.duckdns.org/webhook/jobs/ingest"
+  files:
+    docker_compose: "n8n/docker-compose.yml"   # postgres:16-alpine + n8n:latest + caddy:2-alpine
+    caddyfile: "n8n/Caddyfile"                 # auto Let's Encrypt TLS
+    init_script: "n8n/init-data.sh"            # PostgreSQL non-root user init
+    env_example: "n8n/.env.cloud.example"      # all required env vars documented
+    guide: "docs/cloud-migration-guide.md"     # 12-step migration guide
+  services:
+    postgres: "postgres:16-alpine (n8n internal DB only — NOT for business data per ADR-010)"
+    n8n: "docker.n8n.io/n8nio/n8n:latest (N8N_ENCRYPTION_KEY must match local)"
+    caddy: "caddy:2-alpine (reverse proxy, auto TLS via Let's Encrypt)"
+  llm: "Gemini 2.0 Flash (LLM_PROVIDER=gemini) — replaces local Ollama after migration"
+  ready:
+    - CLOUD-6: done  # DuckDNS domain registered
+    - CLOUD-7: done  # docker-compose.yml + Caddyfile + init-data.sh written
+    - ssh_key: ready  # ~/.ssh/id_ed25519
+    - encryption_key: ready  # extracted from local n8n
+    - gemini_api_key: ready  # from scraper/.env GOOGLE_API_KEY
+  pending:
+    - CLOUD-1: Oracle account (blocked by maintenance until 2026-05-29 15:30 GMT)
+    - CLOUD-2..5: VM creation + server setup
+    - CLOUD-8: Deploy stack + verify HTTPS
+    - CLOUD-9..11: Migrate workflows + switch LLM
+    - CLOUD-12..16: GitHub Secrets + E2E test + backups + monitoring
 
 workflows:
   ingest:

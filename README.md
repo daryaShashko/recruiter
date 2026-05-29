@@ -33,7 +33,7 @@ Telegram (ручная ссылка)  ──────────────
 - [x] **PHASE 4** — Notion database integration ✅
 - [x] **PHASE 5** — Telegram bot ✅
 - [ ] **PHASE 6** — E2E hardening & monitoring 🔄 (6/7 done)
-- [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
+- [~] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 🔄 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(2/16 done — CLOUD-6 ✅ CLOUD-7 ✅ — ждём Oracle аккаунт)*
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
 - [~] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(8/13 done — P10-1…P10-8 ✅)*
