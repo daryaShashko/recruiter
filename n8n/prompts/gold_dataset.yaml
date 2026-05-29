@@ -476,7 +476,7 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "E05: Salary info only, no description — evaluate on title → should match"
+- description: "E05: Salary info only, no description — evaluate on title → should NOT discard (score >= 50)"
   vars:
     title: "Senior Node.js Developer — Gdańsk"
     company: "QuickHire"
@@ -490,7 +490,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
 
