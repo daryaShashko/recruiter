@@ -33,7 +33,7 @@ tech_stack:
     testing: jest 29 + ts-jest 29
   pipeline:
     workflow_engine: "n8n (local; planned: Oracle Cloud Always Free — ADR-010)"
-    llm: "Ollama llama3.1:latest (local); planned: Groq/Gemini free-tier API (ADR-011)"
+    llm: "Ollama llama3.1:latest (local, default); Gemini / Anthropic via adapter pattern (ADR-016, P12 done)"
   storage:
     primary_database: Notion API (kanban board + dedup source)
     evaluation_log: "Notion Evaluation Log (planned — ADR-012)"
@@ -71,9 +71,10 @@ architecture:
       dedup_levels: 3
       dedup_note: "ADR-015 — semantic fingerprint dedup, cross-platform capable"
     - step: 4
-      from: n8n HTTP Request
-      action: "Evaluate each job with LLM (local Ollama or cloud Groq/Gemini)"
-      output: "{ match: boolean, reason: string, url: string }"
+      from: n8n Code: LLM Router
+      action: "Evaluate each job with LLM (Ollama / Gemini / Anthropic — env-driven via ADR-016)"
+      output: "{ overall_score, tech_stack_match, seniority_match, red_flags, reason, url }"
+      note: "match derived in Code: Parse Ollama Response as overall_score >= 50"
     - step: 4.5
       from: n8n Notion Create Page (planned — ADR-012)
       action: "Log evaluation result (match AND reject) to Evaluation Log DB"
@@ -83,7 +84,7 @@ architecture:
       action: Save to Notion Board + send Telegram alert
       output: "Notion page created, Telegram message sent"
 
-current_phase: P7 # P0–P5 done, P6 in_progress (6/7), P7+P8 proposed
+current_phase: P13 # P0–P12 done; P13 in_progress (3/12); P6 6/7 (awaiting production data)
 # See context/roadmap.yaml for detailed task status
 
 structure:
@@ -91,7 +92,7 @@ structure:
   n8n/: "n8n workflow JSONs + LLM prompts"
   scripts/: "Local run entrypoints (run-local preflight + health summary)"
   docs/: "Architecture diagrams, schemas, ADRs, agent skill files"
-  docs/adr/: "Architecture Decision Records (ADR-001 through ADR-016)"
+  docs/adr/: "Architecture Decision Records (ADR-001 through ADR-017)"
   docs/agents/: "AI agent system prompt files (8 agents)"
   context/: "THIS — project context manifests (YAML)"
   .github/: "GitHub Actions CI/CD workflows"

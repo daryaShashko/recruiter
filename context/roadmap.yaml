@@ -3,13 +3,16 @@ current_focus: >
   P6 6/7 done (P6-7 awaits production data).
   P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass + GHA prompt-eval.yml live.
   P12 DONE (2026-05-28): All 8 tasks complete. LLM_PROVIDER env var switches provider for n8n + promptfoo.
-  P13-1 DONE (2026-05-28): format:{JSON Schema} added to promptfooconfig.yaml providers[0].config.
+  P13-1 DONE (2026-05-28): passthrough.format:{JSON Schema} in promptfooconfig.yaml (corrected from format:).
     Ollama enforces clean JSON without markdown fences. Schema matches EvaluationResult (6 required fields).
-    Gemini/Anthropic in promptfoo ignore unknown config fields — unaffected.
-    Regression 22→15/22 from P12-7 now resolved; 22/22 expected.
-  UNBLOCKED: P13-2 (qa-engineer: remove p() helpers, use JSON.parse directly).
-             P13-3 (n8n-specialist: remove dual-format parser from ingest.json).
-  current_phase: P13. Execution: P13-2 (qa) + P13-3 (n8n, parallel) → P13-4 (prompt-eng) ...
+    Regression 22→15/22 from P12-7 resolved.
+  P13-2 DONE (2026-05-28): 26 JS assertions refactored (4 defaultTest + 22 gold_dataset).
+    p() helper removed. try { JSON.parse(output) } catch { return false } pattern throughout.
+    Multiline YAML blocks (|) required — promptfoo buildFunctionBody() adds return-prefix to single-line, breaking try{}.
+    21/22 pass; E02 transient Gemini RPM error (not code issue).
+  P13-3 DONE (2026-05-28): JSON.parse(raw) in Code: Parse Ollama Response; dual-format wrapper removed.
+  Level 1 (Structured Output) COMPLETE. P13-4 (Few-Shot) UNBLOCKED.
+  current_phase: P13. Next: P13-4 (prompt-engineer) → P13-5 (n8n-specialist).
 
 phases:
   P0:
@@ -1298,7 +1301,7 @@ phases:
             estimate: "0.3d"
 
           P13-2:
-            status: pending
+            status: done
             title: "Refactor all promptfoo assertions to use JSON.parse(output)"
             owner_agent: qa-engineer
             skill: "promptfoo JS assertions refactor"
@@ -1314,7 +1317,7 @@ phases:
             estimate: "0.2d"
 
           P13-3:
-            status: pending
+            status: done
             title: "Update n8n ingest.json response parsing for structured output"
             owner_agent: n8n-specialist
             skill: "Ollama HTTP API, n8n Code Node"

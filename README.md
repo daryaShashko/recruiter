@@ -354,8 +354,8 @@ Telegram (ручная ссылка)  ──────────────
 
 #### 13.1 — L1: Structured Output (JSON Schema)
 - [x] `P13-1` Переключить OllamaAdapter на `format:{schema_object}` ✅ (2026-05-28: JSON Schema в `providers[0].config.format`; регрессия 22→15/22 устранена)
-- [ ] `P13-2` Рефакторинг: удалить `p()` хелпер из всех ассертов, заменить на `JSON.parse(output)`
-- [ ] `P13-3` Обновить парсер в `ingest.json` (удалить dual-format парсер, оставить прямой `JSON.parse`)
+- [x] `P13-2` Рефакторинг: удалить `p()` хелпер из всех ассертов, заменить на `JSON.parse(output)` ✅ (2026-05-28: 26 assertions refactored; `format:→passthrough.format:` bugfix в promptfooconfig.yaml; 21/22 pass, 1 transient Gemini RPM error)
+- [x] `P13-3` Обновить парсер в `ingest.json` (удалить dual-format парсер, оставить прямой `JSON.parse`) ✅ (2026-05-28: `JSON.parse(raw)` в ноде `Code: Parse Ollama Response`; dual-format wrapper удалён)
 
 #### 13.2 — L2: Few-Shot Prompting
 - [ ] `P13-4` Добавить 3 примера (хорошее совпадение, критический отказ, граничный кейс) в `evaluator.md`

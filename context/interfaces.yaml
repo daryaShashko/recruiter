@@ -74,24 +74,46 @@ interfaces:
 
   EvaluationResult:
     file: scraper/src/types.ts
-    description: "LLM response from Ollama — parsed in n8n Code node"
-    fields:
-      match:
-        type: boolean
-        required: true
+    description: "LLM response — parsed in n8n Code: Parse Ollama Response. Multidimensional scoring since Phase 3."
+    note: "'match' is NOT returned by LLM — it is derived in Code: Parse Ollama Response as overall_score >= 50"
+    llm_output_schema:
+      overall_score: { type: number, range: "0–100", required: true }
+      tech_stack_match: { type: number, range: "0–100", required: true }
+      seniority_match: { type: number, range: "0–100", required: true }
+      red_flags:
+        {
+          type: "string[]",
+          required: true,
+          note: "flat array, 1–6 words per item, no commas, no markdown",
+        }
       reason:
-        type: string
-        required: true
-        constraint: "ONE sentence only"
+        { type: string, required: true, constraint: "ONE sentence in English" }
       url:
-        type: string
-        required: true
-        note: "Echoed from the user message — used for traceability"
+        {
+          type: string,
+          required: true,
+          note: "echoed from user message for traceability",
+        }
+    n8n_output_fields:
+      note: "Code: Parse Ollama Response merges LLM output with job fields and adds derived fields"
+      match: { type: boolean, derived: "overall_score >= 50" }
+      overall_score: { type: number }
+      tech_stack_match: { type: number }
+      seniority_match: { type: number }
+      red_flags: { type: "string[]", note: "normalized via mapToStandardTag()" }
+      reason: { type: string }
+      url: { type: string }
+      fingerprint: { type: string }
+    routing:
+      gte_80: "Telegram alert + Notion Board (Hot Match)"
+      50_to_79: "Notion Board only (Review)"
+      lt_50: "Evaluation Log only (Discard)"
     critical_notes:
-      - "LLM MUST return ONLY this JSON — no markdown, no explanation outside JSON"
-      - "Parse from: response.message.content (Ollama) or response.choices[0].message.content (Groq/Gemini)"
-      - "Add try/catch in n8n Code node — LLM may wrap in markdown code blocks"
-      - "If parsing fails, default to { match: false, reason: 'Parse error', url: $json.url }"
+      - "LLM MUST return ONLY the 6-field JSON — no markdown, no explanation outside JSON"
+      - "Structured output enforced via format:{JSON Schema} in Ollama (P13-1; passthrough.format: in promptfoo)"
+      - "Parse: JSON.parse(raw) directly — no dual-format parser (removed in P13-3)"
+      - "If parsing fails: fallback to overall_score=0, match=false, red_flags=['Pipeline: Parse Error']"
+      - "Heuristic overrides in n8n: location/agency/crypto/gambling checks may force overall_score=0 post-parse"
 
   # ── ADR-012: Evaluation Log (planned, Phase 8) ───────────
   EvaluationLogRecord:

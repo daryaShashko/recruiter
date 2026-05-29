@@ -20,7 +20,7 @@ workflows:
     webhook_path: "/webhook/jobs/ingest"
     method: POST
     trigger: "scraper/src/sender.ts POST request"
-    last_updated: "2026-05-24"
+    last_updated: "2026-05-28"
     architecture_note: >
       SINGLE MONOLITHIC WORKFLOW — contains the full pipeline end-to-end.
       No sub-workflows (evaluate.json and notify.json are deprecated/replaced).

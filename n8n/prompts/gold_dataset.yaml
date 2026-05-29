@@ -32,16 +32,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
     - type: llm-rubric
       value: "Reasoning must mention Node.js or TypeScript as the primary stack."
@@ -64,16 +59,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T03: Senior Full-Stack React + Node.js — fully remote"
@@ -92,16 +82,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T04: Principal Engineer — JavaScript platform, remote"
@@ -121,16 +106,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T05: Staff Engineer — TypeScript platform, EU remote"
@@ -150,16 +130,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T06: Senior Backend Node.js — Gdynia/Tricity hybrid"
@@ -178,16 +153,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T07: Solution Architect Node.js/React — remote"
@@ -207,16 +177,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "T08: Senior React Developer + Node.js backend — Gdańsk"
@@ -235,16 +200,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 # ═══════════════════════════════════════════════════════════
@@ -267,16 +227,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F02: Senior Java/Spring Boot — wrong primary stack"
@@ -295,16 +250,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
     - type: llm-rubric
       value: "Reasoning must identify Java as the primary stack, not JavaScript/Node.js."
@@ -325,16 +275,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F04: Senior PHP/Laravel — wrong stack"
@@ -352,16 +297,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F05: Senior Node.js Warsaw on-site only — wrong location"
@@ -379,16 +319,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F06: Senior Go Backend — wrong primary stack"
@@ -407,16 +342,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F07: Spam / newsletter confirmation — not a job posting"
@@ -435,16 +365,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 # ═══════════════════════════════════════════════════════════
@@ -468,16 +393,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
     - type: llm-rubric
       value: "Reasoning must acknowledge Node.js as the primary stack despite Java legacy presence."
@@ -500,16 +420,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
     - type: llm-rubric
       value: "Reasoning must identify Java as the primary stack, not Node.js."
@@ -531,16 +446,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "E04: No tech stack mentioned — cannot determine stack → should NOT match"
@@ -559,16 +469,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "E05: Salary info only, no description — evaluate on title → should match"
@@ -582,16 +487,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score >= 80;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F08: Senior Node.js at Crypto Startup — restricted industry → should NOT match"
@@ -611,16 +511,11 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        return j.overall_score < 50;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
       weight: 3
 
 - description: "F09: Senior Frontend Developer — Katowice hybrid, Angular stack → should NOT match"
@@ -636,17 +531,12 @@
   assert:
     - type: javascript
       value: |
-        function p(o) {
-          const end = o.lastIndexOf('}');
-          if (end === -1) return null;
-          const s = o.indexOf('{');
-          try { return JSON.parse(s !== -1 ? o.substring(s, end+1) : '{' + o.substring(0, end+1)); }
-          catch(e) { return null; }
-        }
-        const j = p(output);
-        if (!j) return false;
-        const isLow = j.overall_score < 50;
-        const hasRedFlags = Array.isArray(j.red_flags) && j.red_flags.length > 0;
-        const hasLocation = j.red_flags.some(x => x.toLowerCase().includes('location') || x.toLowerCase().includes('katowice') || x.toLowerCase().includes('mismatch'));
-        return isLow && hasRedFlags && hasLocation;
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          const isLow = j.overall_score < 50;
+          const hasRedFlags = Array.isArray(j.red_flags) && j.red_flags.length > 0;
+          const hasLocation = j.red_flags.some(x => x.toLowerCase().includes('location') || x.toLowerCase().includes('katowice') || x.toLowerCase().includes('mismatch'));
+          return isLow && hasRedFlags && hasLocation;
+        } catch(e) { return false; }
       weight: 3

@@ -555,7 +555,7 @@ decisions:
 
   ADR-017:
     title: "Prompt Engineering Best Practices — structured output, few-shot, CoT, retry loop"
-    status: proposed
+    status: in_progress # L1 complete (P13-1/2/3); L2–L6 pending
     date: "2026-05-28"
     depends_on: "ADR-016 (provider adapters implement per-provider structured output)"
     context: >
@@ -593,9 +593,22 @@ decisions:
         - "L5 review pass requires GOOGLE_API_KEY — free tier 15 RPM, sequential only"
     implementation: >
       Phase P13 tasks: P13-1 through P13-12 (see context/roadmap.yaml P13).
-      Updated: n8n/prompts/evaluator.md, evaluator-template.json, promptfooconfig.yaml,
-               gold_dataset.yaml (+5 semantic cases), n8n/workflows/ingest.json
-      New: docs/prompt-engineering-sop.md
+      L1 COMPLETE (2026-05-28):
+        P13-1: passthrough.format:{JSON Schema} in promptfooconfig.yaml providers[0].config.
+               Key finding: promptfoo requires passthrough.format: (NOT config.format:) to pass
+               the field to Ollama API top-level; config.format: silently lands in options{} and
+               is ignored — model falls back to free-form text with markdown fences.
+        P13-2: 26 JS assertions refactored (4 defaultTest + 22 gold_dataset).
+               p() helper removed everywhere. try { JSON.parse(output) } catch { return false }.
+               Multiline YAML (|) required — promptfoo buildFunctionBody() prepends 'return'
+               to single-line values, producing 'return try {}' SyntaxError.
+        P13-3: JSON.parse(raw) in Code: Parse Ollama Response (ingest.json).
+               Dual-format parser (lastIndexOf/indexOf/substring) removed.
+      Pending: L2 (P13-4/5), L3 (P13-6/7), L4 (P13-8/9), L5 (P13-10), L6 (P13-11/12).
+      Updated: n8n/prompts/promptfooconfig.yaml, n8n/prompts/gold_dataset.yaml,
+               n8n/workflows/ingest.json
+      Planned: n8n/prompts/evaluator.md (+few-shot P13-4), evaluator-template.json (+CoT P13-6),
+               gold_dataset.yaml (+5 semantic cases P13-12), docs/prompt-engineering-sop.md (P13-11)
 
   ADR-018:
     title: "Manual Job URL Checker — Telegram /check command with LLM field extraction"

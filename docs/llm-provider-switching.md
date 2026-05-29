@@ -36,6 +36,20 @@ LLM_API_KEY=
 LLM_PROVIDER=ollama npm run eval
 ```
 
+> **Promptfoo + Ollama structured output:**
+> Use `passthrough.format:` in `promptfooconfig.yaml` (NOT `config.format:`).
+> `config.format:` silently lands in the Ollama `options{}` object and is ignored;
+> `passthrough.format:` places the field at the Ollama API top level, enabling
+> grammar-constrained JSON output. Without this, the model returns markdown fences.
+> ```yaml
+> providers:
+>   - id: "ollama:chat:llama3.1:latest"
+>     config:
+>       temperature: 0
+>     passthrough:
+>       format: { type: object, required: [...], properties: { ... } }
+> ```
+
 ---
 
 ### Gemini (Google AI Studio)
