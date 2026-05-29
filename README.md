@@ -36,10 +36,12 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] **PHASE 7** — Cloud Migration: Oracle Cloud + Cloud LLM 📋 [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) *(Может выполняться параллельно с P8)*
 - [ ] **PHASE 8** — Evaluator Observability & Feedback Loop 📋 [ADR-012](docs/adr/ADR-012-evaluator-observability.md) *(Может выполняться параллельно с P7)*
 - [ ] **PHASE 9** — Incremental Improvements & POC Backlog 📋
-- [ ] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(6/13 done — P10-1…P10-6 ✅)*
+- [~] **PHASE 10** — Lightweight Prompt Evaluation & CI/CD Pipeline (Promptfoo) 🔄 [ADR-013](docs/adr/ADR-013-prompt-evaluation-pipeline.md) *(8/13 done — P10-1…P10-8 ✅)*
 - [ ] **PHASE 11** — Multidimensional Scoring & Intelligent Routing 📋 *(blocked by P8+P10)*
-- [ ] **PHASE 12** — LLM Provider Adapter Pattern 📋 [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) *(blocked by P10)*
-- [~] **PHASE 13** — Prompt Engineering Best Practices Stack 🔄 [ADR-017] *(1/12 done)*
+- [x] **PHASE 12** — LLM Provider Adapter Pattern ✅ [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md) *(завершена 2026-05-28)*
+- [~] **PHASE 13** — Prompt Engineering Best Practices Stack 🔄 [ADR-017](docs/adr/ADR-017-prompt-engineering-stack.md) *(3/12 done — P13-1…P13-3 ✅)*
+- [ ] **PHASE 14** — Manual Job URL Checker 📋 [ADR-018](docs/adr/ADR-018-manual-url-checker.md) *(blocked by P8)*
+- [ ] **PHASE 15** — Cloud LLM: Gemini 2.0 Flash Primary + OpenRouter Fallback 📋 *(depends on P12 ✅ — no blockers)*
 
 ---
 
@@ -394,6 +396,24 @@ Telegram (ручная ссылка)  ──────────────
 - [ ] `P14-6` Safe JSON fallback при ошибке парсинга LLM extraction (по образцу evaluator)
 - [ ] `P14-7` QA тест-сьют: 5 сценариев (happy path, HTTP 403, SPA, invalid JSON, empty tech_stack)
 
+### PHASE 15 — Cloud LLM: Gemini 2.0 Flash Primary + OpenRouter Fallback 📋
+> Цель: активировать Gemini 2.0 Flash как основной LLM (GeminiAdapter уже готов, P12 done), заменить локальную Ollama-зависимость, добавить OpenRouter как fallback при превышении лимита 429.
+> ADR: [ADR-016](docs/adr/ADR-016-llm-provider-adapter-pattern.md), [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md) | Разблокирует P7 Oracle Cloud ARM
+> Предупреждение: бесплатные модели OpenRouter не имеют SLA — проверяйте `openrouter.ai/models` ежемесячно.
+
+#### 15.1 — Gemini Activation (MVP)
+- [ ] `P15-1` Прогнать promptfoo eval с `gemini-2.0-flash` — зафиксировать pass rate + latency в `docs/pe-tuning-log.md`
+- [ ] `P15-2` Smoke-test в n8n: 5 реальных вакансий через Gemini end-to-end — Notion страницы созданы
+- [ ] `P15-3` Обновить `.env.example` + `docs/llm-provider-switching.md`: Gemini как Production Recommended, лимиты (15 RPM/1500 RPD/1M TPM), ссылка AI Studio
+
+#### 15.2 — OpenRouter Fallback
+- [ ] `P15-4` Реализовать `n8n/providers/openrouter.ts` — OpenAI-compatible API, type-guard, >= 6 unit tests
+- [ ] `P15-5` Добавить fallback-цепочку в LLM Router Code Node: Gemini 429/timeout → OpenRouter; `provider_used` field в `$json`
+- [ ] `P15-6` Документация: `OPENROUTER_API_KEY` в `.env.example`; ASCII-схема цепочки + SLA-предупреждение в `docs/llm-provider-switching.md`
+
+#### 15.3 — Observability *(blocked by P8)*
+- [ ] `P15-7` Логировать `provider_used` (gemini|openrouter|ollama) в Notion Evaluation Log
+
 ---
 
 ## Структура репозитория
@@ -465,15 +485,18 @@ recruiter/
 | `NOTION_DB_ID` | n8n | ID базы данных в Notion *(P4)* |
 | `TELEGRAM_BOT_TOKEN` | n8n | Токен Telegram Bot *(P5)* |
 | `TELEGRAM_CHAT_ID` | n8n | ID чата для алертов *(P5)* |
-| `OLLAMA_HOST` | n8n | URL Ollama (default: `http://localhost:11434`) |
+| `OLLAMA_HOST` | n8n | URL Ollama (default: `http://localhost:11434`) — legacy, заменён `LLM_BASE_URL` (ADR-016) |
+| `LLM_PROVIDER` | n8n | Провайдер LLM: `gemini` (primary) / `ollama` / `anthropic` — реализован P12 |
+| `LLM_API_KEY` | n8n | API-ключ для Gemini или Anthropic *(только при LLM_PROVIDER != ollama)* — P12 |
+| `LLM_MODEL` | n8n | Модель LLM (default: `gemini-2.0-flash` / `llama3.1:latest` / `claude-haiku-4-5`) — P12 |
+| `LLM_BASE_URL` | n8n | Base URL для Ollama при нестандартном хосте (default: `http://localhost:11434`) — P12 |
+| `OPENROUTER_API_KEY` | n8n | API-ключ OpenRouter fallback (free, sk-or-v1-...) — P15 |
+| `OPENROUTER_MODEL` | n8n | Модель fallback (default: `deepseek/deepseek-chat-v3-0324:free`) — P15 |
 
 **Планируемые (P7/P8):**
 
 | Переменная | Где используется | Описание |
 |---|---|---|
-| `LLM_PROVIDER` | n8n | Провайдер LLM: `ollama` / `groq` / `gemini` (default: `ollama`) |
-| `LLM_API_KEY` | n8n | API-ключ для Groq или Gemini *(только при LLM_PROVIDER != ollama)* |
-| `LLM_MODEL` | n8n | Модель LLM (зависит от провайдера) |
 | `NOTION_EVAL_LOG_DB_ID` | n8n | ID Notion DB Evaluation Log *(P8)* |
 | `N8N_DB_TYPE` | n8n docker | `sqlite` или `postgresdb` *(P7, Oracle Cloud)* |
 

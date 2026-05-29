@@ -13,6 +13,8 @@ current_focus: >
   P13-3 DONE (2026-05-28): JSON.parse(raw) in Code: Parse Ollama Response; dual-format wrapper removed.
   Level 1 (Structured Output) COMPLETE. P13-4 (Few-Shot) UNBLOCKED.
   current_phase: P13. Next: P13-4 (prompt-engineer) → P13-5 (n8n-specialist).
+  P15 ADDED (2026-05-29): Cloud LLM activation — Gemini 2.0 Flash primary + OpenRouter fallback.
+    Tasks P15-1…P15-7. Depends on P12 (done). No blockers. Unblocks P7 Oracle Cloud ARM deployment.
 
 phases:
   P0:
@@ -1644,6 +1646,162 @@ phases:
       - "On fetch error or parse error: Telegram warns, workflow does not crash"
       - "All 5 QA scenarios documented and passing"
       - "context/modules/n8n.yaml updated: telegram_trigger.json status → created"
+
+  P15:
+    name: "Gemini 2.0 Flash Primary + OpenRouter Fallback"
+    status: pending
+    goal: >
+      Activate Gemini 2.0 Flash as the primary LLM provider (replacing local Ollama dependency),
+      implement OpenRouter as rate-limit fallback, and document the cloud-first provider chain.
+      Unblocks Oracle Cloud migration (P7) which requires cloud LLM due to no GPU on ARM.
+    blocked_by: ["P12"]
+    depends_on: ["P12"]
+    adrs: ["ADR-016", "ADR-011"]
+    note: >
+      GeminiAdapter (n8n/providers/gemini.ts) already implemented in P12-4.
+      LLM Router Code Node already supports LLM_PROVIDER env switching (P12-6).
+      MVP is activation + validation, not new infrastructure.
+      OpenRouter uses OpenAI-compatible API — simpler adapter than Gemini.
+      WARNING: OpenRouter free model availability has no SLA; treat as best-effort fallback only.
+
+    sub_phases:
+      "15.1 Gemini Activation (MVP)":
+        goal: "Validate and activate Gemini 2.0 Flash as primary provider; replace Ollama as default"
+        tasks:
+          P15-1:
+            status: pending
+            title: "Run promptfoo eval with gemini-2.0-flash and document results"
+            owner_agent: qa-engineer
+            skill: "promptfoo multi-provider eval, Gemini API"
+            inputs:
+              - "n8n/providers/gemini.ts"
+              - "n8n/prompts/promptfooconfig.yaml"
+              - "n8n/prompts/gold_dataset.yaml"
+            output: "docs/pe-tuning-log.md: gemini-2.0-flash baseline eval results (pass rate, latency)"
+            acceptance: >
+              LLM_PROVIDER=gemini LLM_MODEL=gemini-2.0-flash npm run eval produces >= 20/22 pass rate;
+              all assertions use JSON.parse(output) without parser helpers;
+              avg latency per job documented in pe-tuning-log.md.
+            estimate: "0.3d"
+
+          P15-2:
+            status: pending
+            title: "Smoke-test Gemini 2.0 Flash as primary in local n8n flow"
+            owner_agent: n8n-specialist
+            skill: "n8n manual execution, Gemini Flash API"
+            inputs:
+              - "n8n/workflows/ingest.json"
+              - "n8n/providers/gemini.ts"
+            output: "5 real job evaluations processed end-to-end via Gemini; Notion pages created"
+            acceptance: >
+              LLM_PROVIDER=gemini LLM_MODEL=gemini-2.0-flash set in n8n env;
+              5 jobs from JustJoin/NoFluffJobs evaluated without parse errors;
+              Notion pages created with all required fields (overall_score, reason, red_flags);
+              zero fallback to Ollama during the test run.
+            estimate: "0.2d"
+
+          P15-3:
+            status: pending
+            title: "Update .env.example and llm-provider-switching.md for Gemini-as-default"
+            owner_agent: devops
+            skill: "Environment configuration, documentation"
+            inputs:
+              - ".env.example"
+              - "docs/llm-provider-switching.md"
+            output: "docs/llm-provider-switching.md: 'Production Recommended' section; .env.example default provider updated"
+            acceptance: >
+              .env.example has LLM_PROVIDER=gemini as primary recommendation with comment;
+              LLM_MODEL default for gemini is gemini-2.0-flash (not gemini-2.5-flash);
+              docs/llm-provider-switching.md has 'Production Recommended Setup' section
+              listing: GOOGLE_API_KEY source (AI Studio link), rate limits (15 RPM/1500 RPD/1M TPM),
+              and fallback configuration reference.
+            estimate: "0.2d"
+
+      "15.2 OpenRouter Fallback":
+        goal: "Implement OpenRouter adapter and wire 429/quota fallback into LLM Router"
+        tasks:
+          P15-4:
+            status: pending
+            title: "Implement OpenRouterAdapter (n8n/providers/openrouter.ts)"
+            owner_agent: developer
+            skill: "OpenAI-compatible HTTP API, TypeScript"
+            inputs:
+              - "n8n/providers/_interface.ts"
+              - "n8n/providers/gemini.ts"
+            output: "n8n/providers/openrouter.ts implementing LLMProvider; index.ts updated"
+            acceptance: >
+              POST to https://openrouter.ai/api/v1/chat/completions with Authorization: Bearer header;
+              default model configurable via OPENROUTER_MODEL env (default: deepseek/deepseek-chat-v3-0324:free);
+              response path: .choices[0].message.content;
+              isOpenRouterResponseBody type-guard (no any);
+              unit tests: happy path + non-2xx + invalid shape + json() reject (>= 6 tests);
+              TypeScript compiles with --noEmit strict exit 0.
+            estimate: "0.4d"
+
+          P15-5:
+            status: pending
+            title: "Add Gemini to OpenRouter fallback chain in n8n LLM Router Code Node"
+            owner_agent: n8n-specialist
+            skill: "n8n Code Node error handling, provider fallback pattern"
+            inputs:
+              - "n8n/workflows/ingest.json"
+              - "n8n/providers/openrouter.ts"
+            output: "ingest.json LLM Router: try Gemini on 429/503/timeout catch retry with OpenRouter"
+            acceptance: >
+              When Gemini returns HTTP 429 or throws timeout: request automatically retried via OpenRouter;
+              $json.provider_used field set to 'gemini' or 'openrouter' on each evaluation;
+              manual test simulating Gemini 429 (wrong API key or forced error) succeeds via fallback;
+              on OpenRouter failure too: job logged with status='llm_unavailable', workflow does NOT crash.
+            estimate: "0.5d"
+
+          P15-6:
+            status: pending
+            title: "Document provider chain: OPENROUTER_API_KEY setup and fallback diagram"
+            owner_agent: devops
+            skill: "Environment configuration, documentation"
+            inputs:
+              - ".env.example"
+              - "docs/llm-provider-switching.md"
+            output: ".env.example: OPENROUTER_API_KEY added; docs: fallback chain diagram"
+            acceptance: >
+              .env.example contains OPENROUTER_API_KEY with comment 'Required for fallback; free at openrouter.ai';
+              OPENROUTER_MODEL with default deepseek/deepseek-chat-v3-0324:free and SLA warning comment;
+              docs/llm-provider-switching.md: ASCII chain diagram gemini to openrouter to error log;
+              warning note: 'OpenRouter free models change without notice; verify at openrouter.ai/models monthly'.
+            estimate: "0.2d"
+
+      "15.3 Observability":
+        goal: "Track which provider was used per evaluation for quality analytics"
+        tasks:
+          P15-7:
+            status: pending
+            title: "Log provider_used field to Notion Evaluation Log"
+            owner_agent: n8n-specialist
+            skill: "Notion API property update, n8n"
+            inputs:
+              - "n8n/workflows/ingest.json"
+            output: "Notion Evaluation Log pages include provider_used select property (gemini|openrouter|ollama)"
+            acceptance: >
+              After 5 evaluations, Notion Evaluation Log records show provider_used populated;
+              Notion select field has 3 options: gemini, openrouter, ollama;
+              provider_used correctly reflects actual provider used (not default).
+            estimate: "0.2d"
+            blocked_by: ["P8"]
+
+    execution_order:
+      - "P15-1 → P15-2 → P15-3 (MVP activation — sequential)"
+      - "P15-4 → P15-5 → P15-6 (fallback chain — sequential, can run in parallel with 15.1)"
+      - "P15-7 (observability — blocked by P8, start planning in parallel)"
+    primary_risks:
+      - "Gemini 2.0 Flash free limit is 15 RPM: if scraper sends 200 jobs at once n8n must process sequentially. Verify LLM Router is not parallelised in ingest.json."
+      - "OpenRouter free model deepseek/deepseek-chat-v3-0324:free may be deprecated. OPENROUTER_MODEL env allows hot-swap without code change."
+      - "gemini-2.0-flash JSON Schema enforcement differs from gemini-2.5-flash used in P12-7 promptfoo test. Run P15-1 eval specifically against 2.0-flash before activating."
+    definition_of_done:
+      - "LLM_PROVIDER=gemini LLM_MODEL=gemini-2.0-flash produces >= 20/22 on promptfoo gold dataset"
+      - "5 real n8n job evaluations complete via Gemini without parse errors"
+      - "Gemini 429 fallback to OpenRouter verified via manual failover test"
+      - "GOOGLE_API_KEY and OPENROUTER_API_KEY documented in .env.example"
+      - "P15 unblocks P7 Oracle Cloud ARM deployment (no local Ollama required)"
 
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"

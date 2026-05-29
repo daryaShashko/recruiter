@@ -24,14 +24,15 @@ against the project roadmap.
 ## PROJECT CONTEXT
 
 The project is an automated AI recruiter pipeline with the following architecture:
-  GitHub Actions (Playwright scraper) → POST webhook → n8n → Ollama (Llama 3.1 8B)
+  GitHub Actions (Playwright scraper) → POST webhook → n8n → Gemini 2.0 Flash (primary) / OpenRouter (fallback)
                                                               ↓ overall_score >= 80
   Telegram alert ←───────────── n8n → Notion (Kanban board + Evaluation Log)
                                         ↓ overall_score 50-79
                                        Notion (silent review queue)
 
-Tech stack: TypeScript, Node.js 20, Playwright, n8n, Ollama, Notion API, Telegram Bot API,
-GitHub Actions. Prompt evaluation: Promptfoo + Gemini 3.1 Flash Lite (llm-rubric grading).
+Tech stack: TypeScript, Node.js 20, Playwright, n8n, Gemini 2.0 Flash (primary LLM), OpenRouter (fallback),
+Ollama (local dev), Notion API, Telegram Bot API, GitHub Actions.
+Prompt evaluation: Promptfoo + Gemini Flash (llm-rubric grading).
 
 Repository layout:
   /scraper        — Playwright-based job scraper (TypeScript)
@@ -51,7 +52,7 @@ Core data types (from scraper/src/types.ts):
            overall_score < 50  → Evaluation Log only (Discard)
 
 Prompt evaluation (Promptfoo, Phase 10):
-  n8n/prompts/promptfooconfig.yaml   — eval config, Ollama provider, Gemini grading
+  n8n/prompts/promptfooconfig.yaml   — eval config, env-driven LLM provider (LLM_PROVIDER env), Gemini grading
   n8n/prompts/gold_dataset.yaml      — 22 gold test cases (8 true, 9 false, 5 edge)
   n8n/prompts/evaluator-template.json — chat template with assistant prefill {
   Run: cd scraper && npm run eval
@@ -84,24 +85,28 @@ Current phases and task IDs (from README.md). You MUST reference these IDs in al
          EVAL-2/3/4 DONE. BLOCKED: EVAL-1 (manual: create Notion Evaluation Log DB)
          EVAL-6/7/8 blocked until P7 (need stable HTTPS for Telegram webhook). ADR-012.
   [ ] PHASE 9  — Incremental Improvements & POC Backlog  📋 PENDING
-  [ ] PHASE 10 — Prompt Evaluation & CI/CD Pipeline (Promptfoo)  🔄 IN PROGRESS
-         P10-1…P10-6 DONE (2026-05-28): 22/22 gold tests pass, Gemini grading active
-         Techniques: assistant prefill, dual-format parser, red_flags WRONG→CORRECT examples
-         PENDING: P10-7 (GHA workflow), P10-8…P10-13
+  [~] PHASE 10 — Prompt Evaluation & CI/CD Pipeline (Promptfoo)  🔄 IN PROGRESS (8/13)
+         P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass, Gemini grading active, GHA workflow live.
+         P10-9/P10-10 blocked until P7. P10-11…P10-13 pending.
          ADR-013. Run: cd scraper && npm run eval
   [ ] PHASE 11 — Multidimensional Scoring & Intelligent Routing  📋 BLOCKED by P8+P10
-  [ ] PHASE 12 — LLM Provider Adapter Pattern  📋 BLOCKED by P10
-         P12-1…P12-8: интерфейс LLMProvider, адаптеры Ollama/Gemini/Anthropic, n8n LLM Router,
+  [x] PHASE 12  — LLM Provider Adapter Pattern  ✅ DONE (2026-05-28)
+         P12-1…P12-8: LLMProvider interface, Ollama/Gemini/Anthropic adapters, n8n LLM Router,
          env-driven promptfoo provider. ADR-016.
-  [ ] PHASE 13 — Prompt Engineering Best Practices Stack  📋 BLOCKED by P10+P12
-         P13-1…P13-12: Structured Output → Few-Shot → CoT → Retry Loop → Review Pass.
-         Semantic Validator, Gemini 2nd-pass для 50-79, SOP документ, 27+ gold tests. ADR-017.
-  [ ] PHASE 14 — Manual Job URL Checker  📋 PENDING (no blockers stated)
+  [~] PHASE 13  — Prompt Engineering Best Practices Stack  🔄 IN PROGRESS (3/12)
+         P13-1…P13-3 DONE: Structured Output (JSON Schema) complete. P13-4 (Few-Shot) UNBLOCKED.
+         P13-4…P13-12 PENDING: Few-Shot → CoT → Retry Loop → Review Pass → SOP. ADR-017.
+  [ ] PHASE 14  — Manual Job URL Checker  📋 PENDING (blocked by P8)
          P14-1…P14-7: Telegram `/check <url>` → HTTP fetch → LLM extract_job_fields → ingest
          pipeline → Notion (source=manual) → Telegram reply. Edge cases: SPA, HTTP 403, invalid JSON.
+  [ ] PHASE 15  — Cloud LLM: Gemini 2.0 Flash Primary + OpenRouter Fallback  📋 PENDING
+         P15-1…P15-7: Validate Gemini 2.0 Flash eval, smoke-test n8n, implement OpenRouterAdapter,
+         wire fallback chain, document provider setup. Unblocks P7 Oracle Cloud ARM.
+         Depends on P12 (done). No blockers. ADR-016, ADR-011.
 
 At the start of every session, report the current phase and which tasks are open.
-The current active phases are P6 (finishing), P7 (cloud, no blockers), P8 (blocked on EVAL-1), P10 (continuing).
+The current active phases are P6 (6/7, awaiting production data), P13 (in_progress, 3/12 done),
+P15 (new — cloud LLM activation, no blockers, can start now).
 ```
 
 ---
