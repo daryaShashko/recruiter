@@ -1,5 +1,14 @@
 # Как начать новую сессию в Zed AI
 
+## 🚀 Zed Skills — самый быстрый старт
+
+Введи в чат Zed AI:
+
+- **`/skill orchestrator-session`** — автоматически загружает контекст, текущую фазу и открытые задачи, запускает Оркестратора
+- **`/skill task-brief`** — канонический шаблон Task Brief для делегирования агентам
+
+---
+
 ## Быстрый старт — скопируй нужный блок
 
 ---
@@ -78,11 +87,12 @@
 
 ## Текущий статус проекта
 
-- **Фаза:** P1 (Scraper) — в процессе
-- **Готово:** P0 полностью, P1 частично (scraper файлы есть)
-- **Открытые задачи P1:** P1-5 (browser.ts), P1-9/P1-14 (тесты), P1-20 (mock-тест sender), P1-21–P1-26 (GitHub Actions)
-- **Следующая фаза:** P2 — n8n Webhook Pipeline
+- **Фаза:** P13 (Prompt Engineering — ADR-017) — в процессе
+- **Готово:** P0–P5 (Scraper→CI), P12 (LLM Provider Adapters, ADR-016)
+- **In progress:** P6 (Sources), P7 (Cloud/Oracle), P10 (Scraper v2), P13 (Prompt Eng)
+- **Открытые задачи P13:** P13-4 (few-shot), P13-5 (n8n schema), P13-6÷P13-12 — см. context/roadmap.yaml
+- **Следующая фаза:** P14 — Gemini Primary + OpenRouter Fallback
 
 ## Правило одной строки
 
-> Начало сессии = `@agents/[кто нужен]` + `@context/project.yaml` + `@context/modules/[что делаем].yaml`
+> Zed: `/skill orchestrator-session` — или — `@docs/agents/[кто нужен]` + `@context/project.yaml` + `@context/modules/[что делаем].yaml`

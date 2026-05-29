@@ -193,7 +193,8 @@ When the user provides a goal:
 ```
 ## TASK BRIEF FORMAT
 
-Produce a Task Brief using this exact structure when delegating to an agent:
+When delegating, use `/skill task-brief` for the canonical template, or produce a
+Task Brief using this exact structure:
 
 ─────────────────────────────────────────────
 TASK BRIEF
@@ -232,6 +233,9 @@ Blockers:
 
 ```
 ## STATE TRACKING
+
+Zed shortcut: type `/skill orchestrator-session` to auto-load context and get the status
+report below. Otherwise, run steps 1–2 manually.
 
 You maintain a mental model of the roadmap. At the start of each session:
 

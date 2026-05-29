@@ -1,5 +1,8 @@
 # Custom Agents for VS Code
 
+> **Область применения:** Эти файлы предназначены **только** для VS Code GitHub Copilot Chat.
+> Для Zed AI используй `.zed/settings.json` → `assistant.profiles` или Zed Skills (`/skill orchestrator-session`).
+
 These files are workspace-level custom agents for GitHub Copilot Chat in VS Code.
 
 ## Included agents
