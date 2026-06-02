@@ -1,0 +1,99 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e337]:
+      - generic [ref=e340]:
+        - generic [ref=e342]:
+          - generic [ref=e345]:
+            - link "Personal" [ref=e347] [cursor=pointer]:
+              - /url: /projects/yaqdIi5qoPJdIA7A
+              - generic [ref=e349]:
+                - generic "Personal" [ref=e350]:
+                  - img [ref=e351]
+                - generic "Personal" [ref=e355]
+            - generic [ref=e356]: /
+            - generic "My workflow" [ref=e357]:
+              - generic [ref=e359] [cursor=pointer]: My workflow
+          - generic [ref=e361]: + Add tag
+          - generic [ref=e363]:
+            - generic [ref=e365]:
+              - button "Publish" [disabled] [ref=e367]:
+                - generic [ref=e370]: Publish
+              - button "More actions" [ref=e373] [cursor=pointer]:
+                - img [ref=e375]
+            - button "Version History" [disabled] [ref=e379]:
+              - img [ref=e381]
+            - button "Actions" [ref=e388] [cursor=pointer]:
+              - img [ref=e390]
+        - radiogroup [ref=e396]:
+          - radio "Editor" [checked] [ref=e397]:
+            - generic [ref=e398] [cursor=pointer]: Editor
+          - radio "Executions" [ref=e399]:
+            - generic [ref=e400] [cursor=pointer]: Executions
+          - radio "Evaluations" [ref=e401]:
+            - generic [ref=e402] [cursor=pointer]: Evaluations
+      - complementary [ref=e403]:
+        - generic [ref=e404]:
+          - generic [ref=e406]:
+            - menubar [ref=e407]:
+              - menuitem "Add new item" [ref=e408]:
+                - button "Add new item" [ref=e410] [cursor=pointer]:
+                  - img [ref=e412]
+            - button "Open command palette" [ref=e415] [cursor=pointer]:
+              - img [ref=e417]
+            - button "Toggle sidebar" [ref=e422] [cursor=pointer]:
+              - img [ref=e424]
+          - generic [ref=e432]:
+            - menuitem "Overview" [ref=e435] [cursor=pointer]:
+              - img [ref=e437]
+            - menuitem "Chat" [ref=e443] [cursor=pointer]:
+              - img [ref=e445]
+          - generic [ref=e448]:
+            - menuitem "Templates" [ref=e451] [cursor=pointer]:
+              - img [ref=e453]
+            - menuitem "Insights" [ref=e460] [cursor=pointer]:
+              - img [ref=e462]
+            - menuitem "Help" [ref=e466] [cursor=pointer]:
+              - img [ref=e468]
+            - menuitem "Settings" [ref=e474] [cursor=pointer]:
+              - img [ref=e476]
+      - main [ref=e480]:
+        - generic [ref=e483]:
+          - generic [ref=e485]:
+            - generic [ref=e487]:
+              - generic:
+                - img
+                - group [ref=e488] [cursor=pointer]:
+                  - generic [ref=e490]:
+                    - button [ref=e492]:
+                      - img [ref=e493]
+                    - paragraph [ref=e495]: Add first step…
+            - img [ref=e496]
+            - img [ref=e497]
+            - generic [ref=e499]:
+              - button "Zoom to Fit" [ref=e501] [cursor=pointer]:
+                - img [ref=e503]
+              - button "Zoom In" [ref=e506] [cursor=pointer]:
+                - img [ref=e508]
+              - button "Zoom Out" [ref=e513] [cursor=pointer]:
+                - img [ref=e515]
+              - button "Tidy Up" [ref=e520] [cursor=pointer]:
+                - img [ref=e522]
+          - generic [ref=e524]:
+            - button "Open nodes panel" [ref=e526] [cursor=pointer]:
+              - img [ref=e528]
+            - button "Command bar" [ref=e531] [cursor=pointer]:
+              - img [ref=e533]
+            - button "Add sticky note" [ref=e538] [cursor=pointer]:
+              - img [ref=e540]
+            - button "Open focus panel" [ref=e545] [cursor=pointer]:
+              - img [ref=e547]
+          - generic:
+            - complementary
+        - generic [ref=e559] [cursor=pointer]:
+          - generic [ref=e560]: Logs
+          - generic [ref=e562]:
+            - button "Pop out panel" [ref=e564]:
+              - img [ref=e566]
+            - button "Open panel" [ref=e569]:
+              - img [ref=e571]
+  - complementary

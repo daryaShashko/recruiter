@@ -40,7 +40,7 @@
       weight: 3
     - type: llm-rubric
       value: "Reasoning must mention Node.js or TypeScript as the primary stack."
-      provider: google:gemini-2.5-flash-lite
+      provider: google:gemini-3.1-flash-lite
 
 - description: "T02: Tech Lead TypeScript/NestJS — Gdańsk hybrid"
   vars:
@@ -258,7 +258,7 @@
       weight: 3
     - type: llm-rubric
       value: "Reasoning must identify Java as the primary stack, not JavaScript/Node.js."
-      provider: google:gemini-2.5-flash-lite
+      provider: google:gemini-3.1-flash-lite
 
 - description: "F03: Senior C#/.NET — wrong stack and database"
   vars:
@@ -401,7 +401,7 @@
       weight: 3
     - type: llm-rubric
       value: "Reasoning must acknowledge Node.js as the primary stack despite Java legacy presence."
-      provider: google:gemini-2.5-flash-lite
+      provider: google:gemini-3.1-flash-lite
 
 - description: "E02: Java primary + Node.js secondary — Java is PRIMARY → should NOT match"
   vars:
@@ -428,7 +428,7 @@
       weight: 3
     - type: llm-rubric
       value: "Reasoning must identify Java as the primary stack, not Node.js."
-      provider: google:gemini-2.5-flash-lite
+      provider: google:gemini-3.1-flash-lite
 
 - description: "E03: 'Senior' in company name but Junior role → should NOT match"
   vars:

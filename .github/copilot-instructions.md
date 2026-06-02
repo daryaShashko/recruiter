@@ -34,6 +34,9 @@
 
 ## n8n rules
 
+- NEVER read `n8n/workflows/ingest.json` directly — it is 1000+ lines.
+  - For workflow overview and business logic: read `context/ingest-workflow.yaml` instead.
+  - For a specific node's code/params: `grep -A 40 '"name": "<NodeName>"' n8n/workflows/ingest.json`
 - Webhook должен быстро отвечать 200 до основной обработки.
 - Для Ollama используй batch size 1 и keep_alive: 0.
 - Перед JSON.parse очищай markdown fences.

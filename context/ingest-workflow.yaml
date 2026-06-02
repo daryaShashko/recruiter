@@ -1,0 +1,131 @@
+# ============================================================
+# INGEST WORKFLOW MAP
+# Compact reference for n8n/workflows/ingest.json
+#
+# How to use:
+#   Overview / flow     → read this file (fits in context)
+#   Node code/params    → grep ingest.json: grep -A 30 '"name": "Code: LLM Router"' n8n/workflows/ingest.json
+#
+# Update this file when:
+#   - a node is added or removed
+#   - routing logic changes (thresholds, LLM providers, dedup)
+#   Do NOT update for code-only changes inside a node.
+# ============================================================
+
+workflow:
+  name: Ingest Jobs
+  file: n8n/workflows/ingest.json
+  purpose: >
+    Receives WebhookPayload{jobs[], meta} from scraper → deduplicates via
+    3-level FNV1a64+urlNorm+url check against Notion → evaluates each job
+    via LLM → routes to Notion Kanban + optional Telegram alert.
+
+# ─── LINEAR FLOW ───────────────────────────────────────────
+# Read top-to-bottom. Branches shown inline as true/false.
+flow:
+  - node: "Webhook: POST /jobs/ingest"
+    desc: Entry point, POST /jobs/ingest
+
+  - node: "Respond to Webhook: 200"
+    desc: Immediately returns {"ok":true} 200 before async processing
+
+  - node: "IF: Zero jobs check"
+    desc: "jobs.length == 0?"
+    true: "→ Telegram: Zero Jobs Alert (end)"
+    false: "→ Code: Normalize Jobs"
+
+  - node: "Code: Normalize Jobs"
+    desc: Normalizes all jobs; adds fingerprint, urlNorm, dedupFilter per item
+
+  - node: "Code: Dedup Batch"
+    desc: In-memory dedup on fingerprint + urlNorm + url; logs dropped items
+
+  - node: "Split In Batches: 1"
+    desc: Loops one job at a time
+    done_output: "→ NoOp: All Done"
+    item_output: "→ Switch: Route by Source"
+
+  - node: "Switch: Route by Source"
+    desc: Routes on $json.source
+    outputs:
+      0_justjoin: "→ Notion: Find Existing URL"
+      1_nofluffjobs: "→ Notion: Find Existing URL"
+      2_manual: "→ Notion: Find Existing URL"
+      3_fallback: "→ Code: Unknown Source → Notion: Find Existing URL"
+
+  - node: "Notion: Find Existing URL"
+    desc: POST Notion DB query with OR filter (fingerprint / urlNorm / url)
+
+  - node: "Code: Check Duplicate"
+    desc: Sets isDuplicate=true/false; logs match reason (fingerprint|url|notion-match)
+
+  - node: "IF: Already in Notion?"
+    desc: "isDuplicate == true?"
+    true: "→ NoOp: Skip Duplicate → back to Split In Batches: 1"
+    false: "→ Read Candidate Profile"
+
+  - node: "Read Candidate Profile"
+    desc: Reads candidate_profile.md binary; fallback to hardcoded profile string
+
+  - node: "Code: Build Ollama Payload"
+    desc: Builds systemPrompt (scoring rules + rejection criteria) + userMessage (job fields)
+
+  - node: "Code: LLM Router"
+    desc: "Provider-agnostic LLM call; reads LLM_PROVIDER env → ollama|gemini|anthropic"
+
+  - node: "Code: Parse Ollama Response"
+    desc: >
+      Parses LLM JSON; normalizes red_flags to taxonomy; programmatic heuristics
+      (wrong city, outsourcing, crypto, gambling) can override score to 0
+
+  - node: "Notion: Log to Eval Log"
+    desc: Always writes evaluation result to Evaluation Log DB
+
+  - node: "Code: Restore Job Payload"
+    desc: Re-attaches original job fields from Split In Batches context
+
+  - node: "IF: Score >= 80?1"
+    desc: "overall_score >= 80?"
+    true: "→ Notion: Create Page (Hot Match) → Telegram: Send Alert → Notion: Update Log with TG Info → loop"
+    false: "→ IF: Score >= 50?2"
+
+  - node: "IF: Score >= 50?2"
+    desc: "overall_score >= 50?"
+    true: "→ Notion: Create Page (Review) → loop"
+    false: "→ NoOp: Discard Non-Match → loop"
+
+# ─── KEY BUSINESS LOGIC ────────────────────────────────────
+key_logic:
+  scoring:
+    hot_match: "overall_score >= 80  → Notion Board (Hot Match) + Telegram alert"
+    review: "overall_score 50-79  → Notion Board (Review, silent)"
+    discard: "overall_score < 50   → Eval Log only"
+    force_zero: >
+      Hard rejection → sets overall_score=0 programmatically (Code: Parse Ollama Response):
+      Crypto/Web3, Gambling/Betting, Agency/Outsourcing,
+      Wrong location (not remote AND not Gdańsk/Tricity),
+      Salary below 18 000 PLN net hard floor.
+
+  dedup_strategy:
+    level_1_fingerprint: "FNV1a64( normalizeCompany(company) + '::' + normalizeTitle(title) )"
+    level_2_urlNorm: "URL hostname+pathname, lowercase, trailing slash stripped"
+    level_3_raw_url: "Raw URL from scraper"
+    batch_dedup: "In-memory Set (Code: Dedup Batch) — prevents duplicate Notion queries"
+    notion_dedup: "Notion OR-filter on Fingerprint + urlNorm + url (Notion: Find Existing URL)"
+
+  llm_providers:
+    env_var: "LLM_PROVIDER in n8n Variables (NOT host .env)"
+    ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
+    gemini: "POST generativelanguage.googleapis.com; model=gemini-3.5-flash; responseMimeType=application/json; timeout=60s"
+    anthropic: "POST api.anthropic.com; tool_use structured output; timeout=60s"
+    output_schema: "{ overall_score, tech_stack_match, seniority_match, red_flags[], reason, url }"
+
+  telegram_alert:
+    trigger: "Hot Match (score >= 80) only"
+    format: "Title, company, salary, location, source, URL, reason + inline keyboard: Correct / Should Match / Should Reject"
+    retry: "maxTries=3, waitBetweenTries=3000ms"
+
+  notion_databases:
+    eval_log: "DB 36c747f7-ebec-80c8-bfd7-ed317f4a7c35 — every job logged here"
+    hot_match: "separate Kanban DB — only score >= 80"
+    review: "separate Kanban DB — score 50-79"

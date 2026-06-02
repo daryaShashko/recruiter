@@ -48,7 +48,7 @@ workflows:
     webhook_path: "/webhook/jobs/ingest"
     method: POST
     trigger: "scraper/src/sender.ts POST request"
-    last_updated: "2026-05-28"
+    last_updated: "2026-06-01"
     architecture_note: >
       SINGLE MONOLITHIC WORKFLOW — contains the full pipeline end-to-end.
       No sub-workflows (evaluate.json and notify.json are deprecated/replaced).
@@ -63,6 +63,9 @@ workflows:
       Dedup is 3-level: within-batch fingerprint (Code:DedupBatch) +
       cross-batch HTTP query (fingerprint OR urlNorm OR url) +
       Code:CheckDuplicate parses Notion API response → isDuplicate boolean.
+      CLOUD-11-A hotfix (2026-06-01):
+      - Read Candidate Profile uses On Error = Continue (ignore error output) to allow fallback profile path handling.
+      - Notion: Log to Eval Log maps Model from env vars: LLM_PROVIDER:LLM_MODEL.
     nodes_sequence:
       - name: Webhook
         type: n8n-nodes-base.webhook

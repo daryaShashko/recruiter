@@ -1,0 +1,12 @@
+{
+  # Optional: replace with your email for Let's Encrypt notices
+  email you@example.com
+}
+
+n8n-recruiter.duckdns.org {
+  reverse_proxy n8n:5678
+  log {
+    output file /var/log/caddy/access.log
+    format single_field common_log
+  }
+}

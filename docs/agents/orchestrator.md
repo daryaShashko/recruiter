@@ -37,6 +37,7 @@ Prompt evaluation: Promptfoo + Gemini Flash (llm-rubric grading).
 Repository layout:
   /scraper        — Playwright-based job scraper (TypeScript)
   /n8n            — n8n workflow exports (JSON) and LLM prompts
+                    context/ingest-workflow.yaml — compact node map (read this, not ingest.json directly)
   /docs           — Architecture docs, Notion schema, agent skill files, ADRs
   /.github        — GitHub Actions workflows
 

@@ -1,0 +1,178 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e54]:
+        - complementary [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e58]:
+              - menubar [ref=e59]:
+                - menuitem "Add new item" [ref=e60]:
+                  - button "Add new item" [ref=e62] [cursor=pointer]:
+                    - img [ref=e64]
+              - button "Open command palette" [ref=e67] [cursor=pointer]:
+                - img [ref=e69]
+              - button "Toggle sidebar" [ref=e74] [cursor=pointer]:
+                - img [ref=e76]
+            - generic [ref=e84]:
+              - menuitem "Overview" [ref=e87] [cursor=pointer]:
+                - img [ref=e89]
+              - menuitem "Chat" [ref=e95] [cursor=pointer]:
+                - img [ref=e97]
+            - generic [ref=e100]:
+              - menuitem "Templates" [ref=e103] [cursor=pointer]:
+                - img [ref=e105]
+              - menuitem "Insights" [ref=e112] [cursor=pointer]:
+                - img [ref=e114]
+              - menuitem "Help" [ref=e118] [cursor=pointer]:
+                - img [ref=e120]
+              - menuitem "Settings" [ref=e126] [cursor=pointer]:
+                - img [ref=e128]
+        - main [ref=e132]:
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - generic [ref=e136]:
+                - generic [ref=e138]:
+                  - heading "Overview" [level=2] [ref=e139]
+                  - generic [ref=e140]: All the workflows, credentials and data tables you have access to
+                - generic [ref=e143]:
+                  - button "Create workflow" [ref=e144] [cursor=pointer]:
+                    - generic [ref=e146]: Create workflow
+                  - button [ref=e149] [cursor=pointer]:
+                    - img [ref=e151]
+              - list [ref=e155]:
+                - listitem [ref=e156]:
+                  - link "Prod. executions 0" [ref=e158] [cursor=pointer]:
+                    - /url: /insights/total
+                    - strong [ref=e159]:
+                      - generic: Prod. executions
+                    - emphasis [ref=e161]: "0"
+                - listitem [ref=e162]:
+                  - link "Failed prod. executions 0" [ref=e163] [cursor=pointer]:
+                    - /url: /insights/failed
+                    - strong [ref=e164]:
+                      - generic: Failed prod. executions
+                    - emphasis [ref=e166]: "0"
+                - listitem [ref=e167]:
+                  - link "Failure rate 0 %" [ref=e168] [cursor=pointer]:
+                    - /url: /insights/failureRate
+                    - strong [ref=e169]:
+                      - generic: Failure rate
+                    - emphasis [ref=e171]:
+                      - text: "0"
+                      - generic [ref=e172]: "%"
+                - listitem [ref=e173]:
+                  - link "Time saved --" [ref=e174] [cursor=pointer]:
+                    - /url: /insights/timeSaved
+                    - strong [ref=e175]:
+                      - generic [ref=e176]: Time saved
+                    - generic [ref=e177]:
+                      - emphasis [ref=e178]: "--"
+                      - img [ref=e179]
+                - listitem [ref=e183]:
+                  - link "Run time (avg.) 0 s" [ref=e184] [cursor=pointer]:
+                    - /url: /insights/averageRunTime
+                    - strong [ref=e185]:
+                      - generic: Run time (avg.)
+                    - emphasis [ref=e187]:
+                      - text: "0"
+                      - generic [ref=e188]: s
+              - generic [ref=e191]:
+                - link "Workflows" [ref=e193] [cursor=pointer]:
+                  - /url: /home/workflows
+                  - generic [ref=e194]: Workflows
+                - link "Credentials" [ref=e196] [cursor=pointer]:
+                  - /url: /home/credentials
+                  - generic [ref=e197]: Credentials
+                - link "Executions" [ref=e199] [cursor=pointer]:
+                  - /url: /home/executions
+                  - generic [ref=e200]: Executions
+                - link "Variables" [ref=e202] [cursor=pointer]:
+                  - /url: /home/variables
+                  - generic [ref=e203]: Variables
+                - link "Data tables" [ref=e205] [cursor=pointer]:
+                  - /url: /home/datatables
+                  - generic [ref=e206]: Data tables
+            - main [ref=e207]:
+              - generic [ref=e209]:
+                - generic [ref=e212]:
+                  - generic [ref=e214]:
+                    - img [ref=e216]
+                    - textbox "Search" [ref=e220]
+                  - generic [ref=e226]:
+                    - combobox "Select" [ref=e227] [cursor=pointer]: Sort by last updated
+                    - img [ref=e230] [cursor=pointer]
+                  - generic [ref=e232]:
+                    - button "Filters" [ref=e235] [cursor=pointer]:
+                      - img [ref=e237]
+                    - button "Add folder" [ref=e240] [cursor=pointer]:
+                      - img [ref=e242]
+                - generic [ref=e247]:
+                  - generic [ref=e248]:
+                    - generic [ref=e251] [cursor=pointer]:
+                      - generic [ref=e252]:
+                        - heading "Ingest Jobs" [level=2] [ref=e254]
+                        - generic [ref=e256]:
+                          - generic [ref=e257]: Last updated 3 minutes ago |
+                          - generic [ref=e258]: Created 1 June
+                      - generic [ref=e260]:
+                        - generic [ref=e265]:
+                          - img [ref=e266]
+                          - text: "1"
+                        - generic [ref=e272]:
+                          - img [ref=e274]
+                          - link "Personal" [ref=e278]:
+                            - /url: /projects/yaqdIi5qoPJdIA7A/workflows
+                        - button [ref=e281]:
+                          - img [ref=e283]
+                    - generic [ref=e290] [cursor=pointer]:
+                      - generic [ref=e291]:
+                        - heading "Feedback Handler (Notion Trigger)" [level=2] [ref=e293]
+                        - generic [ref=e295]:
+                          - generic [ref=e296]: Last updated 4 minutes ago |
+                          - generic [ref=e297]: Created 1 June
+                      - generic [ref=e299]:
+                        - generic [ref=e304]:
+                          - img [ref=e305]
+                          - text: "1"
+                        - generic [ref=e311]:
+                          - img [ref=e313]
+                          - link "Personal" [ref=e317]:
+                            - /url: /projects/yaqdIi5qoPJdIA7A/workflows
+                        - button [ref=e320]:
+                          - img [ref=e322]
+                    - generic [ref=e329] [cursor=pointer]:
+                      - generic [ref=e330]:
+                        - heading "Telegram Bot" [level=2] [ref=e332]
+                        - generic [ref=e334]:
+                          - generic [ref=e335]: Last updated 4 minutes ago |
+                          - generic [ref=e336]: Created 1 June
+                      - generic [ref=e338]:
+                        - generic [ref=e343]:
+                          - img [ref=e344]
+                          - text: "2"
+                        - generic [ref=e350]:
+                          - img [ref=e352]
+                          - link "Personal" [ref=e356]:
+                            - /url: /projects/yaqdIi5qoPJdIA7A/workflows
+                        - button [ref=e359]:
+                          - img [ref=e361]
+                  - generic [ref=e367]:
+                    - generic [ref=e368]: Total 3
+                    - button "Go to previous page" [disabled] [ref=e369]:
+                      - generic [ref=e370]:
+                        - img
+                    - list [ref=e371]:
+                      - listitem "page 1" [ref=e372]: "1"
+                    - button "Go to next page" [disabled] [ref=e373]:
+                      - generic [ref=e374]:
+                        - img
+                    - generic [ref=e379]:
+                      - combobox "Select" [ref=e380] [cursor=pointer]: 50/page
+                      - img [ref=e383] [cursor=pointer]
+    - complementary
+  - menu [active] [ref=e386]:
+    - generic [ref=e387]:
+      - menuitem "Create credential" [ref=e389]:
+        - generic [ref=e390]: Create credential
+      - menuitem "Create data table" [ref=e392]:
+        - generic [ref=e393]: Create data table

@@ -1,0 +1,149 @@
+# ─────────────────────────────────────────────────────────
+# AI Recruiter — Promptfoo Evaluation Config (Gemini / Cloud Providers)
+# ADR: ADR-013 (Lightweight Prompt Evaluation & CI/CD Pipeline)
+# Tasks: P15-1 (Gemini 2.0 Flash baseline eval)
+#
+# Usage:
+#   cd scraper && npm run eval:gemini        # run with Gemini / cloud provider
+#   cd scraper && npm run eval:gemini:view   # open HTML report
+#
+# Prerequisites:
+#   - GOOGLE_API_KEY env var set (free tier: aistudio.google.com)
+#   - LLM_PROVIDER must be a google: prefixed provider
+#
+# Why separate from promptfooconfig.yaml?
+#   The Ollama config uses `passthrough.format` to inject JSON Schema at the
+#   request root level (Ollama API requirement). Google Gemini API rejects
+#   any unknown root-level fields with 400 "Unknown name: format".
+#   This config instead uses `generationConfig.responseMimeType` +
+#   `generationConfig.responseSchema` — the native Gemini structured output API.
+#   Discovered and fixed in P15-1.
+# ─────────────────────────────────────────────────────────
+
+description: "AI Recruiter — Evaluator Prompt v1 (Gemini)"
+
+# ─── Prompt ──────────────────────────────────────────────
+prompts:
+  - file://evaluator-template.json
+
+# ─── Provider ────────────────────────────────────────────
+# Set via LLM_PROVIDER env var.
+# Examples:
+#   LLM_PROVIDER=google:gemini-2.0-flash npm run eval:gemini
+#   LLM_PROVIDER=google:gemini-2.5-flash npm run eval:gemini
+#   LLM_PROVIDER=google:gemini-3.1-flash-lite npm run eval:gemini
+providers:
+  - id: "{{env.LLM_PROVIDER}}"
+    label: "{{env.LLM_PROVIDER}}"
+    config:
+      temperature: 0
+      # Native Gemini structured output — prevents markdown fences and schema violations.
+      # Unlike passthrough.format (Ollama-only), this is natively understood by Google API.
+      generationConfig:
+        responseMimeType: "application/json"
+        responseSchema:
+          type: object
+          required:
+            [
+              overall_score,
+              tech_stack_match,
+              seniority_match,
+              red_flags,
+              reason,
+              url,
+            ]
+          properties:
+            overall_score: { type: number, minimum: 0, maximum: 100 }
+            tech_stack_match: { type: number, minimum: 0, maximum: 100 }
+            seniority_match: { type: number, minimum: 0, maximum: 100 }
+            red_flags:
+              type: array
+              items: { type: string }
+            reason: { type: string }
+            url: { type: string }
+
+# ─── Default Assertions ────────────────────────────────────
+defaultTest:
+  vars:
+    profile: file://candidate_profile.md
+  options:
+    provider:
+      id: google:gemini-3.1-flash-lite
+      config:
+        temperature: 0
+  assert:
+    # 1. Output must parse as a valid JSON object
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          return j !== null && typeof j === 'object';
+        } catch(e) { return false; }
+      weight: 2
+
+    # 2. JSON must contain all required fields with correct types
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return typeof j.overall_score === 'number' && j.overall_score >= 0 && j.overall_score <= 100
+            && typeof j.tech_stack_match === 'number' && j.tech_stack_match >= 0 && j.tech_stack_match <= 100
+            && typeof j.seniority_match === 'number' && j.seniority_match >= 0 && j.seniority_match <= 100
+            && Array.isArray(j.red_flags) && j.red_flags.every(x => typeof x === 'string')
+            && typeof j.reason === 'string' && j.reason.length > 0
+            && typeof j.url === 'string' && j.url.length > 0;
+        } catch(e) { return false; }
+      weight: 2
+
+    # 3. URL in response must echo back the input URL
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          return j !== null && j.url === context.vars.url;
+        } catch(e) { return false; }
+      weight: 1
+
+    # 4. red_flags: flat string array, no commas/markdown, 1-6 words per item
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j || !Array.isArray(j.red_flags)) return false;
+          for (const flag of j.red_flags) {
+            if (typeof flag !== 'string') return false;
+            if (flag.includes(',')) return false;
+            if (/[*_`\n\r]/.test(flag)) return false;
+            const words = flag.trim().split(/\s+/).length;
+            if (words < 1 || words > 6) return false;
+          }
+          return true;
+        } catch(e) { return false; }
+      weight: 2
+
+    # 5. LLM-rubric: quality of the "reason" field (requires GOOGLE_API_KEY)
+    - type: llm-rubric
+      value: >-
+        Extract the "reason" field from the JSON in the output (ignore any surrounding
+        text or markdown fences). Evaluate ONLY that reason string.
+        The reason MUST: (1) be written in English, (2) be one concise sentence,
+        (3) reference at least one specific concrete detail — either a technology name
+        (e.g. "Java", "Angular"), a location (e.g. "Warsaw on-site"),
+        a seniority level (e.g. "junior", "entry-level", "no experience required"),
+        a salary level (e.g. "below 18k", "financial mismatch"),
+        an industry (e.g. "blockchain/crypto"),
+        OR clearly state the vacancy is invalid/spam/not a job posting.
+        PASS if the reason is specific and informative, or correctly identifies spam.
+        FAIL if the reason is purely generic (e.g. "does not match the profile")
+        with no concrete detail whatsoever.
+      weight: 1
+
+# ─── Evaluate Options ───────────────────────────────────
+# maxConcurrency:1 — sequential execution, natural rate limiter.
+# Gemini free tier: 15 RPM — sequential calls stay safely under limit.
+evaluateOptions:
+  maxConcurrency: 1
+
+# ─── Test Cases ──────────────────────────────────────────
+tests: file://gold_dataset.yaml

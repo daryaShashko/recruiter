@@ -24,6 +24,7 @@
 | `decisions.yaml` | Architecture Decision Records (ADR) | Новое архитектурное решение |
 | `modules/scraper.yaml` | Файлы скрапера, экспорты, паттерны, known gaps | Новый скрапер, изменились контракты |
 | `modules/n8n.yaml` | n8n воркфлоу, Ollama конфиг, маппинг Notion | Воркфлоу создан/изменён |
+| `ingest-workflow.yaml` | Карта нод + flow + бизнес-логика ingest.json | Нода добавлена/удалена или изменился routing |
 | `modules/ci.yaml` | GitHub Actions workflows, секреты, требования | Workflow изменён |
 | `SYNC_PROTOCOL.md` | Правила синхронизации: что → что обновить | При добавлении нового правила |
 

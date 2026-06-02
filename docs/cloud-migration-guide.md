@@ -86,555 +86,387 @@ ps aux | grep n8n
 
 ### 2.1. Сначала создай VCN (Virtual Cloud Network)
 
+> Примечание: на текущем шаге VCN уже создан с CIDR `10.0.0.0/24`. Ниже — объяснение последствий этого выбора и рекомендации по разбиению сети (public/private) и проверке пересечений.
+
 1. Menu → **Networking** → **Virtual Cloud Networks**
-2. **Start VCN Wizard** → "Create VCN with Internet Connectivity"
+2. **Start VCN Wizard** → 'Create VCN with Internet Connectivity'
 3. Имя: `n8n-vcn`
-4. CIDR: `10.0.0.0/16` (default)
-5. Нажми **Create** → дождись завершения
+4. CIDR: `10.0.0.0/24` (уже создано)
 
-### 2.2. Открой порты в Security List
+Если вы только планируете один VM, который будет запускать весь docker-compose стек (Caddy, n8n, Postgres) — можно оставить `/24` и разместить инстанс в публичной подсети (с публичным IP). Это самый быстрый путь. Если хотите лучше изолировать базу данных и подготовиться к масштабированию — рекомендую создать отдельные подсети (пример ниже).
 
-1. Menu → Networking → Virtual Cloud Networks → `n8n-vcn`
-2. Слева: **Security Lists** → Default Security List
-3. **Add Ingress Rules** → добавь эти правила:
+Рекомендации по разбиению (варианты)
 
-| Stateless | Source CIDR | Protocol | Source Port | Dest Port | Описание |
-|-----------|-------------|----------|-------------|-----------|----------|
-| ❌ | 0.0.0.0/0 | TCP | All | 80 | HTTP (Caddy ACME challenge) |
-| ❌ | 0.0.0.0/0 | TCP | All | 443 | HTTPS (n8n webhook) |
-| ❌ | 0.0.0.0/0 | ICMP | - | Type 3, Code 4 | Path MTU discovery (не трогай default) |
+- Вариант A — Быстро и просто (одна подсеть):
+  - Оставляем одну публичную подсеть: `10.0.0.0/24`. Всё запускается на одном VM. Закрываем порты для БД на уровне firewall/iptables, раскрываем только 80/443/SSH.
 
-> SSH (port 22) уже есть в default rules — не удаляй.
+- Вариант B — Рекомендуемый (минимум: public + private):
+  - Public subnet (Caddy, bastion): `10.0.0.0/26`
+  - App subnet (n8n / приложение): `10.0.0.64/26`
+  - DB subnet (Postgres, internal): `10.0.0.128/26`
+  - Management / future: `10.0.0.192/26`
 
-### 2.3. Создай инстанс
+  Почему: отдельная приватная подсеть для БД позволяет не давать ей публичный IP и ограничить доступ по Security Lists / NSG только из app-подсети.
 
-1. Menu → **Compute** → **Instances** → **Create instance**
-2. **Name:** `n8n-server`
-3. **Placement → Availability Domain:** AD-1 (если нет места — пробуй AD-2, AD-3)
-4. **Image:** нажми **Change image** → Ubuntu → **Ubuntu 22.04** (Always Free eligible)
-5. **Shape:** нажми **Change shape** → Ampere → **VM.Standard.A1.Flex**
-   - OCPUs: **2** (оставь 2 в запасе на случай нужды)
-   - Memory: **12 GB**
-6. **Networking:** VCN `n8n-vcn` → public subnet → ✅ "Automatically assign public IPv4 address"
-7. **SSH Keys:**
-   - Если нет ключа: **Generate a key pair for me** → скачай приватный ключ
-   - Если есть: **Paste public keys** → вставь свой `~/.ssh/id_rsa.pub` (или ed25519)
-8. **Boot Volume:** 50 GB (default) → OK
-9. **Create**
+- Вариант C — Если потребуется масштабирование (лучше для `/16`):
+  - Ресайз VCN до `/16` нельзя — нужно пересоздать VCN с `10.0.0.0/16` и затем использовать /24 подсети (10.0.0.0/24, 10.0.1.0/24 и т.д.).
 
-> 🔴 **Если получаешь "Out of host capacity":**
-> - Попробуй другой AD
-> - Попробуй 1 OCPU + 6 GB вместо 2+12
-> - Попробуй в 2–5 часов ночи по Frankfurt
-> - Жди 20–30 минут и повторяй
+Как создать подсети через Web Console (UI)
 
-### 2.4. Запиши публичный IP
+1. В VCN → вкладка **Subnets** → **Create Subnet**
+2. Выберите: Name, Compartment, CIDR block (например `10.0.0.0/26`), тип — **Regional** (рекомендуется). Для публичной подсети отметьте, что VNIC может получать Public IPv4.
+3. Создайте Internet Gateway (IG) для публичных подсетей: VCN → Internet Gateways → Create Internet Gateway, затем добавьте route rule `0.0.0.0/0` → IG в таблицу маршрутизации публичной подсети.
+4. Для private подсетей не давайте public IP и используйте NAT Gateway (если они должны выходить в интернет).
 
-После того как инстанс перешёл в статус **Running:**
-- Menu → Compute → Instances → `n8n-server`
-- Запиши **Public IP address**: `<INSTANCE_IP>`
+Примеры Security Lists / NSG
+
+- Public subnet (ingress):
+  - TCP 80, TCP 443 от 0.0.0.0/0
+  - SSH TCP 22 от вашего статического IP (или узкого диапазона)
+- Private subnet (ingress):
+  - TCP 5432 (Postgres) только от App subnet CIDR
+  - Разрешить внутренний трафик VCN: source = `10.0.0.0/16` (или конкретные подсети)
+
+Рекомендация: используйте Network Security Groups (NSG), если планируете гибко привязывать правила к VNIC; Security Lists применяются на уровне подсети и проще, но менее гибки.
+
+Почему нужно проверять локальную сеть на пересечение (и с чем)
+
+- "Пересечение" означает, что CIDR вашей VCN совпадает или перекрывается с диапазоном IP, который уже используется в другой сети, с которой вы планируете устанавливать связь:
+  - Локальная сеть (домашний/офисный роутер) — например, если ваш ноутбук или офис использует `10.0.0.0/24`.
+  - Сеть компании (on-prem) или VPN — если вы собираетесь делать Site-to‑Site VPN или подключаться через корпоративную сеть.
+  - Другая VCN в той же или в другой учётной записи, если вы будете делать VCN peering.
+
+- Почему это проблема:
+  - При перекрытии маршрутов трафик может не идти туда, куда вы ожидаете: запрос к `10.0.0.5` может оставаться локальным вместо того, чтобы идти в облако. Это ломает VPN, peering и удалённый доступ.
+
+Как проверить локальную сеть (без CLI):
+- macOS: System Preferences → Network → выбранное соединение → Advanced → TCP/IP → см. IPv4 address и Subnet Mask.
+- Windows: Пуск → cmd → `ipconfig` — смотрите IPv4 и Mask.
+- Router admin page: зайдите в веб-интерфейс роутера и посмотрите LAN settings.
+- VPN: проверьте у IT или в настройках VPN-адаптера, какие range назначаются.
+
+Как проверить в OCI Console:
+- Networking → Virtual Cloud Networks → убедитесь, что нет других VCN с CIDR, который перекрывается с вашим (в списке видно CIDR у каждой VCN).
+
+Что делать при конфликте:
+- Если конфликт с домашней/офисной сетью — смените CIDR VCN (пересоздайте VCN) на другой приватный диапазон (например `10.1.0.0/16` или `10.8.0.0/16`).
+- Если уже создали VCN и планируете VPN — лучше пересоздать VCN с другим CIDR (изменить CIDR у существующего VCN нельзя).
+
+Краткое резюме — что рекомендую для этого проекта
+
+- Если всё будет на одном VM (docker-compose): оставьте `10.0.0.0/24` и продолжайте → создайте публичную подсеть и откройте 80/443; базу держите внутри Docker и не пробрасывайте порт 5432 наружу.
+- Если хотите минимальную безопасность и готовитесь к масштабированию: добавьте как минимум private subnet и поместите БД туда (вариант B).
+- Если планируете VPN/peering с офисом — пересоздайте VCN с `/16` заранее.
 
 ---
 
-## Шаг 3: Первичная настройка сервера
 
-### 3.1. Подключись по SSH
+### 2.2. Создание подсетей и шлюзов (public + private)
+
+Мы делаем Вариант B — минимум public + private в рамках VCN `10.0.0.0/24`.
+
+Шаги в Console (UI):
+1. Networking → Virtual Cloud Networks → `n8n-vcn` → Subnets → Create Subnet
+   - Public subnet:
+     - Name: `public-subnet`
+     - CIDR block: `10.0.0.0/26`
+     - Type: Regional
+     - Public IPv4: Allow
+   - Private subnet:
+     - Name: `private-subnet`
+     - CIDR block: `10.0.0.128/26`
+     - Type: Regional
+     - Public IPv4: Do NOT allow
+
+2. Internet Gateway (IG) для публичного трафика
+   - VCN → Internet Gateways → Create Internet Gateway → Name: `igw-n8n` → Create
+   - VCN → Route Tables → create/update public route table → Add Route Rule: Destination 0.0.0.0/0 → Target Type: Internet Gateway → Target: `igw-n8n`
+   - Associate public route table with `public-subnet` (Subnet → Edit → Route Table)
+
+3. NAT Gateway (если private VM должен уметь выходить в интернет для обновлений)
+   - VCN → NAT Gateways → Create NAT Gateway → Name: `nat-n8n` → Create
+   - Создать/выбрать route table для `private-subnet` → Add Route Rule: Destination 0.0.0.0/0 → Target Type: NAT Gateway → Target: `nat-n8n` → Associate с `private-subnet`
+
+Примечание: NAT необходим, если на private VM будете запускать `apt update`, скачивать пакеты и т.д. Без NAT private VM не сможет выходить в интернет.
+
+---
+
+### 2.3. Security Lists / Network Security Groups (NSG)
+
+Лучше использовать NSG (гибче), но ниже — шаги через Security Lists (UI) которые работают сразу.
+
+A) Security Lists (быстро через UI)
+1. Networking → Virtual Cloud Networks → `n8n-vcn` → Security Lists → Create Security List
+
+- `sl-public`
+  - Ingress:
+    - TCP 80 from 0.0.0.0/0
+    - TCP 443 from 0.0.0.0/0
+    - TCP 22 from <YOUR_PUBLIC_IP>/32 (или временно 0.0.0.0/0 — потом сузить)
+  - Egress: Allow all
+
+- `sl-private`
+  - Ingress:
+    - TCP 5432 from `10.0.0.0/26` (public-subnet CIDR)
+    - (опционально) SSH TCP 22 from `10.0.0.0/26` если будете подключаться к private VM только через public
+  - Egress: Allow all
+
+2. Attach `sl-public` к `public-subnet`, `sl-private` к `private-subnet`.
+
+B) Network Security Groups (рекомендуется в прод)
+- Create → Network Security Groups → `nsg-app` и `nsg-db`
+- В `nsg-app` добавьте правила: ingress 80/443 0.0.0.0/0; ingress 22 от вашего IP
+- В `nsg-db` добавьте правило: ingress 5432 только от `10.0.0.0/26`
+- При создании instance указывайте NSG вместо Security List (Primary VNIC → Use Network Security Groups)
+
+Как узнать свой public IP
+- Открой в браузере `https://ifconfig.me` или `https://icanhazip.com` — это ваш текущий public IP. Используйте его в правилах SSH.
+
+---
+
+### 2.4. Создание инстансов (Public + Private)
+
+A) Public VM — `n8n-app` (Caddy + n8n)
+1. Compute → Instances → Create instance
+2. Name: `n8n-app`
+3. Image: Ubuntu 22.04
+4. Shape: VM.Standard.A1.Flex (2 OCPU / 12 GB) — или 1 OCPU/6GB если capacity problem
+5. Primary VNIC: VCN=`n8n-vcn`, Subnet=`public-subnet`, Automatically assign public IPv4 address = Yes
+6. SSH Keys: вставь свой public key или сгенерируй
+7. Create
+
+B) Private VM — `n8n-db` (Postgres)
+1. Compute → Instances → Create instance
+2. Name: `n8n-db`
+3. Image: Ubuntu 22.04
+4. Shape: VM.Standard.A1.Flex (или меньший по capacity)
+5. Primary VNIC: VCN=`n8n-vcn`, Subnet=`private-subnet`, Automatically assign public IPv4 address = No
+6. SSH Keys: тот же public key
+7. Create
+
+После создания: запомни Public IP `n8n-app` и Private IP `n8n-db` (пример `10.0.0.128`).
+
+---
+
+### 2.5. Подключение к private VM через public VM (SSH jump)
+
+Если `n8n-db` не имеет public IP, подключаемся через `n8n-app`:
+
+- На локальной машине:
+  - `ssh -i ~/Downloads/ssh-key-*.key -J ubuntu@<PUBLIC_IP> ubuntu@10.0.0.128`
+  - Или сначала `ssh ubuntu@<PUBLIC_IP>` затем `ssh ubuntu@10.0.0.128`
+
+Для копирования файлов через jump:
+- `scp -i key -o ProxyJump=ubuntu@<PUBLIC_IP> localfile ubuntu@10.0.0.128:/home/ubuntu/`
+
+---
+
+## Шаг 3: Первичная настройка серверов (public + private)
+
+Резюме: public VM держит Caddy + n8n (docker-compose), private VM — Postgres (docker-compose-db). Общие шаги — установка Docker, swap, базовое hardening.
+
+### 3.1. На обеих машинах (общие)
 
 ```bash
-# Если скачивал OCI-ключ:
-chmod 400 ~/Downloads/ssh-key-*.key
-ssh -i ~/Downloads/ssh-key-*.key ubuntu@<INSTANCE_IP>
-
-# Если использовал свой ключ:
-ssh ubuntu@<INSTANCE_IP>
-```
-
-### 3.2. Базовая настройка системы
-
-```bash
-# Обновление пакетов
 sudo apt update && sudo apt upgrade -y
-
-# Установка утилит
-sudo apt install -y curl wget git nano htop unzip
-
-# Проверка времени (должно быть UTC или Europe/Warsaw)
-timedatectl
-```
-
-### 3.3. Настройка swap (4 GB)
-
-Swap нужен для стабильности при пиках нагрузки:
-
-```bash
+sudo apt install -y curl wget git htop unzip
+# swap 4GB
 sudo fallocate -l 4G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-
-# Сделать постоянным
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
-# Проверка
-free -h
+# docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker ubuntu
+newgrp docker
 ```
 
-### 3.4. Открыть порты в iptables (ОБЯЗАТЕЛЬНО)
+### 3.2. Настройка iptables / firewall
 
-Oracle Ubuntu образы по умолчанию блокируют всё кроме SSH через iptables. Это **второй уровень** firewall поверх OCI Security List:
+- Public VM: откройте 80 и 443 и SSH (ограничьте SSH по IP как можно скорее).
+- Private VM: откройте 5432 только от public-subnet CIDR `10.0.0.0/26`.
 
+Пример (public VM):
 ```bash
-# Открыть порт 80 (HTTP)
 sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
-
-# Открыть порт 443 (HTTPS)
 sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
-
-# Сохранить правила чтобы не слетели после перезагрузки
+sudo iptables -I INPUT -p tcp --dport 22 -j ACCEPT
 sudo apt install -y iptables-persistent
 sudo netfilter-persistent save
-
-# Проверить
-sudo iptables -L INPUT -n | grep -E "80|443"
 ```
 
-### 3.5. Установка Docker
-
+Пример (private VM): разрешить 5432 через Security List/NSG и в iptables:
 ```bash
-# Официальный скрипт установки Docker
-curl -fsSL https://get.docker.com | sudo sh
+sudo iptables -I INPUT -p tcp -s 10.0.0.0/26 --dport 5432 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 22 -s 10.0.0.0/26 -j ACCEPT
+sudo netfilter-persistent save
+```
 
-# Добавить пользователя ubuntu в группу docker (без sudo)
-sudo usermod -aG docker ubuntu
+### 3.3. Подготовка Postgres на private VM
 
-# Применить без перелогина
-newgrp docker
+Создай `docker-compose-db.yml` (см. раздел 5.4) и запусти:
+```bash
+docker compose up -d
+```
+Проверь что порт 5432 слушает и доступен только из public-subnet:
+```bash
+# с public VM
+nc -zv 10.0.0.128 5432
+```
 
-# Проверка
-docker --version
-docker compose version
+### 3.4. Подготовка n8n + Caddy на public VM
+
+1. Создай `~/n8n-stack` и помести туда `.env`, `docker-compose.yml`, `Caddyfile` (см. раздел 5)
+2. Отредактируй `.env`: `POSTGRES_HOST=10.0.0.128` (private IP)
+3. `docker compose up -d`
+4. Проверка логов:
+```bash
+docker compose logs -f n8n
+docker compose logs -f caddy
 ```
 
 ---
 
-## Шаг 4: Настройка домена (DuckDNS — бесплатно)
+## Шаг 4: Настройка домена (DuckDNS)
 
-### 4.1. Создай поддомен на DuckDNS
+Ты уже добавил `n8n-recruiter.duckdns.org` — убедись, что DNS указывает на Public IP `n8n-app`.
 
-1. Зайди на [duckdns.org](https://duckdns.org) → Login через Google/GitHub
-2. Выбери имя поддомена: например `my-n8n` → будет `my-n8n.duckdns.org`
-3. В поле IP введи `<INSTANCE_IP>` → **Update IP**
-4. Запиши свой **token** (он нужен для авто-обновления)
-
-### 4.2. Авто-обновление IP через cron
-
-```bash
-# Создай скрипт обновления (замени YOUR_TOKEN и YOUR_SUBDOMAIN)
-mkdir -p ~/duckdns
-cat > ~/duckdns/duck.sh << 'EOF'
-echo url="https://www.duckdns.org/update?domains=YOUR_SUBDOMAIN&token=YOUR_TOKEN&ip=" | curl -k -o ~/duckdns/duck.log -K -
-EOF
-
-chmod +x ~/duckdns/duck.sh
-
-# Добавь в cron каждые 5 минут
-(crontab -l 2>/dev/null; echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1") | crontab -
-
-# Тест
-~/duckdns/duck.sh && cat ~/duckdns/duck.log
-# должно вернуть "OK"
-```
-
-### 4.3. Проверь DNS резолвинг
-
-```bash
-# Подожди 1–2 минуты
-dig +short my-n8n.duckdns.org
-# должен вернуть <INSTANCE_IP>
-```
-
-> ⚠️ **Caddy не получит Let's Encrypt сертификат, пока DNS не разрезолвится на правильный IP.** Убедись в этом перед следующим шагом.
+На public VM настроен cron-скрипт для авто-обновления DuckDNS (см. раздел 4.2).
 
 ---
 
-## Шаг 5: Установка Docker Compose стека
+## Шаг 5: Docker Compose файлы (готовые шаблоны)
 
-### 5.1. Создай рабочую директорию
+Public VM (`~/n8n-stack/docker-compose.yml`):
 
-```bash
-mkdir -p ~/n8n-stack && cd ~/n8n-stack
+```yaml
+version: '3.8'
+services:
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION}
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    expose:
+      - '5678'
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8nnet
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - n8nnet
+
+volumes:
+  n8n_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  n8nnet:
 ```
 
-### 5.2. Создай `.env` файл
-
-```bash
-cat > .env << 'EOF'
-# ── Домен ──────────────────────────────────────────────────
-DOMAIN=my-n8n.duckdns.org
-N8N_HOST=my-n8n.duckdns.org
-N8N_PROTOCOL=https
-WEBHOOK_URL=https://my-n8n.duckdns.org/webhook/jobs/ingest
-
-# ── n8n безопасность ───────────────────────────────────────
-# ВАЖНО: скопируй значение из локального ~/.n8n/config (encryptionKey)
-# или сгенерируй новое: openssl rand -hex 24
-N8N_ENCRYPTION_KEY=ВСТАВЬ_СЮДА_СВОЙ_КЛЮЧ
-
-# ── PostgreSQL ─────────────────────────────────────────────
-POSTGRES_DB=n8n
-POSTGRES_USER=n8n
-POSTGRES_PASSWORD=ПРИДУМАЙ_СЛОЖНЫЙ_ПАРОЛЬ
-POSTGRES_NON_ROOT_USER=n8n_user
-POSTGRES_NON_ROOT_PASSWORD=ДРУГОЙ_СЛОЖНЫЙ_ПАРОЛЬ
-
-# ── n8n версия ─────────────────────────────────────────────
-N8N_VERSION=latest
-
-# ── Таймзона ───────────────────────────────────────────────
-GENERIC_TIMEZONE=Europe/Warsaw
-TZ=Europe/Warsaw
-EOF
+`Caddyfile`:
 ```
-
-> 🔐 **Безопасность:** никогда не коммить этот файл. Убедись что `~/n8n-stack/.env` в `.gitignore` если ты клонируешь репо на сервер.
-
-### 5.3. Создай `docker-compose.yml`
-
-```bash
-# Этот файл также лежит в репо: n8n/docker-compose.yml
-# Скопируй его на сервер или создай здесь:
-cat > docker-compose.yml << 'COMPOSE'
-# (содержимое — смотри файл n8n/docker-compose.yml в репо)
-COMPOSE
-```
-
-Файл `docker-compose.yml` уже подготовлен в репо по пути `n8n/docker-compose.yml` — скопируй его на сервер.
-
-### 5.4. Создай `Caddyfile`
-
-```bash
-cat > Caddyfile << 'EOF'
-{
-  # Email для Let's Encrypt уведомлений (необязательно но рекомендуется)
-  email твой@email.com
-}
-
-my-n8n.duckdns.org {
+# Caddy автоматом возьмёт TLS
+n8n-recruiter.duckdns.org {
   reverse_proxy n8n:5678
 }
-EOF
 ```
 
-### 5.5. Запуск стека
+Private VM (`~/n8n-db/docker-compose-db.yml`):
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
 
-```bash
-cd ~/n8n-stack
-
-# Первый запуск
-docker compose up -d
-
-# Проверить логи (первый старт PostgreSQL занимает ~30 сек)
-docker compose logs -f --tail=50
-
-# Дождись строки: "n8n ready on 0.0.0.0, port 5678"
+volumes:
+  pgdata:
 ```
 
-### 5.6. Проверь HTTPS
-
-```bash
-# С локальной машины (не с сервера!)
-curl -I https://my-n8n.duckdns.org
-# ожидаем: HTTP/2 200 или 301
-```
-
-Если всё прошло — открой `https://my-n8n.duckdns.org` в браузере. Должна открыться страница настройки n8n.
+Примечание: порт 5432 в private VM не будет доступен из интернета, только из VCN (security lists/NSG).
 
 ---
 
-## Шаг 6: Первичная настройка n8n
+## Шаг 6: Импорт/миграция БД и воркфлоу
 
-### 6.1. Создай аккаунт в n8n
-
-При первом открытии `https://my-n8n.duckdns.org`:
-- Введи email и пароль (это будет admin-аккаунт)
-
-### 6.2. Проверь настройки
-
-В n8n → Settings → General:
-- **Webhook URL:** должен показывать `https://my-n8n.duckdns.org/`
+1. Сделай дамп локальной БД: `pg_dump -Fc -U local_user local_db -f n8n.dump`
+2. Скопируй дамп на public VM, затем через ProxyJump на private VM:
+```bash
+scp -i key -o ProxyJump=ubuntu@<PUBLIC_IP> n8n.dump ubuntu@10.0.0.128:/home/ubuntu/
+```
+3. На private VM: `pg_restore -U ${POSTGRES_USER} -d ${POSTGRES_DB} /home/ubuntu/n8n.dump`
+4. На public VM обнови `.env` → `POSTGRES_HOST=10.0.0.128` → `docker compose down && docker compose up -d`
 
 ---
 
-## Шаг 7: Перенос воркфлоу и credentials
+## Шаг 7–12: Остальные шаги (без серьёзных изменений)
 
-### 7.1. Экспорт из локального n8n
-
-На **локальной машине** открой n8n → Settings → **Export All Workflows** (JSON).
-
-Или через CLI:
-```bash
-# Если n8n в docker
-docker exec -it n8n n8n export:workflow --all --output=/tmp/workflows.json
-docker cp n8n:/tmp/workflows.json ~/workflows-backup.json
-```
-
-### 7.2. Импорт на облачный n8n
-
-На **облачном сервере** или через браузер:
-
-**Вариант A: через UI (рекомендуется)**
-1. Открой `https://my-n8n.duckdns.org`
-2. Нажми **+** в левом меню → **Import from file**
-3. Загружай каждый JSON из `n8n/workflows/`:
-   - `ingest.json`
-   - `evaluate.json`
-   - `feedback-handler.json`
-   - `notify.json`
-   - `telegram-trigger.json`
-
-**Вариант B: через CLI**
-```bash
-# Скопируй воркфлоу на сервер
-scp -i ~/Downloads/ssh-key-*.key /path/to/recruiter/n8n/workflows/*.json ubuntu@<INSTANCE_IP>:~/workflows/
-
-# Импортируй
-docker exec -it n8n n8n import:workflow --separate --input=/home/node/.n8n/workflows/
-# Или смонтируй volume (см. docker-compose.yml)
-```
-
-### 7.3. Воссоздай credentials (ВАЖНО)
-
-Credentials не экспортируются из соображений безопасности. Нужно воссоздать вручную:
-
-1. **Notion API:**
-   - Settings → Credentials → New → "Notion API"
-   - Вставь свой Notion Internal Integration Token
-
-2. **Telegram Bot:**
-   - New → "Telegram API"
-   - Вставь Bot Token
-
-После добавления credentials — открой каждый воркфлоу и переподключи nodes к новым credentials.
-
-### 7.4. Обнови переменные окружения в воркфлоу
-
-Для воркфлоу которые используют `NOTION_DB_ID`, `TELEGRAM_CHAT_ID`:
-- Либо хардкодь в воркфлоу (не в репо)
-- Либо используй n8n Variables (Settings → Variables)
+- Перенос воркфлоу и credentials — как в разделе 7 (UI import + recreate credentials).
+- LLM/Gemini — раздел 8 остался релевантным.
+- GitHub Secrets — обнови `WEBHOOK_URL` на `https://n8n-recruiter.duckdns.org/webhook/jobs/ingest`.
+- Бэкапы: делаем дампы на private VM и выгружаем в Object Storage (или копируем на public и оттуда в Object Storage).
+- Heartbeat/cron: ставим на public VM.
 
 ---
 
-## Шаг 8: Переключение LLM на Gemini
+## Troubleshooting (distributed)
 
-### 8.1. Получи Gemini API ключ
-
-1. Зайди на [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-2. **Create API Key** → выбери проект Google Cloud
-3. Скопируй ключ
-
-> 💡 Gemini 2.0 Flash **бесплатно** на free tier: 15 RPM, 1M TPM, 1500 запросов/день
-
-### 8.2. Добавь credentials в n8n
-
-- Settings → Credentials → New → "HTTP Request" или используй header auth
-- Или добавь в Variables: `LLM_API_KEY = <твой_ключ>`
-
-### 8.3. Проверь провайдер в воркфлоу
-
-В `evaluate.json` воркфлоу найди ноду **Code: LLM Router** (ADR-016):
-- Убедись что `LLM_PROVIDER` = `"gemini"` или настроен через env variable
-- Модель: `gemini-2.0-flash`
-
-> 📖 Подробная инструкция по переключению: `docs/llm-provider-switching.md`
+- n8n не стартует → `docker compose logs n8n` на public VM; проверь connection to Postgres (`telnet 10.0.0.128 5432`)
+- Postgres не принимает → проверь security list/NSG и iptables на private VM
+- Caddy не получает TLS → проверь что DuckDNS резолвится точно на Public IP
+- SSH access issues → проверь SSH rule в Security List и свой текущий public IP (ifconfig.me)
 
 ---
 
-## Шаг 9: Обновление GitHub Secrets
+## Чеклист (обновлённый для 2 VM)
 
-На локальной машине или в GitHub UI:
-
-```
-Repo → Settings → Secrets and variables → Actions → Secrets
-```
-
-Обнови:
-
-| Secret | Новое значение |
-|--------|----------------|
-| `WEBHOOK_URL` | `https://my-n8n.duckdns.org/webhook/jobs/ingest` |
-
-Добавь новые (если ещё нет):
-
-| Secret | Значение |
-|--------|----------|
-| `LLM_API_KEY` | Gemini API key |
-| `NOTION_EVAL_LOG_DB_ID` | ID базы Evaluation Log |
+- [ ] Созданы `public-subnet` и `private-subnet` и сопоставлены route tables
+- [ ] Созданы IG и (опционально) NAT
+- [ ] Security Lists/NSG настроены (80/443 публично, 5432 только из public-subnet)
+- [ ] Запущены `n8n-app` (public) и `n8n-db` (private)
+- [ ] n8n подключается к Postgres (проверить из логов)
+- [ ] DuckDNS резолвит на Public IP
+- [ ] Docker Compose запущен на обеих машинах
+- [ ] E2E: scraper → webhook → n8n → Notion → Telegram
 
 ---
 
-## Шаг 10: End-to-End тест
+Если хочешь, я могу:
+1) Вставить текст `docker-compose.yml`, `docker-compose-db.yml` и `Caddyfile` как файлы в репо (в том числе поддиректории `deploy/`),
+2) Подготовить пошаговый чеклист с GUI-кликами + командной строкой для каждой операции (copy-paste команды),
+3) Сделать оба пункта.
 
-### 10.1. Ручной запуск scraper
-
-```bash
-# На локальной машине
-cd /path/to/recruiter/scraper
-
-# DRY_RUN=false чтобы отправить на реальный webhook
-WEBHOOK_URL=https://my-n8n.duckdns.org/webhook/jobs/ingest npm run scrape
-```
-
-Ожидаемый результат:
-- Логи scraper: `Sent X jobs to webhook`
-- Логи n8n (cloud): воркфлоу выполнился
-- Notion: новые записи в AI Recruiter Board
-- Telegram: алерты по подходящим вакансиям
-
-### 10.2. Тест через GitHub Actions
-
-```
-Repo → Actions → Scraper → Run workflow
-```
-
-Наблюдай логи. После успеха — проверь Notion и Telegram.
-
-### 10.3. Тест webhook URL напрямую
-
-```bash
-curl -X POST https://my-n8n.duckdns.org/webhook/jobs/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"jobs":[{"id":"test-1","title":"Senior TS Dev","company":"Test Co","url":"https://example.com/1","body":"TypeScript Node.js React","source":"manual","scrapedAt":"2026-05-29T10:00:00Z"}],"meta":{"source":"manual","count":1,"sentAt":"2026-05-29T10:00:00Z"}}'
-
-# Ожидаем: HTTP 200 {"message":"success"} или аналогичный ответ
-```
-
----
-
-## Шаг 11: Бэкапы (опционально но рекомендуется)
-
-### 11.1. Автоматический дамп PostgreSQL в файл
-
-```bash
-cat > ~/backup-n8n.sh << 'EOF'
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR=~/backups
-
-mkdir -p "$BACKUP_DIR"
-
-# Дамп PostgreSQL
-docker exec n8n-stack-postgres-1 pg_dump -U n8n n8n > "$BACKUP_DIR/n8n_db_$DATE.sql"
-
-# Бэкап n8n data volume (encryption key, etc.)
-docker run --rm -v n8n-stack_n8n_storage:/data -v "$BACKUP_DIR":/backup ubuntu \
-  tar czf "/backup/n8n_data_$DATE.tar.gz" /data
-
-# Удалить старые бэкапы (хранить 7 дней)
-find "$BACKUP_DIR" -name "*.sql" -mtime +7 -delete
-find "$BACKUP_DIR" -name "*.tar.gz" -mtime +7 -delete
-
-echo "Backup completed: $DATE"
-EOF
-
-chmod +x ~/backup-n8n.sh
-
-# Добавь в cron: каждый день в 03:00
-(crontab -l 2>/dev/null; echo "0 3 * * * ~/backup-n8n.sh >> ~/backup.log 2>&1") | crontab -
-```
-
-### 11.2. Загрузка бэкапов в Oracle Object Storage (бесплатно — 20 GB)
-
-Опционально. Инструкция в официальной документации OCI.
-
----
-
-## Шаг 12: Защита от idle reclamation
-
-Oracle может рекламировать инстанс если CPU < 20% + Network < 20% + Memory < 20% **одновременно 7 дней**.
-
-n8n + postgres + Caddy уже дают baseline нагрузку. Для страховки:
-
-```bash
-# Добавь heartbeat: curl на себя каждые 30 минут
-(crontab -l 2>/dev/null; echo "*/30 * * * * curl -s https://my-n8n.duckdns.org/healthz > /dev/null 2>&1") | crontab -
-```
-
----
-
-## Итоговая архитектура после миграции
-
-```
-GitHub Actions (08:00 UTC)
-    └─> POST https://my-n8n.duckdns.org/webhook/jobs/ingest
-               │
-         Caddy (443/HTTPS, Let's Encrypt)
-               │
-           n8n (5678, Docker)
-               │
-         ┌─────┴──────┐
-      PostgreSQL    Gemini API
-     (n8n internal)  (LLM eval)
-               │
-          ┌────┴────┐
-        Notion    Telegram
-```
-
-**Сервер:** Oracle Cloud A1 Flex (ARM) · 2 OCPU · 12 GB RAM · Ubuntu 22.04  
-**Домен:** my-n8n.duckdns.org (DuckDNS, бесплатно)  
-**HTTPS:** Caddy + Let's Encrypt (автообновление)  
-**Стоимость:** $0/месяц
-
----
-
-## Troubleshooting
-
-### n8n не запускается
-```bash
-docker compose logs n8n
-# Частая причина: postgres ещё не готов → подождать
-# Или: неверный N8N_ENCRYPTION_KEY формат → должен быть hex строка
-```
-
-### Caddy не получает сертификат
-```bash
-docker compose logs caddy
-# Проверь DNS резолвинг:
-dig +short my-n8n.duckdns.org
-# Должен вернуть твой IP
-# Порт 80 должен быть открыт (нужен для ACME challenge)
-```
-
-### Webhook возвращает 404
-```bash
-# Проверь что воркфлоу активирован (не просто сохранён)
-# В n8n UI: воркфлоу должен иметь toggle "Active" = ON
-# URL должен совпадать с путём в Webhook ноде
-```
-
-### "Out of host capacity" при создании VM
-- Попробуй AD-2 или AD-3
-- Уменьши до 1 OCPU + 6 GB
-- Попробуй в другое время суток
-- Создай support ticket в Oracle (иногда помогает)
-
-### Credentials не работают после переноса
-```bash
-# N8N_ENCRYPTION_KEY на облаке должен совпадать с локальным
-# если создавал новый ключ — нужно вручную воссоздать все credentials
-```
-
----
-
-## Чеклист успешной миграции
-
-- [ ] Oracle VM создан и доступен по SSH
-- [ ] Порты 80/443 открыты и в Security List, и в iptables
-- [ ] DuckDNS домен резолвится на IP сервера
-- [ ] Docker Compose стек запущен (`docker compose ps` — все `Up`)
-- [ ] HTTPS работает: `curl -I https://my-n8n.duckdns.org` → 200
-- [ ] Все 5 воркфлоу импортированы и активированы в n8n
-- [ ] Credentials (Notion API, Telegram Bot) воссозданы
-- [ ] Gemini API Key настроен в n8n
-- [ ] `WEBHOOK_URL` в GitHub Secrets обновлён
-- [ ] E2E тест прошёл: scraper → n8n → Notion → Telegram
-- [ ] Бэкап настроен (cron)
+Напиши, что добавить: `1`, `2` или `3` — и я выполню.

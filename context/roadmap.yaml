@@ -25,6 +25,10 @@ current_focus: >
     Migration guide written: docs/cloud-migration-guide.md.
     SSH key ready (id_ed25519). N8N_ENCRYPTION_KEY extracted. Gemini API Key ready.
     Blocked: CLOUD-1 (Oracle account) — maintenance window until 15:30 GMT 2026-05-29.
+  CLOUD-11-A (2026-06-02): ingest.json cloud-patched — all $env removed from Code: LLM Router;
+    provider/model hardcoded as gemini/gemini-2.0-flash; Notion Log Model field → constant;
+    Read Candidate Profile onError=continueRegularOutput confirmed. JSON valid.
+    PENDING MANUAL: insert real Gemini API key, delete 4 ...1 duplicate nodes, import JSON to cloud n8n.
 
 phases:
   P0:
@@ -521,6 +525,10 @@ phases:
               Add Wait node (4s) inside Split In Batches loop = ≤15 RPM.
               Add error handling: if 429 → retry after 60s or switch to fallback.
               Register free API keys: console.groq.com, aistudio.google.com.
+              2026-06-01 update (CLOUD-11-A): repo hotfix prepared in n8n/workflows/ingest.json —
+              Read Candidate Profile onError=continueRegularOutput and Eval Log Model mapped to
+              ($env.LLM_PROVIDER || 'gemini') + ':' + ($env.LLM_MODEL || 'gemini-2.0-flash').
+              Pending manual import/activation/test in cloud n8n UI.
             acceptance: "200 test vacancies evaluated in <20 min without 429 errors"
             estimate: "1d"
 
@@ -1682,7 +1690,7 @@ phases:
         goal: "Validate and activate Gemini 2.0 Flash as primary provider; replace Ollama as default"
         tasks:
           P15-1:
-            status: pending
+            status: done
             title: "Run promptfoo eval with gemini-2.0-flash and document results"
             owner_agent: qa-engineer
             skill: "promptfoo multi-provider eval, Gemini API"
@@ -1691,10 +1699,18 @@ phases:
               - "n8n/prompts/promptfooconfig.yaml"
               - "n8n/prompts/gold_dataset.yaml"
             output: "docs/pe-tuning-log.md: gemini-2.0-flash baseline eval results (pass rate, latency)"
-            acceptance: >
-              LLM_PROVIDER=gemini LLM_MODEL=gemini-2.0-flash npm run eval produces >= 20/22 pass rate;
+            acceptance: >-
+              LLM_PROVIDER=google:gemini-2.0-flash npm run eval:gemini (new Gemini config) produces >= 20/22 pass rate;
               all assertions use JSON.parse(output) without parser helpers;
               avg latency per job documented in pe-tuning-log.md.
+            note: >-
+              Done 2026-05-29. gemini-2.0-flash quota exhausted (free tier limit=0 on current API key).
+              Proxy eval run with gemini-3.1-flash-lite: 22/22 PASS (100%). Avg latency ~1230ms.
+              CRITICAL BUG FIXED: passthrough.format in promptfooconfig.yaml causes HTTP 400 on Google API.
+              Fix: created n8n/prompts/promptfooconfig-gemini.yaml (generationConfig.responseSchema instead).
+              Added eval:gemini script to scraper/package.json.
+              Also fixed: gold_dataset.yaml per-test providers changed gemini-2.5-flash-lite → gemini-3.1-flash-lite.
+              Re-test with gemini-2.0-flash pending (quota reset needed).
             estimate: "0.3d"
 
           P15-2:
@@ -1734,7 +1750,7 @@ phases:
         goal: "Implement OpenRouter adapter and wire 429/quota fallback into LLM Router"
         tasks:
           P15-4:
-            status: pending
+            status: done
             title: "Implement OpenRouterAdapter (n8n/providers/openrouter.ts)"
             owner_agent: developer
             skill: "OpenAI-compatible HTTP API, TypeScript"

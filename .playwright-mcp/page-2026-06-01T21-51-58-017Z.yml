@@ -1,0 +1,739 @@
+- generic:
+  - generic:
+    - generic:
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - link:
+                                - /url: /projects/yaqdIi5qoPJdIA7A
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - generic: Personal
+                            - generic: /
+                            - generic:
+                              - generic:
+                                - generic: Ingest Jobs
+                      - generic:
+                        - generic: + Add tag
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - button "Publish" [disabled]:
+                                  - generic:
+                                    - generic:
+                                      - generic: Publish
+                              - generic:
+                                - generic:
+                                  - button "More actions":
+                                    - generic:
+                                      - img
+                          - generic:
+                            - link "Version History":
+                              - /url: /workflow/RwYJHMIlYwhEIQyE/history
+                              - button "Version History":
+                                - generic:
+                                  - img
+                          - generic:
+                            - generic:
+                              - generic:
+                                - button "Actions":
+                                  - generic:
+                                    - img
+                  - generic:
+                    - radiogroup:
+                      - radio [checked]:
+                        - generic: Editor
+                      - radio:
+                        - generic: Executions
+                      - radio:
+                        - generic: Evaluations
+            - complementary:
+              - generic:
+                - generic:
+                  - menubar:
+                    - menuitem "Add new item":
+                      - generic:
+                        - button "Add new item":
+                          - generic:
+                            - img
+                  - generic:
+                    - button "Open command palette":
+                      - generic:
+                        - img
+                  - generic:
+                    - button "Toggle sidebar":
+                      - generic:
+                        - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - menuitem:
+                                  - generic:
+                                    - img
+                            - generic:
+                              - generic:
+                                - menuitem:
+                                  - generic:
+                                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - menuitem:
+                          - generic:
+                            - img
+                    - generic:
+                      - generic:
+                        - menuitem:
+                          - generic:
+                            - img
+                    - generic:
+                      - generic:
+                        - menuitem:
+                          - generic:
+                            - img
+                    - generic:
+                      - generic:
+                        - menuitem:
+                          - generic:
+                            - img
+            - main:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - img
+                              - img
+                              - img
+                              - img:
+                                - group [ref=e1724] [cursor=pointer]
+                              - img:
+                                - group [ref=e1725] [cursor=pointer]
+                              - img
+                              - img
+                              - img:
+                                - group [ref=e1726] [cursor=pointer]
+                              - img:
+                                - group [ref=e1727] [cursor=pointer]
+                              - img:
+                                - group [ref=e1728] [cursor=pointer]
+                              - img:
+                                - group [ref=e1729] [cursor=pointer]
+                              - img:
+                                - group [ref=e1730] [cursor=pointer]
+                              - img:
+                                - group [ref=e1731] [cursor=pointer]
+                              - img:
+                                - group [ref=e1732] [cursor=pointer]
+                              - img
+                              - img
+                              - img:
+                                - group [ref=e1733] [cursor=pointer]
+                              - img:
+                                - group [ref=e1734] [cursor=pointer]
+                              - img:
+                                - group [ref=e1735] [cursor=pointer]
+                              - img
+                              - img
+                              - img
+                              - img:
+                                - group [ref=e1736] [cursor=pointer]
+                              - img
+                              - img:
+                                - group [ref=e1737] [cursor=pointer]
+                              - img:
+                                - group [ref=e1738] [cursor=pointer]
+                              - img
+                              - img:
+                                - group [ref=e1739] [cursor=pointer]
+                              - img:
+                                - group [ref=e1740] [cursor=pointer]
+                              - img:
+                                - group [ref=e1741] [cursor=pointer]
+                              - img:
+                                - group [ref=e1742] [cursor=pointer]
+                              - img:
+                                - group [ref=e1743] [cursor=pointer]
+                              - img:
+                                - group [ref=e1744] [cursor=pointer]
+                              - img
+                              - generic:
+                                - group [ref=e647] [cursor=pointer]:
+                                  - generic [ref=e648]:
+                                    - generic [ref=e651]: POST
+                                    - generic [ref=e654]:
+                                      - button "Execute step" [ref=e655]:
+                                        - img [ref=e657]
+                                      - button "Deactivate" [ref=e659]:
+                                        - img [ref=e661]
+                                      - button "Delete" [ref=e664]:
+                                        - img [ref=e666]
+                                      - button "More actions" [ref=e668]:
+                                        - img [ref=e670]
+                                    - generic [ref=e672]:
+                                      - generic [ref=e675]:
+                                        - img
+                                      - generic:
+                                        - generic: "Webhook: POST /jobs/ingest"
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - img
+                                        - button "Execute workflow":
+                                          - generic:
+                                            - img
+                                            - generic: Execute workflow
+                                - group [ref=e676] [cursor=pointer]:
+                                  - generic [ref=e677]:
+                                    - generic [ref=e686]:
+                                      - button "Execute step" [ref=e687]:
+                                        - img [ref=e689]
+                                      - button "Deactivate" [ref=e691]:
+                                        - img [ref=e693]
+                                      - button "Delete" [ref=e696]:
+                                        - img [ref=e698]
+                                      - button "More actions" [ref=e700]:
+                                        - img [ref=e702]
+                                    - generic [ref=e704]:
+                                      - generic [ref=e707]:
+                                        - img
+                                      - generic:
+                                        - generic: "Respond to Webhook: 200"
+                                - group [ref=e708] [cursor=pointer]:
+                                  - generic [ref=e709]:
+                                    - generic [ref=e712]: "true"
+                                    - generic [ref=e717]: "false"
+                                    - generic [ref=e724]:
+                                      - button "Execute step" [ref=e725]:
+                                        - img [ref=e727]
+                                      - button "Deactivate" [ref=e729]:
+                                        - img [ref=e731]
+                                      - button "Delete" [ref=e734]:
+                                        - img [ref=e736]
+                                      - button "More actions" [ref=e738]:
+                                        - img [ref=e740]
+                                    - generic [ref=e742]:
+                                      - generic [ref=e745]:
+                                        - img
+                                      - generic:
+                                        - generic: "IF: Zero jobs check"
+                                - group [ref=e746] [cursor=pointer]:
+                                  - generic [ref=e747]:
+                                    - img [ref=e753]
+                                    - generic [ref=e761]:
+                                      - button "Execute step" [ref=e762]:
+                                        - img [ref=e764]
+                                      - button "Deactivate" [ref=e766]:
+                                        - img [ref=e768]
+                                      - button "Delete" [ref=e771]:
+                                        - img [ref=e773]
+                                      - button "More actions" [ref=e775]:
+                                        - img [ref=e777]
+                                    - generic [ref=e779]:
+                                      - generic [ref=e782]:
+                                        - img
+                                      - generic [ref=e783]:
+                                        - img [ref=e786]
+                                        - img [ref=e790]
+                                      - generic:
+                                        - generic: "Telegram: Zero Jobs Alert"
+                                        - generic: "sendMessage: message"
+                                - group [ref=e792] [cursor=pointer]:
+                                  - generic [ref=e793]:
+                                    - generic [ref=e802]:
+                                      - button "Execute step" [ref=e803]:
+                                        - img [ref=e805]
+                                      - button "Deactivate" [ref=e807]:
+                                        - img [ref=e809]
+                                      - button "Delete" [ref=e812]:
+                                        - img [ref=e814]
+                                      - button "More actions" [ref=e816]:
+                                        - img [ref=e818]
+                                    - generic [ref=e820]:
+                                      - generic [ref=e823]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Normalize Jobs"
+                                - group [ref=e824] [cursor=pointer]:
+                                  - generic [ref=e825]:
+                                    - generic [ref=e834]:
+                                      - button "Execute step" [ref=e835]:
+                                        - img [ref=e837]
+                                      - button "Deactivate" [ref=e839]:
+                                        - img [ref=e841]
+                                      - button "Delete" [ref=e844]:
+                                        - img [ref=e846]
+                                      - button "More actions" [ref=e848]:
+                                        - img [ref=e850]
+                                    - generic [ref=e852]:
+                                      - generic [ref=e855]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Dedup Batch"
+                                - group [ref=e856] [cursor=pointer]:
+                                  - generic [ref=e857]:
+                                    - generic [ref=e860]: done
+                                    - generic [ref=e865]: loop
+                                    - generic [ref=e872]:
+                                      - button "Execute step" [ref=e873]:
+                                        - img [ref=e875]
+                                      - button "Deactivate" [ref=e877]:
+                                        - img [ref=e879]
+                                      - button "Delete" [ref=e882]:
+                                        - img [ref=e884]
+                                      - button "More actions" [ref=e886]:
+                                        - img [ref=e888]
+                                    - generic [ref=e890]:
+                                      - generic [ref=e893]:
+                                        - img
+                                      - generic:
+                                        - generic: "Split In Batches: 1"
+                                - group [ref=e894] [cursor=pointer]:
+                                  - generic [ref=e895]:
+                                    - generic [ref=e898]: "0"
+                                    - generic [ref=e903]: "1"
+                                    - generic [ref=e908]: "2"
+                                    - generic [ref=e913]: "3"
+                                    - generic [ref=e920]:
+                                      - button "Execute step" [ref=e921]:
+                                        - img [ref=e923]
+                                      - button "Deactivate" [ref=e925]:
+                                        - img [ref=e927]
+                                      - button "Delete" [ref=e930]:
+                                        - img [ref=e932]
+                                      - button "More actions" [ref=e934]:
+                                        - img [ref=e936]
+                                    - generic [ref=e938]:
+                                      - generic [ref=e941]:
+                                        - img
+                                      - generic:
+                                        - generic: "Switch: Route by Source"
+                                - group [ref=e942] [cursor=pointer]:
+                                  - generic [ref=e943]:
+                                    - generic [ref=e952]:
+                                      - button "Execute step" [ref=e953]:
+                                        - img [ref=e955]
+                                      - button "Deactivate" [ref=e957]:
+                                        - img [ref=e959]
+                                      - button "Delete" [ref=e962]:
+                                        - img [ref=e964]
+                                      - button "More actions" [ref=e966]:
+                                        - img [ref=e968]
+                                    - generic [ref=e970]:
+                                      - generic [ref=e973]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Unknown Source"
+                                - group [ref=e974] [cursor=pointer]:
+                                  - generic [ref=e975]:
+                                    - generic [ref=e984]:
+                                      - button "Execute step" [ref=e985]:
+                                        - img [ref=e987]
+                                      - button "Deactivate" [ref=e989]:
+                                        - img [ref=e991]
+                                      - button "Delete" [ref=e994]:
+                                        - img [ref=e996]
+                                      - button "More actions" [ref=e998]:
+                                        - img [ref=e1000]
+                                    - generic [ref=e1002]:
+                                      - generic [ref=e1005]:
+                                        - img
+                                      - img [ref=e1009]
+                                      - generic:
+                                        - generic: "Notion: Find Existing URL"
+                                        - generic: "POST: https://api.notion.com/v1/databases/36c747f7-ebec-80c8-bfd7-ed317f4a7c35/query"
+                                      - img [ref=e1013]
+                                - group [ref=e1015] [cursor=pointer]:
+                                  - generic [ref=e1016]:
+                                    - generic [ref=e1025]:
+                                      - button "Execute step" [ref=e1026]:
+                                        - img [ref=e1028]
+                                      - button "Deactivate" [ref=e1030]:
+                                        - img [ref=e1032]
+                                      - button "Delete" [ref=e1035]:
+                                        - img [ref=e1037]
+                                      - button "More actions" [ref=e1039]:
+                                        - img [ref=e1041]
+                                    - generic [ref=e1043]:
+                                      - generic [ref=e1046]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Check Duplicate"
+                                - group [ref=e1047] [cursor=pointer]:
+                                  - generic [ref=e1048]:
+                                    - generic [ref=e1051]: "true"
+                                    - generic [ref=e1056]: "false"
+                                    - generic [ref=e1063]:
+                                      - button "Execute step" [ref=e1064]:
+                                        - img [ref=e1066]
+                                      - button "Deactivate" [ref=e1068]:
+                                        - img [ref=e1070]
+                                      - button "Delete" [ref=e1073]:
+                                        - img [ref=e1075]
+                                      - button "More actions" [ref=e1077]:
+                                        - img [ref=e1079]
+                                    - generic [ref=e1081]:
+                                      - generic [ref=e1084]:
+                                        - img
+                                      - generic:
+                                        - generic: "IF: Already in Notion?"
+                                - group [ref=e1085] [cursor=pointer]:
+                                  - generic [ref=e1086]:
+                                    - generic [ref=e1095]:
+                                      - button "Execute step" [ref=e1096]:
+                                        - img [ref=e1098]
+                                      - button "Deactivate" [ref=e1100]:
+                                        - img [ref=e1102]
+                                      - button "Delete" [ref=e1105]:
+                                        - img [ref=e1107]
+                                      - button "More actions" [ref=e1109]:
+                                        - img [ref=e1111]
+                                    - generic [ref=e1113]:
+                                      - generic [ref=e1116]:
+                                        - img
+                                      - generic:
+                                        - generic: "NoOp: Skip Duplicate"
+                                - group [ref=e1117] [cursor=pointer]:
+                                  - generic [ref=e1118]:
+                                    - generic [ref=e1127]:
+                                      - button "Execute step" [ref=e1128]:
+                                        - img [ref=e1130]
+                                      - button "Deactivate" [ref=e1132]:
+                                        - img [ref=e1134]
+                                      - button "Delete" [ref=e1137]:
+                                        - img [ref=e1139]
+                                      - button "More actions" [ref=e1141]:
+                                        - img [ref=e1143]
+                                    - generic [ref=e1145]:
+                                      - generic [ref=e1148]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Build Ollama Payload"
+                                - group [ref=e1149] [cursor=pointer]:
+                                  - generic [ref=e1150]:
+                                    - generic [ref=e1159]:
+                                      - button "Execute step" [ref=e1160]:
+                                        - img [ref=e1162]
+                                      - button "Deactivate" [ref=e1164]:
+                                        - img [ref=e1166]
+                                      - button "Delete" [ref=e1169]:
+                                        - img [ref=e1171]
+                                      - button "More actions" [ref=e1173]:
+                                        - img [ref=e1175]
+                                    - generic [ref=e1177]:
+                                      - generic [ref=e1180]:
+                                        - img
+                                      - img [ref=e1184]
+                                      - generic:
+                                        - generic: "Code: LLM Router"
+                                - group [ref=e1186] [cursor=pointer]:
+                                  - generic [ref=e1187]:
+                                    - generic [ref=e1196]:
+                                      - button "Execute step" [ref=e1197]:
+                                        - img [ref=e1199]
+                                      - button "Deactivate" [ref=e1201]:
+                                        - img [ref=e1203]
+                                      - button "Delete" [ref=e1206]:
+                                        - img [ref=e1208]
+                                      - button "More actions" [ref=e1210]:
+                                        - img [ref=e1212]
+                                    - generic [ref=e1214]:
+                                      - generic [ref=e1217]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Parse Ollama Response"
+                                - group [ref=e1218] [cursor=pointer]:
+                                  - generic [ref=e1219]:
+                                    - generic [ref=e1228]:
+                                      - button "Execute step" [ref=e1229]:
+                                        - img [ref=e1231]
+                                      - button "Deactivate" [ref=e1233]:
+                                        - img [ref=e1235]
+                                      - button "Delete" [ref=e1238]:
+                                        - img [ref=e1240]
+                                      - button "More actions" [ref=e1242]:
+                                        - img [ref=e1244]
+                                    - generic [ref=e1246]:
+                                      - generic [ref=e1249]:
+                                        - img
+                                      - img [ref=e1253]
+                                      - generic:
+                                        - generic: "Notion: Log to Eval Log"
+                                        - generic: "create: databasePage"
+                                      - img [ref=e1257]
+                                - group [ref=e1259] [cursor=pointer]:
+                                  - generic [ref=e1260]:
+                                    - generic [ref=e1269]:
+                                      - button "Execute step" [ref=e1270]:
+                                        - img [ref=e1272]
+                                      - button "Deactivate" [ref=e1274]:
+                                        - img [ref=e1276]
+                                      - button "Delete" [ref=e1279]:
+                                        - img [ref=e1281]
+                                      - button "More actions" [ref=e1283]:
+                                        - img [ref=e1285]
+                                    - generic [ref=e1287]:
+                                      - generic [ref=e1290]:
+                                        - img
+                                      - generic:
+                                        - generic: "Code: Restore Job Payload"
+                                - group [ref=e1291] [cursor=pointer]:
+                                  - generic [ref=e1292]:
+                                    - generic [ref=e1301]:
+                                      - button "Execute step" [ref=e1302]:
+                                        - img [ref=e1304]
+                                      - button "Deactivate" [ref=e1306]:
+                                        - img [ref=e1308]
+                                      - button "Delete" [ref=e1311]:
+                                        - img [ref=e1313]
+                                      - button "More actions" [ref=e1315]:
+                                        - img [ref=e1317]
+                                    - generic [ref=e1319]:
+                                      - generic [ref=e1322]:
+                                        - img
+                                      - img [ref=e1326]
+                                      - generic:
+                                        - generic: "Notion: Create Page (Hot Match)"
+                                        - generic: "create: databasePage"
+                                      - img [ref=e1330]
+                                - group [ref=e1332] [cursor=pointer]:
+                                  - generic [ref=e1333]:
+                                    - generic [ref=e1342]:
+                                      - button "Execute step" [ref=e1343]:
+                                        - img [ref=e1345]
+                                      - button "Deactivate" [ref=e1347]:
+                                        - img [ref=e1349]
+                                      - button "Delete" [ref=e1352]:
+                                        - img [ref=e1354]
+                                      - button "More actions" [ref=e1356]:
+                                        - img [ref=e1358]
+                                    - generic [ref=e1360]:
+                                      - generic [ref=e1363]:
+                                        - img
+                                      - generic [ref=e1364]:
+                                        - img [ref=e1367]
+                                        - img [ref=e1371]
+                                      - generic:
+                                        - generic: "Telegram: Send Alert"
+                                        - generic: "POST: https://api.telegram.org/bot8929393314:AAFDEMMUnkJenDjA8BzC_zmRUJYZuHaywQI/sendMessage"
+                                - group [ref=e1373] [cursor=pointer]:
+                                  - generic [ref=e1374]:
+                                    - generic [ref=e1383]:
+                                      - button "Execute step" [ref=e1384]:
+                                        - img [ref=e1386]
+                                      - button "Deactivate" [ref=e1388]:
+                                        - img [ref=e1390]
+                                      - button "Delete" [ref=e1393]:
+                                        - img [ref=e1395]
+                                      - button "More actions" [ref=e1397]:
+                                        - img [ref=e1399]
+                                    - generic [ref=e1401]:
+                                      - generic [ref=e1404]:
+                                        - img
+                                      - generic:
+                                        - generic: "NoOp: Discard Non-Match"
+                                - group [ref=e1405] [cursor=pointer]:
+                                  - generic [ref=e1406]:
+                                    - img [ref=e1412]
+                                    - generic [ref=e1420]:
+                                      - button "Execute step" [ref=e1421]:
+                                        - img [ref=e1423]
+                                      - button "Deactivate" [ref=e1425]:
+                                        - img [ref=e1427]
+                                      - button "Delete" [ref=e1430]:
+                                        - img [ref=e1432]
+                                      - button "More actions" [ref=e1434]:
+                                        - img [ref=e1436]
+                                    - generic [ref=e1438]:
+                                      - generic [ref=e1441]:
+                                        - img
+                                      - generic:
+                                        - generic: "NoOp: All Done"
+                                - group [ref=e1442] [cursor=pointer]:
+                                  - generic [ref=e1443]:
+                                    - generic [ref=e1452]:
+                                      - button "Execute step" [ref=e1453]:
+                                        - img [ref=e1455]
+                                      - button "Deactivate" [ref=e1457]:
+                                        - img [ref=e1459]
+                                      - button "Delete" [ref=e1462]:
+                                        - img [ref=e1464]
+                                      - button "More actions" [ref=e1466]:
+                                        - img [ref=e1468]
+                                    - generic [ref=e1470]:
+                                      - generic [ref=e1473]:
+                                        - img
+                                      - img [ref=e1477]
+                                      - generic:
+                                        - generic: "Notion: Create Page (Review)"
+                                        - generic: "create: databasePage"
+                                      - img [ref=e1481]
+                                - group [ref=e1483] [cursor=pointer]:
+                                  - generic [ref=e1484]:
+                                    - generic [ref=e1493]:
+                                      - button "Execute step" [ref=e1494]:
+                                        - img [ref=e1496]
+                                      - button "Deactivate" [ref=e1498]:
+                                        - img [ref=e1500]
+                                      - button "Delete" [ref=e1503]:
+                                        - img [ref=e1505]
+                                      - button "More actions" [ref=e1507]:
+                                        - img [ref=e1509]
+                                    - generic [ref=e1511]:
+                                      - generic [ref=e1514]:
+                                        - img
+                                      - generic:
+                                        - generic: Read Candidate Profile
+                                        - generic: Read File(s) From Disk
+                                - group [ref=e1515] [cursor=pointer]:
+                                  - generic [ref=e1516]:
+                                    - generic [ref=e1525]:
+                                      - button "Execute step" [ref=e1526]:
+                                        - img [ref=e1528]
+                                      - button "Deactivate" [ref=e1530]:
+                                        - img [ref=e1532]
+                                      - button "Delete" [ref=e1535]:
+                                        - img [ref=e1537]
+                                      - button "More actions" [ref=e1539]:
+                                        - img [ref=e1541]
+                                    - generic [ref=e1543]:
+                                      - generic [ref=e1546]:
+                                        - img
+                                      - img [ref=e1550]
+                                      - generic:
+                                        - generic: "Notion: Update Log with TG Info"
+                                        - generic: "update: databasePage"
+                                      - img [ref=e1554]
+                                - group [ref=e1556] [cursor=pointer]:
+                                  - generic [ref=e1557]:
+                                    - generic [ref=e1560]: "true"
+                                    - generic [ref=e1565]: "false"
+                                    - generic [ref=e1572]:
+                                      - button "Execute step" [ref=e1573]:
+                                        - img [ref=e1575]
+                                      - button "Deactivate" [ref=e1577]:
+                                        - img [ref=e1579]
+                                      - button "Delete" [ref=e1582]:
+                                        - img [ref=e1584]
+                                      - button "More actions" [ref=e1586]:
+                                        - img [ref=e1588]
+                                    - generic [ref=e1590]:
+                                      - generic [ref=e1593]:
+                                        - img
+                                      - generic:
+                                        - generic: "IF: Score >= 80?1"
+                                - group [ref=e1594] [cursor=pointer]:
+                                  - generic [ref=e1595]:
+                                    - generic [ref=e1598]: "true"
+                                    - generic [ref=e1603]: "false"
+                                    - generic [ref=e1610]:
+                                      - button "Execute step" [ref=e1611]:
+                                        - img [ref=e1613]
+                                      - button "Deactivate" [ref=e1615]:
+                                        - img [ref=e1617]
+                                      - button "Delete" [ref=e1620]:
+                                        - img [ref=e1622]
+                                      - button "More actions" [ref=e1624]:
+                                        - img [ref=e1626]
+                                    - generic [ref=e1628]:
+                                      - generic [ref=e1631]:
+                                        - img
+                                      - generic:
+                                        - generic: "IF: Score >= 50?2"
+                        - img
+                        - img
+                        - generic [ref=e1635]:
+                          - button "Zoom to Fit" [ref=e1637] [cursor=pointer]:
+                            - img [ref=e1639]
+                          - button "Zoom In" [ref=e1642] [cursor=pointer]:
+                            - img [ref=e1644]
+                          - button "Zoom Out" [ref=e1649] [cursor=pointer]:
+                            - img [ref=e1651]
+                          - button "Reset Zoom" [ref=e1656] [cursor=pointer]:
+                            - img [ref=e1658]
+                          - button "Tidy Up" [ref=e1663] [cursor=pointer]:
+                            - img [ref=e1665]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button "Execute workflow":
+                            - generic:
+                              - img
+                              - generic: Execute workflow
+                    - generic [ref=e1675]:
+                      - button "Open nodes panel" [ref=e1677] [cursor=pointer]:
+                        - img [ref=e1679]
+                      - button "Command bar" [ref=e1682] [cursor=pointer]:
+                        - img [ref=e1684]
+                      - button "Add sticky note" [ref=e1689] [cursor=pointer]:
+                        - img [ref=e1691]
+                      - button "Open focus panel" [ref=e1696] [cursor=pointer]:
+                        - img [ref=e1698]
+                    - complementary
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic: Logs
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - button "Pop out panel":
+                                        - generic:
+                                          - img
+                                    - generic:
+                                      - button "Open panel":
+                                        - generic:
+                                          - img
+      - complementary
+  - menu "Actions" [active] [ref=e1745]:
+    - generic [ref=e1746]:
+      - menuitem "Edit description" [ref=e1748]:
+        - generic [ref=e1749]: Edit description
+      - menuitem "Duplicate" [ref=e1751]:
+        - generic [ref=e1752]: Duplicate
+      - menuitem "Download" [ref=e1754]:
+        - generic [ref=e1755]: Download
+      - menuitem "Rename" [ref=e1757]:
+        - generic [ref=e1758]: Rename
+      - menuitem "Favorite" [ref=e1760]:
+        - generic [ref=e1761]: Favorite
+      - menuitem "Import from URL..." [ref=e1763]:
+        - generic [ref=e1764]: Import from URL...
+      - menuitem "Import from file..." [ref=e1766]:
+        - generic [ref=e1767]: Import from file...
+      - menuitem "Push to git" [disabled] [ref=e1769]:
+        - generic [ref=e1770]: Push to git
+      - menuitem "Settings" [ref=e1772]:
+        - generic [ref=e1773]: Settings
+      - generic [ref=e1774]:
+        - separator [ref=e1775]
+        - menuitem "Archive" [ref=e1776]:
+          - generic [ref=e1777]: Archive

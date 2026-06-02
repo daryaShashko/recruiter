@@ -13,13 +13,19 @@ export type { LLMProvider, LLMRequest, LLMResponse } from "./_interface";
 import { OllamaAdapter } from "./ollama";
 import { GeminiAdapter } from "./gemini";
 import { AnthropicAdapter } from "./anthropic";
+import { OpenRouterAdapter } from "./openrouter";
 import type { LLMProvider } from "./_interface";
 
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
-const SUPPORTED_PROVIDERS = ["ollama", "gemini", "anthropic"] as const;
+const SUPPORTED_PROVIDERS = [
+  "ollama",
+  "gemini",
+  "anthropic",
+  "openrouter",
+] as const;
 
 type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number];
 
@@ -27,6 +33,7 @@ const registry: Record<SupportedProvider, LLMProvider> = {
   ollama: new OllamaAdapter(),
   gemini: new GeminiAdapter(),
   anthropic: new AnthropicAdapter(),
+  openrouter: new OpenRouterAdapter(),
 };
 
 function isSupportedProvider(name: string): name is SupportedProvider {
@@ -36,7 +43,7 @@ function isSupportedProvider(name: string): name is SupportedProvider {
 /**
  * Return the LLMProvider adapter for the given provider name.
  *
- * @param name - One of: "ollama", "gemini", "anthropic".
+ * @param name - One of: "ollama", "gemini", "anthropic", "openrouter".
  * @returns The corresponding LLMProvider instance.
  * @throws {Error} When `name` is not a known provider.
  *
