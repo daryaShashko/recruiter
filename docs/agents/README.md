@@ -125,7 +125,8 @@ Full rules: [`context/SYNC_PROTOCOL.md`](../../context/SYNC_PROTOCOL.md)
 
 The SYNC_PROTOCOL defines exactly which YAML files to update for each type of change
 (new TypeScript interface, new env variable, new n8n workflow, new ADR, roadmap
-task completed). A CI check enforces that no YAML file is stale after a commit.
+task completed). CI only partly checks this: `context-check.yml` warns (does not block) when
+some source files change without their YAML note. See the CI section of `SYNC_PROTOCOL.md`.
 
 ---
 
@@ -158,8 +159,9 @@ aligned:
    code changes
 4. **Prompt Engineer** reviews whether any agent skill prompts reference stale
    information and makes surgical edits if needed
-5. The **SYNC_PROTOCOL CI check** runs on every push and catches any missed updates —
-   if a source file changed but its corresponding YAML was not updated, the check fails
+5. The **context CI check** (`context-check.yml`) runs on pull requests: it warns, without
+   failing, when some source files changed but their YAML note did not; the blocking
+   `scripts/check-agent-surfaces.sh` job fails on missing paths in current notes
 
 This sequence ensures that agents always see a consistent project state at session
 start, regardless of when they were last used.

@@ -3,6 +3,12 @@
 ## Current Data Flow (Local POC)
 
 > **Status:** Active — Phases 0–5 done, Phase 6 in progress
+>
+> **Diagram last updated 2026-05-25, before P12 and EVAL-1.** The running ingest workflow is described in
+> [`context/ingest-workflow.yaml`](../context/ingest-workflow.yaml): single `Ingest Jobs`
+> workflow, `Code: LLM Router` (ollama | gemini | anthropic), Evaluation Log for every
+> decision, score routing (>= 80 Board + Telegram, 50–79 Board, < 50 log only). The
+> workflow export itself is local-only (`n8n/workflows/*.json` is gitignored).
 
 ```
 +----------------------------------+
@@ -126,15 +132,19 @@
 - Receives webhook payload
 - Normalizes data structure
 - Deduplicates against Notion database
-- Evaluates each job with LLM (local Ollama or cloud Groq/Gemini)
-- **Logs every evaluation to Evaluation Log DB** (ADR-012, planned)
-- Routes match:true jobs to Notion Board + Telegram
+- Evaluates each job with LLM (`Code: LLM Router`: Ollama, Gemini, or Anthropic)
+- **Logs every evaluation to Evaluation Log DB** (ADR-012; EVAL-1 and EVAL-4 done)
+- Routes by `overall_score`: >= 80 Notion Board + Telegram, 50–79 Notion Board, < 50 log only
 
 ### LLM Evaluator
-- **Current:** Ollama Llama 3.1 8B (local, no rate limits, keep_alive: 0)
-- **Planned (ADR-011):** Groq (primary) + Gemini 1.5 Flash (fallback)
-- Throttled Queue pattern: Wait node 4s → ≤15 RPM
-- Returns strict JSON: {match, reason, url}
+- **Current:** inline code in the n8n `Code: LLM Router` node (ADR-016), not
+  `n8n/providers/`. Two generator scripts exist: `scripts/p12_6_llm_router.py`
+  (`$env.LLM_PROVIDER`, default Ollama) and the later `scripts/patch_llm_router.py`
+  (CLOUD-11-A: Gemini `gemini-2.0-flash` hardcoded). Which one runs is known only from the
+  local export or n8n.
+- **Planned (ADR-011):** Groq (primary) + Gemini 1.5 Flash (fallback); throttled queue
+  (Wait node 4s → ≤15 RPM). P15 (pending) plans Gemini 2.0 Flash primary + OpenRouter fallback.
+- Returns strict JSON: `{ overall_score, tech_stack_match, seniority_match, red_flags, reason, url }`
 
 ### Notion Databases
 - **AI Recruiter Board** — persistent storage for matched jobs + Kanban board

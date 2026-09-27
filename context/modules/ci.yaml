@@ -89,8 +89,19 @@ workflows:
   context-check.yml:
     path: .github/workflows/context-check.yml
     status: exists # Created as part of SYNC system
-    purpose: "Warn on PR if context YAML files are stale after code changes"
-    triggers: [pull_request]
+    purpose: "Blocking structural check of agent surfaces and doc paths; advisory context-sync warnings"
+    triggers: [pull_request (main), workflow_dispatch]
+    jobs:
+      check-agent-surfaces:
+        blocking: true
+        run: "scripts/check-agent-surfaces.sh (offline; fails the job on any FAIL)"
+      check-context-sync:
+        blocking: false
+        note: >
+          ::warning annotations only, never fails. Pairs: types.ts → interfaces.yaml,
+          config.ts → modules/scraper.yaml, n8n/prompts/evaluator.md → modules/n8n.yaml,
+          .github/workflows → modules/ci.yaml, .env.example → env.yaml.
+          n8n/workflows/*.json is gitignored and not checked.
 
   prompt-eval.yml:
     path: .github/workflows/prompt-eval.yml

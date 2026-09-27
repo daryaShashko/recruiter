@@ -7,6 +7,13 @@
 **Extends:** ADR-011 (formalizes and implements LLM_PROVIDER env vars)
 ─────────────────────────────────────────────────────────
 
+> **Current-state note (2026-09-27):** this record describes the decision as made. Since
+> then, `scripts/patch_llm_router.py` (CLOUD-11-A) rewrote the `Code: LLM Router` node with
+> provider, model, and key hardcoded and no `$env`, so "switch by env var" holds only for
+> the `scripts/p12_6_llm_router.py` version. The node does not use `n8n/providers/`
+> (P15-5). `n8n/workflows/ingest.json` is a local-only export, not in the repository. See
+> `context/ingest-workflow.yaml` (`llm_providers`).
+
 ## CONTEXT
 
 Currently all model-specific code is hardcoded for Ollama in **5 places**:

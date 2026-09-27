@@ -2,7 +2,8 @@
 
 > **Правило #1**: Если изменяется код → обновляется YAML.  
 > **Правило #2**: Если изменяется YAML → агенты автоматически видят актуальный контекст.  
-> **Правило #3**: PR без обновления YAML (при изменении кода) не мержится.
+> **Правило #3**: PR без обновления YAML (при изменении кода) не мержится. Это правило
+> процесса: CI его не блокирует, а только предупреждает (см. «CI-проверка»).
 
 ---
 
@@ -17,8 +18,8 @@
 | Задача выполнена (P1-X done) | `context/roadmap.yaml` (status: done) + `README.md` checkbox | Orchestrator |
 | Новый ADR принят | `context/decisions.yaml` | Architect |
 | Архитектура изменилась | `docs/architecture.md` + `context/decisions.yaml` + `context/project.yaml` (architecture.data_flow) | Architect |
-| n8n workflow создан | `context/modules/n8n.yaml` (status: created) + экспорт JSON в `n8n/workflows/` | n8n Specialist |
-| n8n workflow изменён | Реэкспорт JSON + обновить `context/modules/n8n.yaml` | n8n Specialist |
+| n8n workflow создан | `context/modules/n8n.yaml` (status: created) + локальный экспорт JSON в `n8n/workflows/` (в `.gitignore`, не коммитится) | n8n Specialist |
+| n8n workflow изменён | Локальный реэкспорт JSON + обновить `context/modules/n8n.yaml` (и `context/ingest-workflow.yaml` для ingest) | n8n Specialist |
 | Ollama промпт изменён | `context/modules/n8n.yaml` (evaluator_prompt notes) | Prompt Engineer |
 | Новая переменная окружения | `context/env.yaml` + `.env.example` | Developer / DevOps |
 | GitHub Actions workflow изменён | `context/modules/ci.yaml` | DevOps |
@@ -87,25 +88,42 @@ context: <action> <file> — <description>
 4. Есть ли незакрытые known_gaps в модуле? → учесть в работе
 ```
 
-**Только если YAML не содержит нужной информации → читать исходный код.**
+**YAML — заметки, а не источник истины.** Если утверждение важно для задачи, сверь его с
+кодом или конфигурацией (`AGENTS.md` → Source of truth).
 
 ---
 
 ## CI-проверка (автоматическая)
 
-Файл `.github/workflows/context-check.yml` запускается на каждый PR и проверяет:
+Файл `.github/workflows/context-check.yml` запускается на каждый PR в `main` и вручную
+(`workflow_dispatch`). В нём два job:
 
-- Если `scraper/src/types.ts` изменился → `context/interfaces.yaml` тоже должен измениться
-- Если `scraper/src/config.ts` изменился → `context/modules/scraper.yaml` тоже
-- Если `.github/workflows/*.yml` изменился → `context/modules/ci.yaml` тоже
-- Если `n8n/prompts/evaluator.md` изменился → `context/modules/n8n.yaml` тоже
+**`check-agent-surfaces` — блокирующий.** Запускает `scripts/check-agent-surfaces.sh`; любой
+`FAIL` роняет job. Проверяет в том числе:
 
-Нарушение → **PR comment с предупреждением** (не блокирующая ошибка на раннем этапе).  
-После Phase 2 → можно сделать блокирующей.
+- пути в `AGENTS.md`, таблицах `docs/agent-tools.md`, текущих заметках `context/` и `docs/`
+  существуют в git (или в `.gitignore` как локальные, или перечислены как planned в
+  скрипте); история и планы (`context/roadmap.yaml`, `context/decisions.yaml`, `docs/adr/`,
+  `docs/benchmarks/`, post-mortem, PE-лог) не проверяются;
+- текущие заметки не называют локальные экспорты `n8n/workflows/*.json` частью репозитория;
+- адаптеры, skills, нет `${{ }}` внутри `run:`.
+
+**`check-context-sync` — рекомендательный (advisory).** Сравнивает изменённые файлы PR и
+выдаёт `::warning` (аннотация в Checks, не PR comment), job не падает:
+
+- `scraper/src/types.ts` → `context/interfaces.yaml`
+- `scraper/src/config.ts` → `context/modules/scraper.yaml`
+- `n8n/prompts/evaluator.md` → `context/modules/n8n.yaml`
+- `.github/workflows/*` → `context/modules/ci.yaml`
+- `.env.example` → `context/env.yaml`
+
+Экспорты n8n (`n8n/workflows/*.json`) в `.gitignore`, в diff PR не попадают и CI не
+проверяются. Остальные строки таблицы выше CI не проверяет.
 
 ---
 
 ## Золотое правило для агентов
 
-> **Никогда не читай исходный код, если ответ есть в YAML.**  
-> YAML файлы — это 3–5x меньше токенов при той же информационной ценности.
+> **Начинай с YAML, а не со всего исходного кода, но проверяй важное по коду.**  
+> YAML экономит токены, но может устареть; то, что реально работает, определяют код и
+> конфигурация.

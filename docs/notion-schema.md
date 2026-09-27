@@ -35,7 +35,8 @@ Kanban view grouped by `Status`
 
 ## Deduplication Strategy
 
-Deduplication happens at **three levels** in `n8n/workflows/ingest.json`:
+Deduplication happens at **three levels** in the `Ingest Jobs` workflow (local-only export
+`n8n/workflows/ingest.json`, gitignored; map: `context/ingest-workflow.yaml`):
 
 ### Level 1 — Within-batch (Code: Dedup Batch)
 Before processing, all jobs in the same webhook payload are deduplicated by `fingerprint` and `urlNorm` using in-memory Sets. Prevents wasting Ollama compute on duplicates inside a single scrape run.
@@ -139,7 +140,8 @@ Save database ID as `NOTION_EVAL_LOG_DB_ID` in `.env` and n8n credentials.
 
 ### n8n Workflow Integration
 
-The Notion Create Page node for Evaluation Log is placed in `evaluate.json`:
+The Notion Create Page node for Evaluation Log (`Notion: Log to Eval Log`) is placed in the
+`Ingest Jobs` workflow (`ingest.json`; `evaluate.json` is deprecated):
 - **After**: `Code: Parse Ollama Response`
 - **Before**: `IF: Match?`
 - Logs every item regardless of match/reject outcome

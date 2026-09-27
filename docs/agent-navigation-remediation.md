@@ -1,8 +1,8 @@
 # Agent navigation and safety remediation plan
 
-**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured; gap fixes rerun  
+**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured; gap fixes rerun; Slice 3 done, pending review  
 **Active workflow stage:** Verify  
-**Next gate:** review the rerun results, then Slice 3
+**Next gate:** review Slice 3, then Slice 4
 
 ## Goal
 
@@ -38,9 +38,9 @@ behavior.
 | Tracked machine-local settings | `.zed/settings.json` tracked (committed before its ignore rule), with personal absolute path | Removed; `.zed/` and `.claude/settings.local.json` ignored |
 | MCP configuration | 5 servers, all `@latest`; `server-fetch` does not exist on npm (404), `server-github` deprecated | None committed; MCP optional and user-level (`docs/agent-tools.md`) |
 | `${{ }}` inside `run:` scripts | 5 steps in `context-check.yml` (PR-controlled file names), 2 Telegram steps in `prompt-eval.yml` and `scraper.yml` | 0; values passed through `env:` |
-| Context freshness check | 6 warning checks, 0 blocking | Unchanged (Slice 3) |
-| References to `n8n/workflows/` | ~80 references to files that are intentionally local-only and gitignored since `d0efe5e`; some claim the file is in the repo | Local-only status stated in `AGENTS.md`; stale per-document claims remain (Slice 3) |
-| Structural check | None | `scripts/check-agent-surfaces.sh`: 8 PASS, 0 FAIL, npm check opt-in (`--online`) |
+| Context freshness check | 6 warning checks, 0 blocking | Slice 3: 1 blocking job (`scripts/check-agent-surfaces.sh`), 5 advisory warning checks; dead `n8n/workflows/` check removed |
+| References to `n8n/workflows/` | ~80 references to files that are intentionally local-only and gitignored since `d0efe5e`; some claim the file is in the repo | Slice 3: current notes corrected; claims that the exports are in the repo are a `FAIL` (check 9) |
+| Structural check | None | `scripts/check-agent-surfaces.sh`: 10 PASS, 0 FAIL, npm check opt-in (`--online`); blocking in CI since Slice 3 |
 | End-to-end routing benchmark | Not run | Slice 0 on the new setup: [results](benchmarks/agent-routing/results-2026-09-27.md) (Claude Code CLI, Codex CLI) |
 
 Structural checks are reproducible from files. Agent performance measures require a
@@ -73,15 +73,25 @@ non-zero on `FAIL`:
 3. No tool-specific agent/prompt/profile directories are tracked (`.zed`, `.github/agents`,
    `.github/prompts`, `.cursor`, `.codex/agents`, `.claude/agents`, `.claude/commands`).
 4. Every skill has `name` (matching its directory) and `description` frontmatter.
-5. Repository paths named in `AGENTS.md` and the tables in `docs/agent-tools.md` exist
-   (`n8n/workflows/` excluded as local-only).
+5. Repository paths named in `AGENTS.md` and the tables in `docs/agent-tools.md` exist.
+   Since Slice 3, "exist" means tracked by git, gitignored (local-only, for example
+   `n8n/workflows/*.json`), or listed in `PLANNED_PATHS` in the script, so the result is
+   the same locally and in CI.
 6. No `${{ }}` expression is interpolated inside a `run:` script.
 7. `--online` only: committed `@modelcontextprotocol/*` package references resolve on npm.
+8. (Slice 3) Paths named in current notes exist under the same rule as check 5: backticked
+   paths in `context/*.md`, `context/starters/`, `docs/*.md`, `docs/agents/`; `file:` and
+   `path:` values in `context/*.yaml`. History and plans are excluded
+   (`context/roadmap.yaml`, `context/decisions.yaml`, `docs/adr/`, `docs/benchmarks/`,
+   `docs/post-mortem.md`, `docs/pe-tuning-log.md`, this file).
+9. (Slice 3) No tracked Markdown/YAML note (same exclusions) has a line that names
+   `n8n/workflows/` and says it is in the repository without also marking it local,
+   gitignored, or not in the repository.
 
 Negative-tested on 2026-09-27 with temporary fixtures: an extra rule in `CLAUDE.md`, a
 skill with mismatched frontmatter, and `${{ }}` in both `run: |` and inline `- run:` forms
-were each reported as `FAIL`. Whether to add the script as a blocking CI job is a separate
-decision.
+were each reported as `FAIL`. Since Slice 3 the script runs as the blocking
+`check-agent-surfaces` job in `.github/workflows/context-check.yml` (pending review).
 
 ### Layer B — fixed task set
 
@@ -242,7 +252,7 @@ roadmap task L12 tool-neutral.
 import and skill symlink, VS Code `AGENTS.md` and skills support) is not yet exercised; the
 Layer B runs in Slice 0 cover it.
 
-### Slice 3 — Make current source and context claims agree
+### Slice 3 — Make current source and context claims agree — **done, pending review**
 
 **Scope:** correct statements that claim `n8n/workflows/*.json` is in the repository (for
 example `docs/eval-log-setup.md:96`); remove or repurpose the dead `n8n/workflows/` check in
@@ -253,6 +263,52 @@ actual CI behavior; add checks only for high-value, mechanically verifiable inva
 **Proof:** a deliberately mismatched context/source fixture is detected by the check; CI
 reports blocking versus advisory behavior accurately; Layer B source accuracy (including
 stale-context traps) is compared against Slice 0.
+
+**Result (2026-09-27, uncommitted, on top of `d8f1b9a`):**
+
+```text
+Slice: 3 — Make current source and context claims agree
+Changed files:
+  .github/workflows/context-check.yml   blocking check-agent-surfaces job; advisory sync
+                                        job; dead n8n/workflows/ check removed;
+                                        workflow_dispatch added
+  scripts/check-agent-surfaces.sh       tracked-or-local-only path rule; checks 8 and 9
+  context/SYNC_PROTOCOL.md, context/README.md, docs/agents/README.md,
+  context/modules/ci.yaml               CI described as blocking vs advisory; notes are
+                                        not the source of truth; exports are local-only
+  docs/eval-log-setup.md, docs/notion-schema.md, context/ingest-workflow.yaml,
+  context/modules/n8n.yaml, docs/agents/n8n-specialist.md
+                                        n8n/workflows/*.json described as local-only
+  context/env.yaml, context/project.yaml, docs/architecture.md,
+  docs/agents/n8n-specialist.md, context/modules/n8n.yaml
+                                        LLM Router: two generators (p12_6 $env vs
+                                        CLOUD-11-A hardcoded) instead of "env-driven"
+  docs/adr/ADR-016-llm-provider-adapter-pattern.md
+                                        short current-state note; decision text unchanged
+  context/starters/new-session.md       project status matches context/roadmap.yaml
+Before (Layer A / Layer B): 8 PASS, 0 FAIL; freshness CI 6 warnings, 0 blocking (1 dead) /
+  Slice 0 source: Claude 8/12, Codex 11/12
+After (Layer A / Layer B): 10 PASS, 0 FAIL; CI 1 blocking job + 5 advisory warnings /
+  Layer B not run (paid agent sessions; deferred to Slice 5)
+Cases improved / regressed / unchanged: not measured (Slice 5)
+Proof/check and result: fixtures added temporarily and removed —
+  (1) `file: scraper/src/scrapers/does-not-exist.ts` in context/modules/scraper.yaml,
+  (2) a backticked `scripts/missing-helper.sh` in context/starters/new-session.md,
+  (3) the old claim "Файл `n8n/workflows/ingest.json` уже обновлён в репозитории"
+      (HEAD version of docs/eval-log-setup.md:96):
+  each reported FAIL (exit 1); after removal all checks pass (exit 0). Workflow YAML
+  parses (jobs: check-agent-surfaces, check-context-sync). Not yet run in GitHub Actions.
+Impact on agent navigation or safety: current notes no longer point agents at a
+  non-existent checked-in export or at the old "env-driven router" claim; CI now fails
+  when a current note names a missing path.
+Known limitation: check 9 is a phrase heuristic (Russian and English wordings); it does
+  not catch implied presence without such a phrase (for example a directory tree).
+  Check 8 does not scan README.md, TODO.md, or unbackticked prose paths.
+  README.md still lists n8n/workflows/*.json in its tree and names missing files; not
+  edited because it has unrelated uncommitted changes. context/modules/n8n.yaml and
+  context/project.yaml were already not strict YAML (unquoted "Code: ..." values).
+Next gate: review Slice 3 (including whether the new CI job should block), then Slice 4
+```
 
 ### Slice 4 — Simplify routing and prompt contracts
 

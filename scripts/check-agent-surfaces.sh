@@ -66,20 +66,41 @@ for skill in .agents/skills/*/; do
   fi
 done
 
+# Path references in docs must resolve the same way locally and in CI, so "exists" means
+# tracked by git (a file, or a directory with tracked files). Allowed without being tracked:
+# - local-only paths matched by .gitignore (for example n8n/workflows/*.json exports,
+#   scraper/output/, scraper/.env), and the n8n/workflows/ directory itself;
+# - PLANNED_PATHS: files that current docs explicitly describe as not created yet or as
+#   generated at run time. Keep this list short and give the reason for each entry.
+PLANNED_PATHS=(
+  ".github/workflows/test.yml"      # context/modules/ci.yaml: status not_created
+  "scraper/promptfoo-results.json"  # written by prompt-eval.yml at run time (artifact)
+)
+path_ok() {
+  local p="$1" planned
+  [[ -n "$(git ls-files -- "$p" 2>/dev/null | head -1)" ]] && return 0
+  git check-ignore -q --no-index -- "$p" 2>/dev/null && return 0
+  [[ "$p" == n8n/workflows || "$p" == n8n/workflows/* ]] && return 0
+  for planned in "${PLANNED_PATHS[@]}"; do [[ "$p" == "$planned" ]] && return 0; done
+  return 1
+}
+# Normalise candidate paths read from stdin: drop placeholders (<name>), anchors, and
+# trailing punctuation; skip globs and templates. Prints one path per line.
+clean_paths() {
+  sed -E 's/<.*$//; s/#.*$//; s/[),.:;]+$//' \
+    | grep -E '^(\.agents|\.claude|\.github|context|docs|n8n|scraper|scripts)/' \
+    | grep -v '[*{$]' | sort -u
+}
+
 # 5. Repository paths named in canonical instructions exist.
 # Checks backticked paths that start with a known top-level directory (AGENTS.md in
-# full, table rows only in docs/agent-tools.md, whose prose lists forbidden examples). Paths under
-# n8n/workflows/ are local-only by design and are skipped.
+# full, table rows only in docs/agent-tools.md, whose prose lists forbidden examples).
 missing=""
 for doc in AGENTS.md docs/agent-tools.md; do
   while IFS= read -r p; do
-    p="${p%%<*}"          # drop placeholders such as <name>
-    [[ "$p" == n8n/workflows/* ]] && continue
-    [[ -z "$p" || "$p" == *'*'* ]] && continue
-    [[ -e "$p" ]] || missing+="$doc:$p "
+    path_ok "$p" || missing+="$doc:$p "
   done < <(grep -E "$([[ "$doc" == AGENTS.md ]] && echo '.' || echo '^\|')" "$doc" \
-    | grep -o '`[^` ]*`' | tr -d '`' \
-    | grep -E '^(\.agents|\.claude|\.github|context|docs|n8n|scraper|scripts)/' | sort -u)
+    | grep -o '`[^` ]*`' | tr -d '`' | clean_paths)
 done
 if [[ -z "$missing" ]]; then
   pass "paths named in AGENTS.md and docs/agent-tools.md exist"
@@ -102,6 +123,55 @@ if [[ -z "$injections" ]]; then
   pass "no \${{ }} expressions inside run: scripts"
 else
   fail "\${{ }} used inside run: (pass through env: instead): $(echo "$injections" | tr '\n' ' ')"
+fi
+
+# 8. Current-state notes name only paths that exist (see path_ok above).
+# Scope: context notes and current docs. History and plans are excluded because they
+# legitimately name removed or future files: context/roadmap.yaml, context/decisions.yaml,
+# docs/adr/, docs/benchmarks/, docs/post-mortem.md, docs/pe-tuning-log.md, and
+# docs/agent-navigation-remediation.md. Markdown: backticked paths. YAML: values of
+# file: and path: keys. (git pathspec * also matches "/", so subdirectories are included.)
+CURRENT_MD="$(git ls-files 'context/*.md' 'docs/*.md' \
+  | grep -v -E '^docs/(adr|benchmarks)/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation|agent-tools)\.md$' \
+  | sort -u)"
+CURRENT_YAML="$(git ls-files 'context/*.yaml' \
+  | grep -v -E '^context/(roadmap|decisions)\.yaml$' | sort -u)"
+missing=""
+for doc in $CURRENT_MD; do
+  [[ -f "$doc" ]] || continue
+  while IFS= read -r p; do
+    path_ok "$p" || missing+="$doc:$p "
+  done < <(grep -o '`[^` ]*`' "$doc" | tr -d '`' | clean_paths)
+done
+for doc in $CURRENT_YAML; do
+  [[ -f "$doc" ]] || continue
+  while IFS= read -r p; do
+    path_ok "$p" || missing+="$doc:$p "
+  done < <(grep -E '^[[:space:]]*-?[[:space:]]*(file|path):[[:space:]]' "$doc" \
+    | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+#.*$//; s/^["'"'"']//; s/["'"'"',]*$//' \
+    | clean_paths)
+done
+if [[ -z "$missing" ]]; then
+  pass "paths named in current context/ and docs/ notes exist (or are local-only/planned)"
+else
+  fail "current notes name missing paths: $missing"
+fi
+
+# 9. No current note claims that local-only n8n workflow exports are in the repository.
+# n8n/workflows/*.json is gitignored (personal IDs). A line that names n8n/workflows/ and
+# says the file is in the repository fails unless the same line also marks it as local,
+# gitignored, or not in the repository. Same exclusions as check 8, applied to all
+# tracked Markdown and YAML files.
+claims="$(git ls-files '*.md' '*.yaml' '*.yml' \
+  | grep -v -E '^docs/(adr|benchmarks)/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation)\.md$|^context/(roadmap|decisions)\.yaml$' \
+  | while IFS= read -r f; do [[ -f "$f" ]] && grep -H -n -i 'n8n/workflows' "$f"; done \
+  | grep -i -E 'в репозитори|в репо |in (the|this) repo|checked[ -]in|committed (to|in)|tracked (in|by) git|stored in git' \
+  | grep -v -i -E 'локальн|local|gitignor|not in (the|this) repo|нет в репозитори|не в репозитори|не хранится|not committed|never commit|не коммит' \
+  | cut -d: -f1,2)"
+if [[ -z "$claims" ]]; then
+  pass "no note claims n8n/workflows/*.json is in the repository"
+else
+  fail "notes claim local-only n8n exports are in the repository: $(echo "$claims" | tr '\n' ' ')"
 fi
 
 # 7. Optional: MCP/npx packages referenced by committed config resolve on npm.

@@ -85,11 +85,14 @@
 
 ## Текущий статус проекта
 
-- **Фаза:** P13 (Prompt Engineering — ADR-017) — в процессе
-- **Готово:** P0–P5 (Scraper→CI), P12 (LLM Provider Adapters, ADR-016)
-- **In progress:** P6 (Sources), P7 (Cloud/Oracle), P10 (Scraper v2), P13 (Prompt Eng)
-- **Открытые задачи P13:** P13-4 (few-shot), P13-5 (n8n schema), P13-6÷P13-12 — см. context/roadmap.yaml
-- **Следующая фаза:** P14 — Gemini Primary + OpenRouter Fallback
+Снимок статусов из `context/roadmap.yaml` (проверено 2026-09-27; roadmap последний раз
+обновлялся 2026-06-02). Перед тем как называть фазу текущей, сверься с roadmap.
+
+- **Фаза (`current_phase`):** P13 (Prompt Engineering Best Practices Stack, ADR-017) — `in_progress`
+- **Готово (`done`):** P0–P5 (bootstrap, scraper + GitHub Actions, n8n webhook, Ollama, Notion, Telegram), P12 (LLM Provider Adapter Pattern, ADR-016)
+- **In progress:** P6 (E2E Hardening & Monitoring), P7 (Cloud Migration — Oracle Cloud + Cloud LLM), P10 (Promptfoo evaluation & CI/CD), P13
+- **Открытые задачи P13:** P13-1÷P13-3 `done`; P13-4 (few-shot) … P13-12 `pending`
+- **Pending:** P8, P9, P11, P14 (Manual Job URL Checker), P15 (Gemini 2.0 Flash Primary + OpenRouter Fallback)
 
 ## Правило одной строки
 

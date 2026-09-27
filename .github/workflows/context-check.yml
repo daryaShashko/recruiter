@@ -1,12 +1,32 @@
 name: Context Freshness Check
 
+# Two kinds of checks (see context/SYNC_PROTOCOL.md, "CI-проверка"):
+# - check-agent-surfaces: BLOCKING. Fails the run when scripts/check-agent-surfaces.sh
+#   reports FAIL (adapters, skills, ${{ }} in run:, missing paths named in current docs,
+#   claims that local-only n8n workflow exports are in the repository).
+# - check-context-sync: ADVISORY. Emits ::warning annotations when a source file changed
+#   without its context note; it never fails the run.
+
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
+  check-agent-surfaces:
+    name: Agent surfaces and doc paths (blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run structural check
+        run: scripts/check-agent-surfaces.sh
+
   check-context-sync:
-    name: Check context YAML is in sync
+    name: Context YAML sync (advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
@@ -46,6 +66,8 @@ jobs:
             fi
           fi
 
+      # n8n workflow exports (n8n/workflows/*.json) are gitignored, so they never appear
+      # in a PR diff; only the prompt file is checked here.
       - name: Check n8n module sync
         env:
           CHANGED: ${{ steps.changed.outputs.changed_files }}
@@ -53,11 +75,6 @@ jobs:
           if echo "$CHANGED" | grep -q "n8n/prompts/evaluator.md"; then
             if ! echo "$CHANGED" | grep -q "context/modules/n8n.yaml"; then
               echo "::warning file=n8n/prompts/evaluator.md::evaluator.md changed but context/modules/n8n.yaml was not updated."
-            fi
-          fi
-          if echo "$CHANGED" | grep -q "n8n/workflows/"; then
-            if ! echo "$CHANGED" | grep -q "context/modules/n8n.yaml"; then
-              echo "::warning::n8n workflow changed but context/modules/n8n.yaml was not updated."
             fi
           fi
 
@@ -84,5 +101,6 @@ jobs:
       - name: Summary
         run: |
           echo "Context sync check complete."
-          echo "See warnings above (if any) — these are non-blocking on early stage."
+          echo "Warnings above (if any) are advisory: this job does not fail on them."
+          echo "The blocking check is the separate check-agent-surfaces job."
           echo "Refer to context/SYNC_PROTOCOL.md for the full sync rules."

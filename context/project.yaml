@@ -72,7 +72,7 @@ architecture:
       dedup_note: "ADR-015 — semantic fingerprint dedup, cross-platform capable"
     - step: 4
       from: n8n Code: LLM Router
-      action: "Evaluate each job with LLM (Ollama / Gemini / Anthropic — env-driven via ADR-016)"
+      action: "Evaluate each job with LLM (Ollama / Gemini / Anthropic; env-driven in the p12_6 version, hardcoded in the CLOUD-11-A version — see context/ingest-workflow.yaml llm_providers)"
       output: "{ overall_score, tech_stack_match, seniority_match, red_flags, reason, url }"
       note: "match derived in Code: Parse Ollama Response as overall_score >= 50"
     - step: 4.5

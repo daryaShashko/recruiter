@@ -4,9 +4,14 @@
 > (и match:true, и match:false). После выполнения этих шагов пайплайн начнёт
 > записывать ~200 оценок/день, что даёт полную видимость в работу эвалюатора.
 >
-> **Что уже сделано:** `evaluate.json` обновлён — новый узел `Notion: Log to Eval Log`
-> уже добавлен между `Code: Parse Ollama Response` и `IF: Match?`. Тебе нужно только
-> создать базу в Notion и прописать её ID.
+> **Что уже сделано:** узел `Notion: Log to Eval Log` добавлен в воркфлоу между
+> `Code: Parse Ollama Response` и `IF: Match?` (сейчас это воркфлоу **Ingest Jobs**,
+> `ingest.json`; `evaluate.json` устарел). Тебе нужно только создать базу в Notion и
+> прописать её ID.
+>
+> **Экспорты воркфлоу не хранятся в репозитории:** `n8n/workflows/*.json` — локальные
+> файлы, они в `.gitignore` (содержат личные ID). Экспортируй воркфлоу вручную из
+> n8n UI и работай с этой локальной копией.
 >
 > **Время:** ~15 минут.
 
@@ -93,12 +98,13 @@ NOTION_EVAL_LOG_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## Шаг 6 — Обновить `ingest.json` в n8n (замена плейсхолдера + импорт)
 
-Файл `n8n/workflows/ingest.json` уже обновлён в репозитории с новым узлом.
-Тебе нужно заменить плейсхолдер и импортировать в n8n.
+Узел добавлен в локальный экспорт `n8n/workflows/ingest.json`. Этого файла нет в
+репозитории (он в `.gitignore`): используй свою локальную копию или скачай экспорт из
+n8n UI. Затем замени плейсхолдер и импортируй воркфлоу в n8n.
 
 ### 6a. Заменить плейсхолдер в JSON-файле
 
-В файле `n8n/workflows/ingest.json` найди строку:
+В локальном файле `n8n/workflows/ingest.json` найди строку:
 ```json
 "value": "YOUR_EVAL_LOG_DB_ID_HERE",
 ```
@@ -112,7 +118,7 @@ NOTION_EVAL_LOG_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 1. Открой n8n → в левом меню нажми **Workflows**
 2. Найди воркфлоу **"Ingest Jobs"**
 3. Открой его → нажми меню `•••` в правом верхнем углу → **Import from file**
-4. Выбери файл `n8n/workflows/ingest.json`
+4. Выбери локальный файл `n8n/workflows/ingest.json`
 5. Подтверди замену (Yes, overwrite)
 6. Нажми **Save** → **Activate**
 

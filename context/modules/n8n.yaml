@@ -40,6 +40,8 @@ cloud_deployment:  # P7 — in_progress (2026-05-29)
     - CLOUD-9..11: Migrate workflows + switch LLM
     - CLOUD-12..16: GitHub Secrets + E2E test + backups + monitoring
 
+# `file:` values below name local-only exports. n8n/workflows/*.json is gitignored since
+# d0efe5e (personal IDs) and is not in the repository; export from the n8n UI when needed.
 workflows:
   ingest:
     file: n8n/workflows/ingest.json
@@ -66,6 +68,8 @@ workflows:
       CLOUD-11-A hotfix (2026-06-01):
       - Read Candidate Profile uses On Error = Continue (ignore error output) to allow fallback profile path handling.
       - Notion: Log to Eval Log maps Model from env vars: LLM_PROVIDER:LLM_MODEL.
+        Superseded 2026-06-02 (context/roadmap.yaml current_focus, CLOUD-11-A): all $env
+        removed from Code: LLM Router; Model field set to a constant.
     nodes_sequence:
       - name: Webhook
         type: n8n-nodes-base.webhook
@@ -172,7 +176,7 @@ workflows:
 
   notify:
     file: n8n/workflows/notify.json
-    status: created
+    status: deprecated # replaced by the single ingest workflow (see ingest.architecture_note)
     phase: P4
     last_updated: "2026-05-24"
     architecture_note: >
@@ -244,7 +248,11 @@ ollama:
     LLM_API_KEY:  "API key for Gemini/Anthropic (default: empty)"
     LLM_MODEL:    "model name (default: provider-specific)"
     LLM_BASE_URL: "Ollama base URL (default: http://localhost:11434)"
-    setup_note:   "Set via n8n Settings → Variables (NOT host .env file)"
+    setup_note: >
+      Read as $env.* only by the scripts/p12_6_llm_router.py version of Code: LLM Router.
+      The later scripts/patch_llm_router.py version (CLOUD-11-A) hardcodes provider, model,
+      and key and reads none of these. Which version runs is known only from the local
+      export or n8n.
   request_template:
     model: "llama3.1:8b"
     stream: false
