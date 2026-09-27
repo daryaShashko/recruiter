@@ -150,7 +150,7 @@ change does the step):
    `context/modules/n8n.yaml`) to reflect the code changes (developer / n8n specialist)
 4. Check whether any role note references stale information and make surgical edits if
    needed (prompt engineer)
-5. The **context CI check** (`context-check.yml`) runs on pull requests: it warns, without
+5. The **context CI check** (`context-check.yml`) runs on pushes and pull requests to main: it warns, without
    failing, when some source files changed but their YAML note did not; the blocking
    `scripts/check-agent-surfaces.sh` job fails on missing paths in current notes
 

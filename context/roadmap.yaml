@@ -1,7 +1,7 @@
 current_phase: P13
 current_focus: >
   P6 6/7 done (P6-7 awaits production data).
-  P10 DONE (2026-05-28): GHA prompt-eval.yml live. Node.js upgraded to 24 (2026-05-29).
+  P10 8/10 done (2026-05-28): GHA prompt-eval.yml live; P10-7, P10-8 blocked until P7. Node.js upgraded to 24 (2026-05-29).
   P12 DONE (2026-05-28): All 8 tasks complete. LLM_PROVIDER env var switches provider for n8n + promptfoo.
   P13-1 DONE (2026-05-28): passthrough.format:{JSON Schema} in promptfooconfig.yaml.
   P13-2 DONE (2026-05-28): 26 JS assertions refactored. try/catch JSON.parse pattern throughout.
@@ -440,33 +440,38 @@ phases:
         goal: "Get a bare server with public IP, Docker installed"
         tasks:
           CLOUD-1:
-            status: in_progress
+            status: done
             title: "Register Oracle Cloud account"
+            verified: '2026-09-27: https://n8n-recruiter.duckdns.org answers /healthz {"status":"ok"} over HTTPS; IP 92.5.81.123 is in an Oracle network (whois).'
             owner_agent: devops
             note: "Blocked by Oracle planned maintenance (06:00–15:30 GMT 2026-05-29). Will retry after 17:30 Warsaw."
             estimate: "0.5d"
           CLOUD-2:
-            status: pending
+            status: done
             title: "Create Compute Instance (VM.Standard.A1.Flex)"
+            verified: '2026-09-27: https://n8n-recruiter.duckdns.org answers /healthz {"status":"ok"} over HTTPS; IP 92.5.81.123 is in an Oracle network (whois).'
             owner_agent: devops
             note: "4 OCPU, 24 GB RAM, 200 GB boot volume, Ubuntu 22.04 aarch64"
             risk: "A1 instances may be unavailable — retry over several days or use availability script"
             estimate: "0.5d"
           CLOUD-3:
-            status: pending
+            status: done
             title: "Configure VCN Security List (Ingress Rules)"
+            verified: '2026-09-27: https://n8n-recruiter.duckdns.org answers /healthz {"status":"ok"} over HTTPS; IP 92.5.81.123 is in an Oracle network (whois). Port 443 is open.'
             owner_agent: devops
             note: "Open ports: 80 (HTTP), 443 (HTTPS), 22 (SSH). Block all other inbound."
             estimate: "0.5d"
           CLOUD-4:
-            status: pending
+            status: done
             title: "SSH into server, update system, configure swap"
+            verified: 'Inferred from CLOUD-8 (server is up); swap not verified.'
             owner_agent: devops
             note: "sudo apt update && upgrade. Add 4-8 GB swap as OOM safety net."
             estimate: "0.5d"
           CLOUD-5:
-            status: pending
+            status: done
             title: "Install Docker Engine + Docker Compose plugin"
+            verified: 'Inferred from CLOUD-8 (n8n stack runs); Docker not verified directly.'
             owner_agent: devops
             note: "Follow official Docker install for Ubuntu ARM64"
             estimate: "0.5d"
@@ -493,8 +498,9 @@ phases:
             completed: "2026-05-29"
             estimate: "1d"
           CLOUD-8:
-            status: pending
+            status: done
             title: "Deploy stack and verify n8n HTTPS accessibility"
+            verified: '2026-09-27: https://n8n-recruiter.duckdns.org answers /healthz {"status":"ok"} over HTTPS; IP 92.5.81.123 is in an Oracle network (whois).'
             owner_agent: devops
             note: "docker compose up -d. Verify: curl https://n8n.your-domain.com → n8n login page."
             acceptance: "n8n is accessible via HTTPS from any browser"

@@ -8,6 +8,8 @@ name: Context Freshness Check
 #   without its context note; it never fails the run.
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -38,8 +40,16 @@ jobs:
 
       - name: Get changed files
         id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          CHANGED=$(git diff --name-only origin/main...HEAD)
+          # push: compare with the previous tip of main; PR and manual runs: with main.
+          if [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$BEFORE" HEAD)
+          else
+            CHANGED=$(git diff --name-only origin/main...HEAD)
+          fi
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT

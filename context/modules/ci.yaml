@@ -90,7 +90,7 @@ workflows:
     path: .github/workflows/context-check.yml
     status: exists # Created as part of SYNC system
     purpose: "Blocking structural check of agent surfaces and doc paths; advisory context-sync warnings"
-    triggers: [pull_request (main), workflow_dispatch]
+    triggers: [push (main), pull_request (main), workflow_dispatch]
     jobs:
       check-agent-surfaces:
         blocking: true

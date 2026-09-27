@@ -95,7 +95,7 @@ context: <action> <file> — <description>
 
 ## CI-проверка (автоматическая)
 
-Файл `.github/workflows/context-check.yml` запускается на каждый PR в `main` и вручную
+Файл `.github/workflows/context-check.yml` запускается на каждый push и PR в `main` и вручную
 (`workflow_dispatch`). В нём два job:
 
 **`check-agent-surfaces` — блокирующий.** Запускает `scripts/check-agent-surfaces.sh`; любой
@@ -108,7 +108,7 @@ context: <action> <file> — <description>
 - текущие заметки не называют локальные экспорты `n8n/workflows/*.json` частью репозитория;
 - адаптеры, skills, нет `${{ }}` внутри `run:`.
 
-**`check-context-sync` — рекомендательный (advisory).** Сравнивает изменённые файлы PR и
+**`check-context-sync` — рекомендательный (advisory).** Сравнивает изменённые файлы (push или PR) и
 выдаёт `::warning` (аннотация в Checks, не PR comment), job не падает:
 
 - `scraper/src/types.ts` → `context/interfaces.yaml`

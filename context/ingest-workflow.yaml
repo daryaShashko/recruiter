@@ -124,7 +124,7 @@ key_logic:
       (gemini, gemini-2.0-flash), no $env, this.helpers.httpRequest, no explicit timeout.
     env_var: "$env.LLM_PROVIDER (+ $env.LLM_MODEL, $env.LLM_BASE_URL, $env.LLM_API_KEY) — p12_6 version only"
     # Timeouts below are from the p12_6 version. Both generators use gemini-2.0-flash;
-    # the gemini-3.5-flash value below is in neither script — verify in the local export.
+    # UNCONFIRMED: the gemini-3.5-flash value below is in neither script (both use gemini-2.0-flash); check with scripts/inspect-n8n.py.
     ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
     gemini: "POST generativelanguage.googleapis.com; model=gemini-3.5-flash; responseMimeType=application/json; timeout=60s"
     anthropic: "POST api.anthropic.com; tool_use structured output; timeout=60s"

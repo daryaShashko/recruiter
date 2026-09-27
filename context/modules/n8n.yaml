@@ -210,6 +210,7 @@ workflows:
   telegram_trigger:
     file: n8n/workflows/telegram-trigger.json
     status: not_created # Phase P14 — planned P5, deferred, now formally scoped
+    unverified: "context/roadmap.yaml (EVAL-6/8) says telegram-trigger.json was exported (combined bot, active: false). Not confirmed against n8n; check with scripts/inspect-n8n.py."
     phase: P14
     adr: ADR-018
     nodes_sequence:
