@@ -1,0 +1,57 @@
+{
+  "case": "C08",
+  "run": 1,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:39:01+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.1560154,
+  "turns": 10,
+  "duration_ms": 54806,
+  "is_error": false,
+  "tool_calls": 9,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "cat scraper/src/types.ts"
+    },
+    {
+      "tool": "Glob",
+      "target": "**/ADR*/**"
+    },
+    {
+      "tool": "Glob",
+      "target": "**/*adr*"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs",
+      "pattern": "ADR"
+    },
+    {
+      "tool": "Bash",
+      "target": "find . -iname \"*adr*\" -not -path \"*/node_modules/*\" 2>/dev/null; echo ---; find docs -maxdepth 2 2>/dev/null; echo ---; cat context/modules/scraper.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src",
+      "pattern": "salary"
+    },
+    {
+      "tool": "Bash",
+      "target": "cat context/interfaces.yaml 2>/dev/null; echo ---FIND---; find context -iname \"*interface*\" 2>/dev/null; echo ---ADR-TEMPLATE---; ls docs/adr; echo ---SAMPLE---; sed -n '1,40p' docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -rl \"ADR-01[45]\" --include=\"*.md\" --include=\"*.yaml\" . 2>/dev/null | grep -v node_modules"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "ADR-01[4-9]"
+    }
+  ],
+  "final_answer": "Есть ADR-018, значит следующий номер — ADR-019. Дальше не читаю весь roadmap — не нужно для этой задачи.\n\nГотов план.\n\n## Что нашёл\n\n- `JobOffer.salary?: string` (`scraper/src/types.ts:21`) — уже свободный текст с валютой внутри: `\"15000–20000 PLN\"`, `\"120–160 EUR/day (B2B)\"`. Оба скрапера (`justjoin.ts`, `nofluffjobs.ts`) формируют эту строку сами, валюта в них уже есть как отдельное значение до склейки в строку (`salary.currency` в NFJ, `currency=PLN` фильтр в JustJoin).\n- `JobOffer`, `WebhookPayload`, `EvaluationResult` — по правилу AGENTS.md любое изменение этих трёх интерфейсов требует **ADR до кода**.\n- ADR лежат в `docs/adr/`, последний — ADR-018 (`context/decisions.yaml`), значит новый будет **ADR-019**.\n- После кода нужно обновить `context/interfaces.yaml` (описывает `JobOffer.salary` как строку с встроенной валютой) и `context/modules/scraper.yaml` (описание скраперов).\n\n## План (RPI, стадия: Intake → нужен Research/Feature Spec перед кодом)\n\nЭто не изолированный однострочный фикс — меняется контракт, который расходится по 4 файлам минимум (`types.ts`, `justjoin.ts`, `nofluffjobs.ts`, `check-manual.ts`) плюс n8n/Notion на другом конце пайплайна. Поэтому по правилам репозитория ADR обязателен, хоть и небольшой.\n\n1. **ADR-019** (`docs/adr/ADR-019-...md`): зафиксировать решение — добавить `salaryCurrency?: string` как отдельное optional-поле (не ломая `salary` для обратной совместимости с уже отправленными в Notion записями). Указать источник значения по каждому скраперу:\n   - JustJoin: `employmentTypes[].currency` (уже есть в raw-данных, сейчас теряется при склейке в строку).\n   - NoFluffJobs: `RawNFJSalary.currency` (тоже уже есть, тоже теряется).\n   - `manual`/`check-manual.ts`: откуда брать (флаг CLI или парсинг из строки).\n2. Обновить `scraper/src/types.ts` — добавить поле с комментарием.\n3. Обновить `justjoin.ts` и `nofluffjobs.ts`, чтобы прокидывали валюту отдельно, не только внутри строки `salary`.\n4. Обновить `check-manual.ts` (ручной ввод вакансий) — либо новый флаг `--salary-currency`, либо разбор из `--salary`.\n5. Обновить `context/interfaces.yaml` (описание поля `JobOffer.salaryCurrency`) и `context/modules/scraper.yaml`.\n6. Тесты: happy path на оба скрапера + fallback, когда валюта в raw-данных отсутствует (`undefined`), + `check-manual.ts` парсинг.\n7. Проверить, нужно ли что-то на стороне n8n/Notion (`WebhookPayload` не меняется по форме, только состав `JobOffer`) — если в Notion схеме есть отдельная колонка под валюту, отметить это как открытый вопрос в ADR, а не молча чинить n8n workflow (он гитигнорится и локален).\n\n## Первые конкретные действия (без выполнения в этом режиме)\n\n- Создать `docs/adr/ADR-019-job-offer-salary-currency.md` по шаблону существующих ADR (Context/Decision/Consequences), затем править код.\n- Если хотите, могу сразу написать текст ADR-019 и патч по `types.ts` — подтвердите, и продолжу (в бенчмарк-режиме файлы не меняю).",
+  "requested_model": "claude-sonnet-5"
+}

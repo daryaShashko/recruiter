@@ -1,0 +1,68 @@
+{
+  "case": "C07",
+  "run": 2,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:38:01+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.21295540000000002,
+  "turns": 12,
+  "duration_ms": 88265,
+  "is_error": false,
+  "tool_calls": 11,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "ls scraper/src/scrapers/ 2>/dev/null; echo \"---\"; ls scraper/src/; echo \"---config---\"; cat scraper/src/config.ts 2>/dev/null | head -80"
+    },
+    {
+      "tool": "Bash",
+      "target": "cat context/modules/scraper.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/ai-workflow.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -ril \"linkedin\" . --include=\"*.md\" --include=\"*.yaml\" --include=\"*.ts\" 2>/dev/null; echo \"---adr---\"; ls docs/adr 2>/dev/null; ls docs/adrs 2>/dev/null; find . -iname \"*adr*\" -not -path \"*/node_modules/*\" 2>/dev/null | head -20"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/post-mortem.md",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/types.ts",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/post-mortem.md",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/types.ts",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    }
+  ],
+  "final_answer": "## Этап: Problem & Value Check (Stage 1, черновой процесс из `docs/ai-workflow.md`)\n\n**Проблема/рабочий процесс:** сейчас пайплайн получает вакансии из `justjoin.ts` и `nofluffjobs.ts` — оба источника отдают данные без авторизации (JustJoin: перехват XHR к публичному API; NoFluffJobs: SSR-состояние в HTML). LinkedIn уже упоминается как идея в backlog (`docs/post-mortem.md:211` — «LinkedIn скрапер — требует авторизации — отдельная задача») и зарезервирован в типе (`scraper/src/types.ts:17`, `source: 'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual'`), но не реализован и решение по нему не принималось.\n\n**Факты:**\n- Оба текущих скрапера принципиально не используют DOM-селекторы и не логинятся — именно потому что headless-браузер с DOM-паттернами блокируется защитой (`playwright_contract.never_use_reason` в `context/modules/scraper.yaml`). У LinkedIn защита от бот-трафика сильнее, а полноценный поиск вакансий недоступен без авторизованной сессии — публичного API аналогичного JustJoin/NFJ нет.\n- Официальный LinkedIn Talent/Jobs API — партнёрский и платный, что противоречит правилу \"No paid services by default\" (`AGENTS.md`).\n- ToS LinkedIn прямо запрещает автоматический скрапинг; компания исторически применяет технические и юридические меры против скраперов (кейс hiQ v. LinkedIn касался узкого CFAA-вопроса о публичных данных, а не разрешил скрапинг вообще — использовать его как индульгенцию некорректно).\n\n**Гипотезы (не подтверждено):**\n- Насколько вакансии LinkedIn пересекаются с тем, что уже приходит из JustJoin/NFJ (многие senior remote JS/TS роли кросс-постятся) — реальных данных по уникальному покрытию нет.\n\n**Материальные затраты/риски:**\n- Нужен личный LinkedIn-аккаунт для сессии → риск бана аккаунта и юридический риск (нарушение ToS).\n- Высокая техническая хрупкость (антибот сильнее Cloudflare-защиты justjoin/NFJ) → выше стоимость поддержки, чем у текущих источников.\n- Нужен ADR до кода, так как меняется `JobOffer.source`/контракт — хотя `'linkedin'` уже сидит в типе без ADR (нестыковка, но не в рамках этой оценки).\n\n**Самая дешёвая альтернатива:** ничего не скрапить — использовать уже запланированный в backlog «Manual intake через Telegram» (`IMPROVE-5`, `docs/post-mortem.md:208`): рекрутер сам пересылает ссылку на вакансию с LinkedIn боту, дальше её обрабатывает `evaluate`. Это закрывает практическую потребность без авторизации, антибота и юридического риска.\n\n**Рекомендация:** не добавлять автоматический скрапер LinkedIn сейчас — риск (ToS/аккаунт/юридический) и стоимость поддержки не оправданы неподтверждённой выгодой в уникальности вакансий, especially когда есть более дёшевая альтернатива (manual intake). Статус: **Drop** для автоскрапера / **Defer** до появления официального недорогого API или явного запроса пользователя на юридический риск.\n\nЕсли хочешь всё же продвигать это дальше, следующий шаг — не реализация, а **Research** на один вопрос: даёт ли LinkedIn достаточно уникальных (не дублирующихся) вакансий, чтобы оправдать риск — и это нельзя проверить без реального скрапинга, так что вопрос скорее упирается в готовность принять юридический риск, а не в технику.\n\n**Authorization boundary:** запрос был только на оценку — implementation не запускал.",
+  "requested_model": "claude-sonnet-5"
+}

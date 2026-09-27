@@ -1,0 +1,26 @@
+{
+  "case": "C05",
+  "run": 2,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:10:55+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 32531,
+    "cached_input_tokens": 15691,
+    "cache_write_input_tokens": 16704,
+    "output_tokens": 671,
+    "reasoning_output_tokens": 422
+  },
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' .github/workflows/context-check.yml\""
+    }
+  ],
+  "final_answer": "Проверил `.github/workflows/context-check.yml`: workflow запускается на `pull_request`, отдельного шага для вывода заголовка нет.\n\nПлан: добавить после `Checkout` шаг `Log PR title`, передав заголовок через `env`, а не подставляя выражение напрямую в `run`:\n\n```yaml\n      - name: Log PR title\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: printf 'PR title: %s\\n' \"$PR_TITLE\"\n```\n\nЭто первые конкретные действия по запросу; файлы не изменял, команды с побочными эффектами не выполнял."
+}

@@ -1,0 +1,64 @@
+{
+  "case": "C06",
+  "run": 3,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:17:20+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.2428806,
+  "turns": 13,
+  "duration_ms": 119860,
+  "is_error": false,
+  "tool_calls": 11,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "ls n8n/providers/ 2>/dev/null; echo \"---\"; cat .env.example 2>/dev/null; echo \"---context---\"; find context -iname \"*provider*\" -o -iname \"*ingest*\" 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/index.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/openrouter.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/README.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/gemini.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/anthropic.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"provider\" context/ingest-workflow.yaml | head -50; echo \"---ADR---\"; find . -iname \"*016*\" -not -path \"*/node_modules/*\""
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Read",
+      "target": "context/ingest-workflow.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls n8n/workflows/ 2>/dev/null; echo \"exit:$?\"",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "ls n8n/workflows/ 2>/dev/null",
+      "error": true
+    }
+  ],
+  "final_answer": "## Что поддерживает пайплайн сейчас\n\nВ коде (`n8n/providers/index.ts`) зарегистрировано 4 адаптера: **ollama, gemini, anthropic, openrouter**. `openrouter.ts` — не заглушка, а рабочая реализация (OpenAI-совместимый `/chat/completions`, добавлена последним коммитом `2928534`).\n\n**Но документация разошлась с кодом:**\n- `.env.example` — `# Supported: ollama | gemini | anthropic` (OpenRouter не упомянут, и нет переменных под него).\n- `n8n/providers/README.md` — таблица адаптеров вообще не содержит строку `openrouter`, и остальные три помечены как \"Stub\", хотя это уже рабочий код.\n- `context/ingest-workflow.yaml` (`llm_providers`) — описание ноды \"Code: LLM Router\" тоже перечисляет только `ollama|gemini|anthropic`.\n- `docs/adr/ADR-016-llm-provider-adapter-pattern.md` — решение и таблица провайдеров тоже без OpenRouter.\n\nВажная деталь по самому адаптеру: `OpenRouterAdapter` читает **не** общие `LLM_API_KEY`/`LLM_MODEL` (как gemini/anthropic), а свои переменные — `OPENROUTER_API_KEY` и `OPENROUTER_MODEL` (дефолт `deepseek/deepseek-chat-v3-0324:free`). Это несогласованность с остальными адаптерами, которую стоит либо задокументировать явно, либо унифицировать.\n\nЕщё ограничение: `n8n/workflows/` в этом checkout отсутствует (workflow JSON гитигнорится). Поэтому не могу подтвердить, что реальная нода \"Code: LLM Router\" в развёрнутом n8n-воркфлоу уже содержит ветку для `openrouter` — судя по `context/ingest-workflow.yaml`, последнее задокументированное состояние ноды знает только про 3 провайдера.\n\n## Как переключиться на OpenRouter (план)\n\n1. Получить и задать ключ:\n   - `LLM_PROVIDER=openrouter`\n   - `OPENROUTER_API_KEY=<ключ>`\n   - опционально `OPENROUTER_MODEL=<модель>` (иначе бесплатная `deepseek/deepseek-chat-v3-0324:free` — соответствует правилу \"no paid services by default\").\n2. Согласно `context/ingest-workflow.yaml`, `LLM_PROVIDER` для пайплайна задаётся в **n8n Variables**, а не в host `.env` — переключение делается там, а не только в `.env`/`.env.example`.\n3. Проверить/добавить ветку `openrouter` в реальной ноде \"Code: LLM Router\" в n8n — это нельзя сделать из этого checkout (workflow JSON нет локально), нужен доступ к запущенному n8n.\n4. Прогнать `npm run eval` с `LLM_PROVIDER=openrouter` (паттерн из ADR-016) для проверки перед реальным трафиком.\n5. Актуализировать документацию вслед за кодом: `.env.example` (добавить `openrouter` в Supported + переменные `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`), `n8n/providers/README.md` (строка `openrouter`, статус не \"Stub\"), `context/ingest-workflow.yaml` (`llm_providers.openrouter`), и рассмотреть дополнение ADR-016 — по правилам репозитория контекст должен обновляться вслед за кодом.\n\nЭто план и разведка; изменений в файлах и команд с побочными эффектами не выполнял.",
+  "requested_model": "claude-sonnet-5"
+}

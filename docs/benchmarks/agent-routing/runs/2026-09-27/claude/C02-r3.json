@@ -1,0 +1,62 @@
+{
+  "case": "C02",
+  "run": 3,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:12+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.23537760000000002,
+  "turns": 12,
+  "duration_ms": 119875,
+  "is_error": false,
+  "tool_calls": 11,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "cat context/modules/scraper.yaml 2>/dev/null | head -100"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/src/**/*nofluff*"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A 30 \"nofluffjobs.ts:\" context/modules/scraper.yaml | head -60"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A 15 \"known_gaps\" context/modules/scraper.yaml | sed -n '1,30p'"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/utils/browser.ts"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/**/*nofluff*.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.unit.test.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -- scraper/src/scrapers/nofluffjobs.ts scraper/src/config.ts | head -20"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A 20 \"^export const config\" scraper/src/config.ts | head -40"
+    }
+  ],
+  "final_answer": "## Что я проверил (без сети, без записи)\n\n- `scraper/src/scrapers/nofluffjobs.ts` — логика извлечения через SSR (`<script id=\"serverApp-state\">` → `STORE_KEY.searchResponse.postings`), пагинация \"cumulative\" (последняя страница = все посты), pre-filter по локации (remote/Gdańsk) и seniority.\n- `context/modules/scraper.yaml:91-129` — там же явно зафиксирован риск: *\"SSR schema is not public — may break on NFJ frontend changes\"*.\n- `git log` по `nofluffjobs.ts`/`config.ts` — код и фильтры не менялись с коммита `806196b` (переход на SSR, датирован 2026-05 в комментариях). Т.е. с мая никто ничего не трогал — значит, дело не в регрессии кода, а либо в изменении сайта, либо в текущем состоянии выдачи.\n- Тесты: `nofluffjobs.unit.test.ts` покрывает только чистый парсинг SSR-стейта и дедуп — на реальных фикстурах HTML. `nofluffjobs.test.ts` — live-тест, требует сети, сейчас не запускал (сетевой side-effect запрещён в этом режиме).\n- `browser.ts` — уже есть анти-детект (маскировка `navigator.webdriver`, фингерпринты UA/viewport) — значит бот-защита сайта уже была проблемой раньше.\n\n## Гипотезы (по убыванию вероятности)\n\n1. **Сайт снова изменил разметку/структуру SSR** — `#serverApp-state` или ключ `STORE_KEY` переименованы/перенесены. Код именно это подозревает и явно логирует warning при `batch1.length === 0` (`nofluffjobs.ts:292-300`).\n2. **Антибот/Cloudflare блокирует headless-браузер** — сайт отдаёт challenge-страницу вместо результатов; для человека в обычном браузере всё ок, для Playwright — 0 постов на странице 1.\n3. **Фильтры (`matchesNFJPreFilter`) вымывают всё** — сырые посты извлекаются (batch1/uniquePostings > 0), но после гейта \"remote OR Gdańsk\" + \"не junior/mid/intern\" не остаётся ничего. Тогда сайт \"показывает вакансии\", но не под тем углом (не remote/не Gdańsk/не senior+), под которым смотрит скрапер.\n4. **Ломка допущения \"cumulative pagination\"** — если `totalPages > 1`, код полностью выбрасывает `batch1` и берёт только последнюю страницу (`nofluffjobs.ts:308-327`). Если на последней странице сайт вдруг не кумулятивен (или отдал 0 из-за бот-детекта именно на второй навигации), то весь урожай теряется, хотя первая страница была непустая.\n5. Изменился URL/slug категории `/pl/praca/javascript` (редирект, переименование).\n\n## Первые конкретные шаги (нужны сеть/запуск — жду подтверждения, т.к. в этом режиме не выполняю side-effect команды)\n\n1. `cd scraper && npm run scrape:dry` — посмотреть лог: остановился ли скрапер на \"0 postings on page 1\" (гипотезы 1/2) или прошёл дальше и обнулился на дедупе/pre-filter (гипотеза 3) или на last-page фетче (гипотеза 4).\n2. Если упало на шаге 1 (page 1 пуст) — открыть `https://nofluffjobs.com/pl/praca/javascript` вручную в браузере с DevTools, глянуть `view-source` на наличие `<script id=\"serverApp-state\">` и актуальный ключ стейта; сравнить со `RawNoFluffPosting`/`ssr_response_shape` в `context/modules/scraper.yaml:116-120`.\n3. Если сеть отдаёт html без ожидаемого скрипта — проверить, не challenge-страница ли это (характерные признаки Cloudflare/Akamai), сравнить с обычным запросом из обычного браузера (то же UA/куки).\n4. Если page 1 непустой, но `filtered.length === 0` — посмотреть лог \"Pre-filter (location + seniority): X/Y kept\" — если Y>0 и X=0, значит дело в фильтрах, а не в парсинге; тогда вопрос к бизнес-логике (сузили ли locations/rejectLevels слишком жёстко), а не к сайту.\n\nДальше — по результатам логов — либо правим regex/ключ SSR-стейта, либо обновляем анти-бот меры, либо переосмысливаем pagination-допущение, либо это не баг, а честный результат фильтра. Это изолированный фикс, отдельный feature-spec не нужен; после правки — обновить `context/modules/scraper.yaml` (дата/детали) согласно правилу проекта.",
+  "requested_model": "claude-sonnet-5"
+}

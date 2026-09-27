@@ -1,0 +1,38 @@
+{
+  "case": "C06",
+  "run": 1,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:04+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 97748,
+    "cached_input_tokens": 72603,
+    "cache_write_input_tokens": 24805,
+    "output_tokens": 1374,
+    "reasoning_output_tokens": 371
+  },
+  "tool_calls": 4,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '.env.example' -g '*provider*' -g '*openrouter*' -g 'package.json' -g '*.yaml' | head -80\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"cat AGENTS.md && printf '\\\\n--- root env example ---\\\\n' && cat .env.example && printf '\\\\n--- provider files ---\\\\n' && rg --files n8n/providers && printf '\\\\n--- provider/config references ---\\\\n' && rg -n 'LLM_PROVIDER|OPENROUTER|provider|OpenRouter|Gemini|OpenAI|Anthropic' scraper/src n8n/providers docs/llm-provider-switching.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"printf '%s\\\\n' '--- registry ---' && sed -n '1,240p' n8n/providers/index.ts && printf '%s\\\\n' '--- env example ---' && cat .env.example && printf '%s\\\\n' '--- provider README ---' && sed -n '1,130p' n8n/providers/README.md && printf '%s\\\\n' '--- OpenRouter adapter ---' && sed -n '1,130p' n8n/providers/openrouter.ts && printf '%s\\\\n' '--- switching guide ---' && sed -n '1,180p' docs/llm-provider-switching.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"printf '%s\\\\n' '--- OpenRouter adapter config ---' && sed -n '25,100p' n8n/providers/openrouter.ts && printf '%s\\\\n' '--- provider README provider table ---' && sed -n '1,80p' n8n/providers/README.md && printf '%s\\\\n' '--- switching references ---' && rg -n 'getProvider|LLM_PROVIDER|OPENROUTER_API_KEY|OPENROUTER_MODEL' n8n context .env.example --glob '\"'!n8n/providers/package-lock.json'\"'\""
+    }
+  ],
+  "final_answer": "По текущему реестру пайплайн поддерживает **4 провайдера**: `ollama`, `gemini`, `anthropic` и `openrouter` (`n8n/providers/index.ts`). OpenRouter уже зарегистрирован и имеет адаптер; добавлять код или менять workflow JSON для переключения не нужно.\n\n**Первые действия для переключения на OpenRouter:**\n1. В переменных окружения **n8n** установить `LLM_PROVIDER=openrouter`.\n2. Добавить `OPENROUTER_API_KEY` с вашим API-ключом. Не подставляйте ключ в команду или коммит.\n3. При необходимости задать `OPENROUTER_MODEL`. Если переменную не указывать, адаптер использует `deepseek/deepseek-chat-v3-0324:free`.\n4. Перезапустить n8n, чтобы он подхватил переменные окружения.\n\nОбратите внимание: `.env.example` и `docs/llm-provider-switching.md` отстают от кода — в них перечислены только три провайдера. Адаптер OpenRouter ожидает отдельные `OPENROUTER_API_KEY` и `OPENROUTER_MODEL`, а не `LLM_API_KEY` и `LLM_MODEL`. Файлы не изменял и команды с побочными эффектами не выполнял."
+}

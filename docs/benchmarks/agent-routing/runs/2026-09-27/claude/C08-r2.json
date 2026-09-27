@@ -1,0 +1,70 @@
+{
+  "case": "C08",
+  "run": 2,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:39:04+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.27613,
+  "turns": 14,
+  "duration_ms": 109671,
+  "is_error": false,
+  "tool_calls": 13,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "find . -iname \"*ADR*\" -not -path \"*/node_modules/*\" | head -50"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/adr/ | sort; echo \"---template---\"; find docs/adr -iname \"*template*\"; echo \"---grep salary---\"; grep -rn \"salary\" --include=\"*.ts\" scraper/src | grep -v node_modules"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -rn \"currency\" --include=\"*.ts\" scraper/src; echo \"---justjoin extractSalary---\"; sed -n '1,90p' scraper/src/scrapers/justjoin.ts; echo \"---context module note---\"; find context -iname \"*scraper*\""
+    },
+    {
+      "tool": "Read",
+      "target": "context/modules/scraper.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "context/interfaces.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/adr/; echo \"---roadmap grep P17/ADR-017---\"; grep -rn \"ADR-017\\|P17\" context/*.yaml docs/*.md 2>/dev/null | head -20"
+    },
+    {
+      "tool": "Bash",
+      "target": "sed -n '520,575p' context/decisions.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "find scraper -iname \"*.test.ts\" -o -iname \"*.spec.ts\" | grep -v node_modules; echo \"---\"; grep -n \"extractSalary\\|salary\" scraper/src/scrapers/*.test.ts scraper/src/**/*.test.ts 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"salary\\|extractSalary\" scraper/tests/nofluffjobs.unit.test.ts scraper/tests/justjoin.unit.test.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"^#\\|Quick mode\\|quick mode\" -i docs/ai-workflow.md | head -40"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/ai-workflow.md"
+    }
+  ],
+  "final_answer": "## Оценка задачи\n\nИзменение бьёт по `JobOffer` в `scraper/src/types.ts` — по правилу AGENTS.md такие изменения требуют ADR **до** кода. Само изменение (опциональное поле) при этом изолированное и обратимое — это могло бы идти по Quick-режиму `docs/ai-workflow.md`, но явный gate по типам его переопределяет: сначала ADR, потом код.\n\nЯ только читал файлы (`types.ts`, `justjoin.ts`, `nofluffjobs.ts`, `check-manual.ts`, `context/interfaces.yaml`, `context/modules/scraper.yaml`, ADR-016, `decisions.yaml`), правок не делал.\n\n## Что нашёл\n\n- Сейчас currency зашита только текстом внутри `salary?: string` (например `\"800–950 PLN B2B/mo\"`).\n- Currency как структурированное значение уже приходит с обеих площадок: `RawEmploymentType.currency` (justjoin.ts:20) и `RawNFJSalary.currency` (nofluffjobs.ts:36) — просто не выносится в отдельное поле `JobOffer`.\n- Следующий свободный номер ADR — **ADR-018** (017 зарезервирован под \"Prompt Engineering Best Practices\", `context/decisions.yaml:556`).\n\n## План\n\n1. **ADR-018** (`docs/adr/ADR-018-...md`): контекст — currency нечитаема программно, только в строке; решение — добавить `salaryCurrency?: string` в `JobOffer`, заполнять из уже имеющихся raw-полей currency в обоих скрейперах; последствия — минимальные, обратная совместимость (поле опционально, старые consumers не ломаются).\n2. Код (после ADR):\n   - `scraper/src/types.ts` — добавить `salaryCurrency?: string`.\n   - `scraper/src/scrapers/justjoin.ts` — извлекать currency из того же `best` объекта, что и `extractSalary`.\n   - `scraper/src/scrapers/nofluffjobs.ts` — аналогично из `RawNFJSalary.currency`.\n   - `scraper/src/check-manual.ts` — добавить `--salary-currency` в CLI, поле в `ManualJobInput`, парсинг из JSON.\n3. Тесты (`scraper/tests/justjoin.unit.test.ts`, `nofluffjobs.unit.test.ts`) — happy path и edge cases (нет currency, невалидный источник) по тем же кейсам, что уже покрывают `extractSalary`.\n4. Обновить `context/interfaces.yaml` (новое поле у `JobOffer`) и `context/modules/scraper.yaml` (`salary_source` заметки) — по правилу синхронизации контекста после изменения типов.\n\nДальше не двигаюсь — режим бенчмарка запрещает правки файлов и команды с побочными эффектами. Если подтвердишь план, начну с текста ADR-018.",
+  "requested_model": "claude-sonnet-5"
+}

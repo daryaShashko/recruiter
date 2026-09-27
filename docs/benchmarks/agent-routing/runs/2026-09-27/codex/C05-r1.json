@@ -1,0 +1,26 @@
+{
+  "case": "C05",
+  "run": 1,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:10:55+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 32597,
+    "cached_input_tokens": 15695,
+    "cache_write_input_tokens": 16766,
+    "output_tokens": 512,
+    "reasoning_output_tokens": 212
+  },
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' .github/workflows/context-check.yml && printf '\\\\n--- workflow references ---\\\\n' && rg -n \\\"pull_request|github\\\\.event\\\\.pull_request|PR title|title\\\" .github/workflows\""
+    }
+  ],
+  "final_answer": "**План**\n- Добавить в `.github/workflows/context-check.yml` отдельный шаг для отладки, который выводит заголовок PR в лог.\n- Передать заголовок через `env`, а не подставлять выражение GitHub Actions прямо в shell-команду.\n\n**Первое конкретное действие**\nПосле шага `Checkout` добавить:\n\n```yaml\n      - name: Debug PR title\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: echo \"PR title: $PR_TITLE\"\n```\n\nПроверил текущую структуру workflow и правило для `${{ ... }}` в `run:`. Файлы не изменял; команд с побочными эффектами не выполнял."
+}

@@ -43,3 +43,6 @@ scraper/output/
 # n8n workflow exports — contain personal IDs (chatId, Notion DB IDs, instanceId)
 # Export manually from n8n UI; never commit production workflow JSONs
 n8n/workflows/*.json
+
+# Agent benchmark raw traces (large; may contain full tool output)
+docs/benchmarks/agent-routing/raw/

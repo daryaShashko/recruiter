@@ -1,0 +1,69 @@
+{
+  "case": "C04",
+  "run": 3,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:14:51+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.29830140000000005,
+  "turns": 13,
+  "duration_ms": 117281,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": "remote",
+      "pattern": "remote"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/providers/**"
+    },
+    {
+      "tool": "Glob",
+      "target": "**/*eval*"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/candidate_profile.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/pe-tuning-log.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-013-prompt-evaluation-pipeline.md"
+    },
+    {
+      "tool": "Grep",
+      "target": "context",
+      "pattern": "location|remote|Tricity|Gdańsk"
+    },
+    {
+      "tool": "Read",
+      "target": "context/interfaces.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/n8n.yaml",
+      "pattern": "location|remote|Gdańsk|overall_score = 0|force"
+    }
+  ],
+  "final_answer": "## Текущий этап и что нужно уточнить сначала\n\nПо `docs/ai-workflow.md` это дошло до стадии **Problem & Value Check** — прежде чем трогать промпт, нужно снять неоднозначность в самой формулировке запроса.\n\n**Факт**: профиль кандидата (`n8n/prompts/candidate_profile.md`, п.4) и текущее правило #6 в `n8n/prompts/evaluator.md` уже принимают **hybrid/office в Gdańsk/Gdynia/Sopot (Tricity)** как равноценную опцию к «fully remote». Отсекается только hybrid/office в Warsaw/Kraków/Wrocław/Katowice/других городах.\n\n**Неоднозначность**: «строже отсекать без удалёнки» может означать два разных решения:\n1. Убрать исключение для Tricity-hybrid и требовать *только* remote — это меняет политику кандидата, конфликтует с `candidate_profile.md` п.4 и сломает существующие эталонные кейсы T02/T06/T08 в `gold_dataset.yaml` (они ожидают score ≥50/≥80 именно для Gdańsk/Gdynia hybrid).\n2. Оставить Tricity-hybrid исключение, но ужесточить обработку **неоднозначных/пограничных** формулировок локации, которые сейчас могут проскакивать как match (например: hybrid без указания города, «remote 2–3 дня/нед.» без города, локация вида «Poland»/«EU» без деталей, отсутствующее поле location).\n\nБез ответа на этот вопрос менять промпт рискованно — это либо изменение политики, либо просто устранение дырки в текущей логике. Прошу подтвердить, какой вариант нужен (по умолчанию предполагаю вариант 2, как более безопасный и соответствующий духу запроса «отсекать то, что должно отсекаться, но не отсекается»).\n\n## Ещё один факт, который важно знать\n\nФильтрация локации происходит на **трёх уровнях**, не только в evaluator-промпте:\n- `matchesPreFilter()` в скрейперах (`scraper/src/scrapers/justjoin.ts`, `nofluffjobs.ts`) — дропает не-remote/не-Gdańsk ещё до отправки в LLM;\n- правило #6 в `n8n/prompts/evaluator.md` (сама LLM-оценка);\n- пост-парсинг heuristic override в n8n (`context/interfaces.yaml:116`: «location/agency/crypto/gambling checks may force overall_score=0 post-parse») — этот код живёт в `n8n/workflows/*.json`, который **гитигнорится и локально может не существовать** в чекауте, так что я не могу его прочитать отсюда.\n\nЕсли утечки происходят на уровне n8n-хевристики, правкой одного `evaluator.md` проблему не закрыть — стоит сначала спросить, есть ли у вас доступ к текущему экспорту workflow, или проверить логику через `context/ingest-workflow.yaml`.\n\n## План (при подтверждении варианта 2 — ужесточить пограничные случаи)\n\n1. **Правка `n8n/prompts/evaluator.md`, правило #6**: явно определить, что считается remote (только явные маркеры \"fully remote\"/\"remote-first\"/\"100% remote\"), и что при hybrid/office без явного упоминания Gdańsk/Gdynia/Sopot или при неоднозначной/отсутствующей локации — force reject, а не давать эвалуатору угадывать.\n2. **Добавить edge-кейсы в `n8n/prompts/gold_dataset.yaml`**: hybrid без города, \"remote N дней/нед.\" без города, location=\"Poland\"/\"EU\" без уточнения, отсутствующее поле location — все со `score < 50`. Плюс regression-guard: явно оставить проверку, что T02/T06/T08 (Tricity hybrid) продолжают проходить.\n3. **Baseline перед правкой**: `cd scraper && npm run eval` (или `eval:gemini`, в зависимости от текущего `LLM_PROVIDER`), зафиксировать pass rate и скор по локационным кейсам.\n4. **После правки**: повторный прогон, сравнение — новые кейсы должны давать `score < 50` с `red_flags` про локацию, старые Tricity-hybrid кейсы не должны регрессировать.\n5. **Зафиксировать результат** в `docs/pe-tuning-log.md` по образцу существующих записей (baseline vs new, таблица по кейсам) — это уже принятый в репозитории формат верификации промпт-изменений.\n6. ADR не требуется — меняются только `evaluator.md`/`gold_dataset.yaml`, тип `EvaluationResult` не трогаем.\n\nНичего не менял — жду подтверждения по пункту про Tricity-hybrid, чтобы не переписать политику кандидата случайно.",
+  "requested_model": "claude-sonnet-5"
+}

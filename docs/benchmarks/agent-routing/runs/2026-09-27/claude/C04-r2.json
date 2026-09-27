@@ -1,0 +1,93 @@
+{
+  "case": "C04",
+  "run": 2,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:14:18+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.4558818,
+  "turns": 19,
+  "duration_ms": 168851,
+  "is_error": false,
+  "tool_calls": 18,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "find . -path ./node_modules -prune -o -type f \\( -name \"*.yaml\" -o -name \"*.yml\" -o -name \"*.md\" -o -name \"*.ts\" -o -name \"*.json\" \\) -print | xargs grep -liE \"remote|удал\" 2>/dev/null | grep -v node_modules"
+    },
+    {
+      "tool": "Bash",
+      "target": "find . -path ./node_modules -prune -o -type d -print | grep -v node_modules | grep -v \"\\.git/\""
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-013-prompt-evaluation-pipeline.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/candidate_profile.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator-template.json"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls scraper/ 2>/dev/null && cat scraper/package.json 2>/dev/null | head -40"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -riln \"evaluator\\|overall_score\\|red_flags\" context/ docs/ 2>/dev/null | grep -v node_modules"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/pe-tuning-log.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/scoring-tuning-guide.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "cat n8n/prompts/promptfooconfig.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "for f in output/dry-run-*.json; do echo \"== $f ==\"; done; echo \"---sample---\"; head -c 2000 output/dry-run-2026-05-26T22-17-22-081Z.json",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "python3 -c \"\nimport json,glob\nfor f in sorted(glob.glob('output/dry-run-*.json')):\n    try:\n        data = json.load(open(f))\n    except Exception as e:\n        print(f, 'ERR', e); continue\n    if isinstance(data, dict):\n        data = data.get('jobs') or data.get('data') or [data]\n    if not isinstance(data, list):\n        continue\n    for item in data:\n        loc = json.dumps(item.get('location','')) if isinstance(item, dict) else ''\n        print(f, '|', item.get('title') if isinstance(item, dict) else item, '|', loc)\n\" 2>&1 | head -100\n",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "wc -l output/dry-run-*.json"
+    },
+    {
+      "tool": "Grep",
+      "target": "output/dry-run-2026-05-26T22-17-22-081Z.json",
+      "pattern": "\"location\""
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"evaluator\\|prompt\" context/modules/n8n.yaml context/interfaces.yaml context/project.yaml 2>/dev/null | head -40"
+    },
+    {
+      "tool": "Read",
+      "target": "context/modules/n8n.yaml"
+    }
+  ],
+  "final_answer": "## Что нашёл\n\nВ `n8n/prompts/evaluator.md` (и его дубликате `n8n/prompts/evaluator-template.json`) правило локации (`6. Wrong Location`) жёстко отклоняет только гибрид/офис в Warsaw/Kraków/Wrocław/Katowice/«другом городе». Но оно **не покрывает**:\n- случаи, когда удалёнка не заявлена явно, а модель по умолчанию считает вакансию remote (нет правила \"не можешь подтвердить remote → не remote\", по аналогии с уже существующим правилом для tech stack);\n- «remote», ограниченный регионом, который фактически исключает кандидата (например \"US-only remote\", \"must reside in Germany\") — по профилю (`candidate_profile.md`, п.4) допустима удалёнка только Poland/EU/UK/USA, но это не факчекается;\n- гибрид с размытой формулировкой без названия города (\"flexible\", \"office when needed\").\n\nВажная оговорка: это вывод из чтения промпта, а не из логов — файлы `output/dry-run-*.json` содержат только сырые данные скрапера (`location: \"Remote\"` и т.п.), без оценок LLM, так что реальных false positive из продакшена я не нашёл и не выдумываю.\n\nИзменение типов (`JobOffer`/`WebhookPayload`/`EvaluationResult`) не требуется → ADR не нужен, это точечная правка промпта.\n\n## Что менять\n\n1. **`n8n/prompts/evaluator.md`** — усилить правило 6: любой гибрид/офис вне Gdańsk/Gdynia/Sopot — reject независимо от доли (даже \"1 день/месяц\"); remote должен быть явно подтверждён текстом, иначе не считается remote; remote, ограниченный регионом вне Poland/EU/UK/USA — force reject. Добавить примеры тегов `red_flags`: \"Not fully remote\", \"Ambiguous remote status\", \"Remote region restricted\".\n2. **`n8n/prompts/evaluator-template.json`** — синхронно продублировать те же формулировки (это отдельный файл, не генерируется из `.md`, реально используется promptfoo).\n\n## Как проверить\n\nГибридная стратегия проекта (ADR-013): детерминированные JS-ассерты в `promptfoo`.\n\n1. Сначала добавить 2-3 новых кейса в `n8n/prompts/gold_dataset.yaml`, покрывающих именно эти пробелы (неявный remote по умолчанию, remote с региональным ограничением, размытый гибрид без города), с assert `overall_score < 50`.\n2. Прогнать `cd scraper && npm run eval` **до** правки промпта — новые кейсы должны упасть (это подтвердит, что пробел реальный, а не гипотетический).\n3. Внести правки в `evaluator.md` + `evaluator-template.json`.\n4. Прогнать `npm run eval` снова — цель: все новые кейсы проходят, старые 22 (включая честные remote T01/T03/T04/T05/T07) не деградировали.\n5. Обновить `docs/pe-tuning-log.md` (новая секция с датой/eval ID) и `context/modules/n8n.yaml` → `evaluator_prompt` (`last_updated`, `eval_results`, `model_notes`) — по SYNC RULE самого файла.\n\n## Первые конкретные шаги\n\nГотов начать с шага 1 — добавить 3 тест-кейса в `gold_dataset.yaml` и прогнать baseline `npm run eval`, чтобы получить объективное \"до\". Скажи, продолжать ли (нужен `LLM_PROVIDER` и, для `llm-rubric`, `GOOGLE_API_KEY` в окружении) — сейчас это только план, изменений и команд я не выполнял.",
+  "requested_model": "claude-sonnet-5"
+}

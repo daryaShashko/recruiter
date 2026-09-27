@@ -1,0 +1,78 @@
+{
+  "case": "C06",
+  "run": 1,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:17:08+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.27151379999999997,
+  "turns": 15,
+  "duration_ms": 137050,
+  "is_error": false,
+  "tool_calls": 14,
+  "actions": [
+    {
+      "tool": "Glob",
+      "target": "n8n/providers/**"
+    },
+    {
+      "tool": "Read",
+      "target": ".env.example"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/index.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/README.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/openrouter.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": "context",
+      "pattern": "LLM_PROVIDER|openrouter|OpenRouter"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/openrouter.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "context/env.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "openrouter|OpenRouter|ADR-016"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/n8n.yaml",
+      "pattern": "openrouter|OpenRouter|LLM_PROVIDER"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/anthropic.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "context/modules/n8n.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/ingest-workflow.yaml",
+      "pattern": "openrouter|OpenRouter|LLM_PROVIDER|LLM Router"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/workflows/**"
+    }
+  ],
+  "final_answer": "## Текущее состояние провайдеров\n\nВ коде есть расхождение между двумя слоями:\n\n**1. TS-адаптеры (`n8n/providers/`)** — реально поддерживают 4 провайдера:\n`ollama`, `gemini`, `anthropic`, **`openrouter`** — все зарегистрированы в `n8n/providers/index.ts:23-37`, `openrouter.ts` реализован и покрыт тестами (`openrouter.test.ts`).\n\n**2. Живая n8n-нода `Code: LLM Router`** (по `context/ingest-workflow.yaml:73-74, 116-121`, единственному источнику правды по факту, т.к. `n8n/workflows/*.json` в этом чекауте нет — гитигнор) — задокументирована как обрабатывающая только `ollama | gemini | anthropic` инлайн-веткой, без `openrouter`. `.env.example`, `n8n/providers/README.md` и `context/env.yaml:87` (список значений `LLM_PROVIDER`) тоже до сих пор перечисляют только эти три.\n\nПри этом `context/env.yaml:121-129` описывает OpenRouter не как режим `LLM_PROVIDER`, а как **отдельный fallback** (P15-5, \"best-effort, когда Gemini вернул 429/503\") со своими переменными `OPENROUTER_API_KEY`/`OPENROUTER_MODEL` — не по общей схеме `LLM_API_KEY`/`LLM_MODEL`, которую используют остальные адаптеры.\n\nВывод: `openrouter` как самостоятельное значение `LLM_PROVIDER` существует в TS-коде, но неясно, подключён ли он в реальной ноде n8n — это не проверяется из чекаута (workflow JSON локальный).\n\n## План (без ADR — не трогает JobOffer/WebhookPayload/EvaluationResult)\n\n1. **Проверить факт**, а не документацию: у себя локально —\n   `grep -A 30 '\"name\": \"Code: LLM Router\"' n8n/workflows/ingest.json`\n   — смотрим, вызывает ли нода `getProvider()` из `n8n/providers/index.ts`, или у неё своя инлайн-логика без ветки `openrouter`.\n2. **Если нода уже дёргает реестр** — просто в n8n Variables (не в host `.env`, см. `ingest-workflow.yaml:117`) поставить `LLM_PROVIDER=openrouter`, добавить `OPENROUTER_API_KEY` (openrouter.ai/keys) и опционально `OPENROUTER_MODEL` (дефолт `deepseek/deepseek-chat-v3-0324:free`).\n3. **Если нода со своей инлайн-веткой** — придётся добавить ветку `openrouter` в сам Code-node (или переключить ноду на вызов общего реестра адаптеров) — это правка n8n-воркфлоу, а не scraper-кода.\n4. После факта — синхронизировать `context/ingest-workflow.yaml` и `context/env.yaml` с реальным состоянием (правило проекта: код меняется → обновляется соответствующий `context/*.yaml`), и поправить `.env.example`/README, если они реально устарели.\n\nДальше без подтверждения от тебя не редактирую файлы и не выполняю команд — это ответ на исследовательский вопрос в режиме бенчмарка.",
+  "requested_model": "claude-sonnet-5"
+}

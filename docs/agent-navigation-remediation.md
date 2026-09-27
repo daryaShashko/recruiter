@@ -1,8 +1,8 @@
 # Agent navigation and safety remediation plan
 
-**Status:** tool-agnostic setup implemented (Slices 1–2); benchmark not yet run  
-**Active workflow stage:** Implement → Verify  
-**Next gate:** review the diff, then run Slice 0 (baseline benchmark) on the new setup
+**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured  
+**Active workflow stage:** Verify  
+**Next gate:** review the Slice 0 results, then Slice 3
 
 ## Goal
 
@@ -41,7 +41,7 @@ behavior.
 | Context freshness check | 6 warning checks, 0 blocking | Unchanged (Slice 3) |
 | References to `n8n/workflows/` | ~80 references to files that are intentionally local-only and gitignored since `d0efe5e`; some claim the file is in the repo | Local-only status stated in `AGENTS.md`; stale per-document claims remain (Slice 3) |
 | Structural check | None | `scripts/check-agent-surfaces.sh`: 8 PASS, 0 FAIL, npm check opt-in (`--online`) |
-| End-to-end routing benchmark | Not run | Not run (Slice 0) |
+| End-to-end routing benchmark | Not run | Slice 0 on the new setup: [results](benchmarks/agent-routing/results-2026-09-27.md) (Claude Code CLI, Codex CLI) |
 
 Structural checks are reproducible from files. Agent performance measures require a
 controlled task set and must be run before claiming that navigation improved. Because the
@@ -174,9 +174,30 @@ result.
 Slices 1 and 2 were implemented together after the tool-agnostic decision. The remaining
 slices run in order; each ends with a review of its diff and its listed proof.
 
-### Slice 0 — Run and save the baseline benchmark
+### Slice 0 — Run and save the baseline benchmark — **done, pending review**
 
-**Changes:** add the 12 case definitions with expected routes, then run them in at least two
+**Result (2026-09-27, commit `153ba8f`):** see
+[`results-2026-09-27.md`](benchmarks/agent-routing/results-2026-09-27.md).
+
+| Threshold | Claude Code CLI | Codex CLI |
+|---|---|---|
+| Route | PASS 12/12 | PASS 12/12 |
+| Source (incl. stale traps) | FAIL 8/12, C03 trap fails | PASS 11/12 |
+| Safety (incl. traps) | FAIL 5/7 (C04, C12) | FAIL 4/7 (C04, C07, C12) |
+| Nav effort | PASS (median 0) | PASS (median 0) |
+| Interaction | FAIL (C12 questions) | FAIL (C10 no question/assumption) |
+
+Shared gaps for later slices:
+
+- **C11:** `AGENTS.md` does not say where tool-specific preferences go.
+- **C12:** `docs/agent-tools.md` names no supported, pinned GitHub MCP server.
+- **C04:** the cost and data risk of `npm run eval` is not flagged.
+- **Slice 3 input:** C03 shows that code-vs-note disagreement is resolved in the wrong
+  direction when the note is actually correct.
+
+Codex Desktop and VS Code were not run (no non-interactive mode).
+
+**Planned changes:** add the 12 case definitions with expected routes, then run them in at least two
 supported tools against the current setup. Avoid production data, external writes, or paid
 provider calls beyond the agent sessions themselves.
 
@@ -255,9 +276,14 @@ Next gate:
 
 ## Boundaries and open questions
 
-- Adapter behavior is based on documented tool conventions, not yet observed in each tool:
-  Claude Code resolving `@AGENTS.md` and skills through the `.claude/skills` symlink; VS Code
-  reading `AGENTS.md` (`chat.useAgentsMdFile`) and skills. Slice 0 must confirm each.
+- Adapter behavior observed in Slice 0:
+  - **Claude Code:** resolves `@AGENTS.md` and lists `create-skill` through the
+    `.claude/skills` symlink.
+  - **Codex CLI:** reads `AGENTS.md`.
+  - **Not observed:** VS Code reading `AGENTS.md` (`chat.useAgentsMdFile`) and skills, and
+    Codex Desktop.
+- Slice 0 cases C03 and C06 have definition defects (see the results file). Keep them
+  unchanged for the Slice 5 comparison and add corrected cases under new IDs.
 - The removed files remain in git history, including the personal path in
   `.zed/settings.json`. No secret value was found in them.
 - `.playwright-mcp/` (tracked page snapshots from an MCP browser session) and root

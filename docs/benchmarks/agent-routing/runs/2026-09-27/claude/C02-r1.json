@@ -1,0 +1,67 @@
+{
+  "case": "C02",
+  "run": 1,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:10:48+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.280808,
+  "turns": 13,
+  "duration_ms": 107888,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": "NoFluffJobs",
+      "pattern": "NoFluffJobs"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/src/**/*nofluff*"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/debug-urls.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "context/modules/scraper.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/config.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/scraper-update-guide.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -- scraper/src/scrapers/nofluffjobs.ts | head -20"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/tests/*nofluff*"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.unit.test.ts"
+    }
+  ],
+  "final_answer": "## Что выяснил\n\nЭто уже второй раз один и тот же симптом. `docs/post-mortem.md` фиксирует **INCIDENT-001** (2026-05): NFJ перешёл на Angular SSR, вакансии рендерятся в `<script id=\"serverApp-state\">` под ключом `STORE_KEY.searchResponse.postings`. Экстрактор `extractSsrPostings()` (`scraper/src/scrapers/nofluffjobs.ts:235`) уже написан под эту схему и покрыт unit-тестами (`scraper/tests/nofluffjobs.unit.test.ts`) — но тесты гоняют синтетический HTML, а не живую страницу, поэтому не поймают повторный дрифт разметки сайта. `context/modules/scraper.yaml:128` прямо помечает это как known_gap: \"SSR схема не публична — может ломаться при изменениях фронтенда NFJ\".\n\nКод при 0 постингов на странице 1 явно логирует причину (`nofluffjobs.ts:292-300`) и возвращает `[]`, **не бросая исключение** — это ожидаемое поведение \"тихого\" отказа, не баг сам по себе. Но есть второй, менее заметный путь к нулю: если `batch1.length > 0`, но после `matchesNFJPreFilter()` (только remote/Gdańsk + не junior/mid/intern) не остаётся ни одной вакансии — предупреждение НЕ печатается, метод просто вернёт `[]`. Различить эти два случая можно только по логам конкретного прогона.\n\n## Гипотезы (не проверены — нужен живой запрос к сайту)\n\n1. NFJ снова изменил разметку SSR (переименовал `serverApp-state`/`STORE_KEY`/путь до `postings`) — повтор INCIDENT-001.\n2. Playwright получает страницу-заглушку Cloudflare вместо реального SSR (бот-детект) — тег отсутствует по другой причине.\n3. Изменился URL/слаг категории `/pl/praca/javascript`.\n4. `totalPages` изменил тип/формат → сломалась кумулятивная пагинация на последнюю страницу.\n5. Постинги есть, но фильтр (`matchesNFJPreFilter`) сейчас отсекает всё — реального бага в парсере нет, просто нет подходящих вакансий или изменился формат `seniority`/`fullyRemote`.\n\n## План (по гайду `docs/scraper-update-guide.md`, раздел 3 — он написан именно под этот случай)\n\n1. `cd scraper && npx ts-node src/debug-urls.ts` — посмотреть, что сейчас реально отдаёт nofluffjobs.com (статусы ответов, редиректы, challenge-страница).\n2. `DRY_RUN=true npx ts-node src/index.ts` — по логам увидеть строку `[NoFluffJobs] Page 1: N postings (totalPages: M)`: N=0 → структурный дрифт (гипотезы 1–4); N>0, но итог 0 → это фильтр (гипотеза 5).\n3. Если структурный дрифт — `curl` + grep/`python3 -c` по HTML страницы (команды уже готовы в гайде, §3 Шаг 1–2) — найти новый ключ/путь до `postings`.\n4. Внести точечное исправление в `extractSsrPostings()`/интерфейс `RawNoFluffPosting`, обновить фикстуры в `nofluffjobs.unit.test.ts`, прогнать `npx tsc --noEmit` → `npm test -- --testPathPattern=unit` → dry-run.\n5. Обновить `context/modules/scraper.yaml` (SYNC RULE) и дописать инцидент в `docs/post-mortem.md`.\n\nЭто чинится изолированно в рамках существующего скрапера — без ADR (не меняются `JobOffer`/`WebhookPayload`/`EvaluationResult`).\n\n**Дальше не двигаюсь**: шаги 1–3 требуют сети (реальные запросы к nofluffjobs.com), а режим бенчмарка это запрещает. Если хочешь, чтобы я выполнил диагностику по-настоящему, скажи — выйду из read-only режима и запущу `debug-urls.ts` и dry-run.",
+  "requested_model": "claude-sonnet-5"
+}

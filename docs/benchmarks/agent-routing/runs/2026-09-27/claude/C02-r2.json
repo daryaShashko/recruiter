@@ -1,0 +1,68 @@
+{
+  "case": "C02",
+  "run": 2,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:09+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.2211524,
+  "turns": 13,
+  "duration_ms": 92605,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Glob",
+      "target": "**/*nofluff*"
+    },
+    {
+      "tool": "Glob",
+      "target": "**/*NoFluff*"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/scraper.yaml",
+      "pattern": "nofluff"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/scraper.yaml",
+      "pattern": "nofluff"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/config.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.unit.test.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -- scraper/src/scrapers/nofluffjobs.ts | head -20"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/utils/browser.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "find scraper/src -iname \"debug-urls*\""
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/debug-urls.ts"
+    }
+  ],
+  "final_answer": "Разобрался в логике `scrapeNoFluffJobs` — теперь по делу.\n\n## Что нашёл (статический анализ, без запуска сети)\n\n`scraper/src/scrapers/nofluffjobs.ts` работает так: заходит на `/pl/praca/javascript`, парсит `<script id=\"serverApp-state\">`, достаёт `STORE_KEY.searchResponse.postings`, дедупит по `reference`, потом **фильтрует до отправки в LLM** (`matchesNFJPreFilter`, строки 144–166): проходят только вакансии, у которых `location.fullyRemote === true` **или** город содержит \"Gdańsk\", и при этом seniority не входит в `rejectLevels` (junior/mid/regular/intern/trainee).\n\nЭто даёт две принципиально разные причины \"0 вакансий\", и код их логирует по-разному:\n\n1. **Экстракция SSR не находит данных** → `extractSsrPostings` возвращает `postings: []`, скрипт печатает `WARNING: 0 postings on page 1` и `SSR state not found — site structure may have changed` (строки 292–300), функция сразу возвращает `[]`.\n   Причины: NFJ снова поменял фронтенд (комментарий в коде фиксирует, что в 2026-05 уже был переход с XHR на SSR — с тех пор прошло 4+ месяца); или Cloudflare/antibot отдал страницу-заглушку вместо реального SSR; или сам URL категории `/pl/praca/javascript` изменился/редиректит.\n\n2. **Данные извлеклись, но всё отфильтровано локальным пре-фильтром** → в этом случае в логах будет `Total raw postings collected: N > 0`, а `Pre-filter (location + seniority): 0/M kept`. Это не баг экстракции, а следствие того, что среди текущих JS-вакансий на сайте сейчас просто нет ни одной senior+ и (remote или Gdańsk) — фильтр жёсткий по дизайну (`config.scraper` в `scraper/src/config.ts:41-73`).\n\nЮнит-тесты (`nofluffjobs.unit.test.ts`) гоняются на синтетическом HTML и не могут поймать дрейф реальной структуры сайта; интеграционный тест (`nofluffjobs.test.ts`) требует реальной сети и не запускается в CI по умолчанию — так что структурная поломка сайта могла давно остаться незамеченной.\n\n## План (это изолированный баг-фикс, полный RPI-цикл не нужен)\n\n1. **Разграничить причину 1 vs 2** — запустить скрапер с логами (`npm run scrape:dry` из `scraper/`) и посмотреть, что именно печатается: \"0 postings on page 1\" (экстракция) или \"Pre-filter 0/N kept\" (фильтр).\n2. Если экстракция: прогнать `npx ts-node src/debug-urls.ts` и/или открыть `https://nofluffjobs.com/pl/praca/javascript` вручную, посмотреть текущий HTML — проверить, жив ли `#serverApp-state`, не поменялся ли путь `STORE_KEY.searchResponse.postings`, не отдаёт ли сайт Cloudflare-чек вместо контента.\n3. Если фильтр: это ожидаемое поведение конфигурации, а не поломка — обсудить с пользователем, нужно ли ослаблять `matchesNFJPreFilter`/`config.scraper.rejectLevels`/`locations`.\n4. По правилам проекта: если السайт действительно сменил формат ответа — это не просто фикс, а изменение метода экстракции для этого источника, значит после кода нужно обновить `context/modules/scraper.yaml` (секцию `src/scrapers/nofluffjobs.ts`). Изменения `JobOffer`/`WebhookPayload`/`EvaluationResult` тут не затрагиваются, ADR не требуется.\n\nПервый конкретный шаг, который я бы сделал следующим — запустить `npm run scrape:dry` в `scraper/`, чтобы увидеть реальные логи и понять, какая из двух причин это. Это делает сетевой запрос, поэтому в текущем бенчмарк-режиме я его не выполняю — подтвердите, и я запущу (или запущу без `--dry-run`, если нужно реальное отправление, но это отдельное подтверждение).",
+  "requested_model": "claude-sonnet-5"
+}

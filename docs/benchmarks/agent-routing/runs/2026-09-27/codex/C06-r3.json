@@ -1,0 +1,38 @@
+{
+  "case": "C06",
+  "run": 3,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:11+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 83153,
+    "cached_input_tokens": 57078,
+    "cache_write_input_tokens": 25803,
+    "output_tokens": 1098,
+    "reasoning_output_tokens": 150
+  },
+  "tool_calls": 4,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"LLM_PROVIDER|OpenRouter|openrouter|provider\\\" .env.example n8n/providers scraper/src docs context --glob '\"'!**/workflows/**'\"'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,180p' n8n/providers/index.ts && sed -n '1,130p' n8n/providers/openrouter.ts && sed -n '15,55p' .env.example\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '105,145p' context/ingest-workflow.yaml && sed -n '1,125p' docs/llm-provider-switching.md && sed -n '1,100p' context/env.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"OPENROUTER_API_KEY|OPENROUTER_MODEL|openrouter|LLM_PROVIDER\\\" n8n context .env.example docs/llm-provider-switching.md --glob '\"'!**/workflows/**'\"'\""
+    }
+  ],
+  "final_answer": "**Что поддерживается**\n\nВ кодовом реестре адаптеров `n8n/providers/index.ts` зарегистрированы четыре провайдера: `ollama`, `gemini`, `anthropic` и `openrouter`. Для OpenRouter есть отдельный адаптер `n8n/providers/openrouter.ts`: ему нужны `OPENROUTER_API_KEY` и, по желанию, `OPENROUTER_MODEL`. Если модель не указана, адаптер использует `deepseek/deepseek-chat-v3-0324:free`.\n\nНо есть важное расхождение: описание ingest-workflow в `context/ingest-workflow.yaml` перечисляет только Ollama, Gemini и Anthropic; `.env.example` и `docs/llm-provider-switching.md` тоже не обновлены. Кроме того, документация указывает, что `LLM_PROVIDER` для n8n задаётся в его переменных, а не только в локальном `.env`. Поэтому наличие адаптера в репозитории само по себе не подтверждает, что текущий workflow n8n уже умеет вызывать OpenRouter.\n\n**План переключения**\n\n1. Убедиться, что активный n8n `LLM Router` вызывает реестр `n8n/providers` либо уже содержит маршрут для `openrouter`.\n2. Задать в окружении n8n `LLM_PROVIDER=openrouter` и `OPENROUTER_API_KEY=<ваш ключ>`; при необходимости — `OPENROUTER_MODEL=<id модели>`.\n3. Перезапустить n8n, если он не подхватывает изменения окружения автоматически.\n4. Проверить вызов на тестовой вакансии и убедиться, что в результате указан провайдер `openrouter`.\n\nВ режиме бенчмарка файлы не менял и команды с побочными эффектами не выполнял. Начал бы с проверки фактического кода `LLM Router` в развернутом n8n: это определит, достаточно ли настройки переменных или сначала нужно обновить workflow."
+}

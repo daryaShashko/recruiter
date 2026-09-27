@@ -1,0 +1,50 @@
+{
+  "case": "C08",
+  "run": 3,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:43+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 85740,
+    "cached_input_tokens": 56147,
+    "cache_write_input_tokens": 29321,
+    "output_tokens": 1692,
+    "reasoning_output_tokens": 351
+  },
+  "tool_calls": 7,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*adr*' -g '*ADR*' -g 'types.ts' -g '*.yaml' -g '*.yml' -g 'agent-tools.md' | head -100\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' scraper/src/types.ts; printf '\\\\n--- scraper context ---\\\\n'; sed -n '1,240p' context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"JobOffer|salaryCurrency|salary\" scraper/src scraper/test* scraper/tests context docs/adr 2>/dev/null | head -180'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg --files docs/adr scraper | sort | head -160; printf '\\\\n--- decision index ---\\\\n'; sed -n '1,200p' context/decisions.yaml; printf '\\\\n--- ADR sample ---\\\\n'; sed -n '1,180p' docs/adr/ADR-016-llm-provider-adapter-pattern.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"ADR-01[7-9]|salaryCurrency|currency\" context/interfaces.yaml context/decisions.yaml docs/adr scraper/tests/justjoin.unit.test.ts scraper/tests/nofluffjobs.unit.test.ts'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,100p' context/interfaces.yaml; sed -n '140,190p' scraper/src/scrapers/justjoin.ts; sed -n '55,90p' scraper/src/scrapers/nofluffjobs.ts; sed -n '160,190p' scraper/src/scrapers/nofluffjobs.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,65p' scraper/src/scrapers/justjoin.ts; sed -n '35,90p' scraper/src/check-manual.ts; sed -n '350,380p' scraper/src/check-manual.ts; sed -n '1,80p' scraper/tests/justjoin.unit.test.ts; sed -n '1,70p' scraper/tests/nofluffjobs.unit.test.ts\""
+    }
+  ],
+  "final_answer": "Файлы не изменял и команды с побочными эффектами не запускал. Сейчас изучение задачи показывает: зарплата нормализуется в двух скрапперах, валюта уже есть в исходных данных и строке `salary`; для ручных вакансий отдельного поля валюты пока нет. Изменение `JobOffer` по правилам репозитория требует ADR до правки кода.\n\n**План**\n1. Зафиксировать в новом ADR смысл поля: `salaryCurrency` — необязательная строка с кодом валюты, извлечённым из тех же данных, что и `salary`; если валюта неизвестна или зарплаты нет — `undefined`.\n2. Добавить поле в `scraper/src/types.ts` и описать его в `context/interfaces.yaml`.\n3. Заполнять поле при нормализации JustJoin и NoFluffJobs; для ручного ввода учесть необязательное поле и не пытаться угадывать валюту из произвольной строки зарплаты.\n4. Добавить или обновить unit-тесты для известной валюты и отсутствующей зарплаты.\n5. Обновить `context/modules/scraper.yaml`; отдельно проверить передачу поля через ingest, поскольку заметка `context/modules/n8n.yaml` описывает список выходных полей, а экспорт workflow может отсутствовать в checkout.\n\n**Первые конкретные действия**\n- Перед изменениями создать ADR и определить, что значение — код валюты из источника, а не локализованное название.\n- Затем обновить тип и тесты нормализации; после этого синхронизировать контекстные YAML.\n- На этапе проверки запустить `npm test` и `npm run typecheck` из `scraper/`."
+}

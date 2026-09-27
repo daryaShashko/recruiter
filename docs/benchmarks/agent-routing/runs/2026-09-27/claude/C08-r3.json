@@ -1,0 +1,69 @@
+{
+  "case": "C08",
+  "run": 3,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:39:30+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.183811,
+  "turns": 13,
+  "duration_ms": 83965,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "find . -maxdepth 3 -iname \"*ADR*\" -o -iname \"*adr*\" | grep -v node_modules"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -rn \"salary\" scraper/src --include=\"*.ts\" | grep -v node_modules"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/adr; echo ---; find docs -iname \"*template*\"; echo ---; sed -n '1,60p' context/modules/scraper.yaml 2>/dev/null || find . -path ./node_modules -prune -o -iname \"scraper.yaml\" -print"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src",
+      "pattern": "currency"
+    },
+    {
+      "tool": "Bash",
+      "target": "find . -iname \"interfaces.yaml\" -not -path \"*/node_modules/*\"; echo ---; cat context/interfaces.yaml 2>/dev/null | head -80"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/scrapers/justjoin.ts",
+      "pattern": "extractSalary|currency|RawNFJSalary|employmentTypes\" -n scraper/src/scrapers/justjoin.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/justjoin.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/ai-workflow.md",
+      "pattern": "ADR"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"ADR\" docs/ai-workflow.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/ai-workflow.md"
+    }
+  ],
+  "final_answer": "## Что нашёл (read-only)\n\n- `JobOffer.salary?: string` в `scraper/src/types.ts:21` — уже единая строка вида `\"15000–20000 PLN\"`, валюта смешана с числами.\n- `nofluffjobs.ts` и `justjoin.ts` **внутри** уже знают валюту (`RawNFJSalary.currency`, `RawEmploymentType.currency`), но она схлопывается в строку и не выходит наружу.\n- `check-manual.ts` (ручной ввод джобов) валюту вообще не парсит — только строка `--salary`.\n- `context/interfaces.yaml` документирует `salary` с форматом `'{from}–{to} {currency}'` и явным правилом: *\"Never extends this interface — add optional fields instead.\"*\n- ADR в `docs/adr/` пронумерованы до `ADR-016`.\n\n## Почему это не «просто добавить поле»\n\nПо `AGENTS.md`: изменения `JobOffer` требуют ADR **до** кода, и после кода — обновление `context/*.yaml`. Это не бюрократия ради самой себя: `salary` сейчас единственный источник валюты для LLM-оценки и Notion, и если завести отдельное поле, нужно решить: заменяет ли `salaryCurrency` парсинг валюты из строки в промпте (`scrape-one.ts:122`) или просто дублирует её.\n\n## План (RPI, стадия Solution Plan → нужен возврат в ADR перед кодом)\n\n1. **ADR-017** — короткое решение: добавить `salaryCurrency?: string` в `JobOffer` как необязательное поле (без `extends`), зафиксировать источник данных по каждому скрейперу.\n2. **Код** (после принятия ADR):\n   - `scraper/src/types.ts` — новое optional-поле.\n   - `scraper/src/scrapers/nofluffjobs.ts` — вернуть `salary.currency` рядом с `extractSalary`.\n   - `scraper/src/scrapers/justjoin.ts` — `extractSalary` сейчас жёстко предпочитает PLN; нужно отдать валюту `best.currency`/`\"PLN\"` наружу.\n   - `scraper/src/check-manual.ts` — новый флаг `--salary-currency` и поле в JSON-инпуте.\n   - `scraper/src/scrape-one.ts` / `index.ts` — по необходимости, минимально.\n3. **Документация**: обновить `context/interfaces.yaml` (поле `salaryCurrency` в блоке `JobOffer.fields`) и `context/modules/scraper.yaml`, если поменяется паттерн экстракции.\n4. **Тесты**: happy path + отсутствие валюты + \"structure drift\" для каждого скрейпера, без реальных сетевых вызовов (уже принятый паттерн mock HTTP/Playwright).\n\n## Вопрос перед стартом ADR\n\nТип поля — свободная строка (`string`) или ограниченный union по аналогии с `source` (например, `'PLN' | 'EUR' | 'USD' | string`)? Это первое, что нужно зафиксировать в ADR-017, прежде чем писать код.",
+  "requested_model": "claude-sonnet-5"
+}

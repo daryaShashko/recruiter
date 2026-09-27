@@ -1,0 +1,26 @@
+{
+  "case": "C05",
+  "run": 3,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:04+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 32603,
+    "cached_input_tokens": 15711,
+    "cache_write_input_tokens": 16756,
+    "output_tokens": 436,
+    "reasoning_output_tokens": 147
+  },
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' .github/workflows/context-check.yml && printf '\\\\n--- workflow files ---\\\\n' && rg --files .github/workflows\""
+    }
+  ],
+  "final_answer": "**План**\n- Добавить в `check-context-sync` шаг для отладки сразу после `Checkout`.\n- Передать заголовок PR через `env`, а затем вывести его в лог через `printf`. Так значение не подставляется напрямую в shell-команду.\n\n**Первое конкретное действие**\n- Проверил `.github/workflows/context-check.yml`: workflow запускается на `pull_request`, поэтому заголовок доступен как `github.event.pull_request.title`.\n- Предлагаемый шаг: `env: PR_TITLE: ${{ github.event.pull_request.title }}` и `run: printf 'PR title: %s\\n' \"$PR_TITLE\"`.\n\nФайлы не изменял; команды с побочными эффектами не выполнял."
+}

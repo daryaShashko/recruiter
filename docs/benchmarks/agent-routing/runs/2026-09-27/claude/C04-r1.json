@@ -1,0 +1,74 @@
+{
+  "case": "C04",
+  "run": 1,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:14:15+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.2546088,
+  "turns": 15,
+  "duration_ms": 126000,
+  "is_error": false,
+  "tool_calls": 14,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "find . -path ./node_modules -prune -o -type f \\( -iname \"*eval*\" -o -iname \"*remote*\" \\) -print 2>/dev/null | grep -v node_modules | grep -v \"/.git/\""
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/providers/**"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/src/**"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator-template.json"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Glob",
+      "target": "**/promptfoo*"
+    },
+    {
+      "tool": "Glob",
+      "target": "context/*.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/promptfooconfig.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "context/interfaces.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-013-prompt-evaluation-pipeline.md"
+    },
+    {
+      "tool": "Read",
+      "target": "context/ingest-workflow.yaml"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls n8n/workflows/ 2>/dev/null; echo \"---\"; grep -n -i \"remote\\|location\\|city\\|hybrid\" n8n/prompts/gold_dataset.yaml | head -80"
+    }
+  ],
+  "final_answer": "## Что сейчас определяет строгость по удалёнке\n\nПравило локации живёт в **двух местах**, и они должны совпадать:\n\n1. **Промпт** — `n8n/prompts/evaluator.md` (документация) и `n8n/prompts/evaluator-template.json` (тот же текст, но это версия, которую реально гоняет promptfoo/`Code: Build Ollama Payload`). Правило 6 сейчас: reject только если гибрид/офис **не в Gdańsk/Tricity**; «Remote» в любом виде и гибрид в Gdańsk/Tricity — это ОК.\n2. **Программная эвристика** в узле `Code: Parse Ollama Response` (`n8n/workflows/ingest.json`) — она может форсировать `overall_score=0` post-parse по локации (см. `context/ingest-workflow.yaml:103-107`). Сам `ingest.json` в этом чекауте отсутствует (он гитигнорится, содержит личные ID), так что его код я не вижу — менять его придётся прямо в n8n, а потом обновлять `context/ingest-workflow.yaml`.\n\nТестовый контур: `n8n/prompts/gold_dataset.yaml` (22 кейса, T01–T08 позитивные, F01–F09 негативные + edge) + `promptfooconfig.yaml` с JS-ассертами и одним `llm-rubric`.\n\n## Не хватает одного факта — уточни\n\n«Строже отсекать вакансии без удалёнки» может означать две разные правки:\n\n- **(A)** Сейчас гибрид/офис в Gdańsk/Tricity явно разрешён — это не удалёнка, но пропускается. Хочешь ли ты, чтобы такие вакансии тоже отсекались (только 100% remote)?\n- **(B)** Утечки другого типа: вакансия помечена как «Remote», но в тексте описания — скрытое требование присутствия («onsite после испытательного», «2 дня в офисе», «hybrid» под видом remote-friendly), и модель это пропускает, потому что смотрит на поле location, а не сверяет с текстом описания.\n\nЭто разные правки промпта. Если у тебя есть конкретные вакансии из Notion Evaluation Log с `human_verdict = \"Wrong – Should Reject\"`, где причина — локация, это и факты, и готовый материал для новых test-кейсов — не хочу гадать вместо проверки.\n\n## План (независимо от ответа на (A)/(B))\n\n1. **Собрать факты**: посмотреть в Eval Log реальные false positives по локации (или получить 2–3 примера от тебя) — это фактическая база, а не гипотеза.\n2. **Переформулировать правило 6** в `evaluator.md` **и** синхронно в `evaluator-template.json` (они обязаны быть идентичны) — например, добавить явное требование «remote = нет упоминания office/hybrid/onsite-дней в тексте; при противоречии между location-полем и описанием — reject» и завести отдельный тег `red_flags` типа `\"Hidden onsite requirement\"`.\n3. Если выбор (A) — сузить исключение «Gdańsk/Tricity hybrid ok» до чистого remote.\n4. **Синхронизировать эвристику** в `Code: Parse Ollama Response` (n8n) с тем же критерием — иначе промпт и код разойдутся; после правки обновить описание в `context/ingest-workflow.yaml:103-107`.\n5. **Добавить кейсы в `gold_dataset.yaml`**: минимум по одному на «remote-label + hidden onsite clause», «hybrid Gdańsk mislabeled as remote» (если A), плюс регрессионные — убедиться, что честные T01/T03/T04/T07 (полный remote) не сломались.\n6. Изменение не трогает `EvaluationResult`/`JobOffer`/`WebhookPayload` — ADR не нужен, это правка только промпта и n8n-эвристики.\n\n## Как проверить, что стало лучше\n\n- `cd scraper && npm run eval` — сравнить прогон до/после правки: новые негативные кейсы должны падать с `overall_score < 50` и соответствующим `red_flags`, старые позитивные remote-кейсы не должны просесть (иначе это оверфит, а не строгость).\n- Отдельно проверить ассерт №4 (формат red_flags) и rubric-ассерт на `reason` — новый тег должен укладываться в 2-4 слова без запятых.\n- После деплоя в n8n — прогнать `scripts/run-local.sh --dry-run` (без реальной отправки) на свежей пачке вакансий и вручную посмотреть Evaluation Log: доля `match=true` с признаками нерелевантной локации должна упасть, а не просто общий % match.\n- Через несколько дней прогона — сверить `human_verdict` в Notion: если после правки новые \"Wrong – Should Reject\" по локации не появляются, а корректные remote-вакансии не начали ложно отклоняться — можно считать правку успешной.\n\nСкажи, (A) или (B) (или обе), и дай пример вакансии-утечки, если есть — тогда я подготовлю точный diff для `evaluator.md`/`evaluator-template.json` и новые тест-кейсы.",
+  "requested_model": "claude-sonnet-5"
+}

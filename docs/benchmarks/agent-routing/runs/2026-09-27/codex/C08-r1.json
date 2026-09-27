@@ -1,0 +1,42 @@
+{
+  "case": "C08",
+  "run": 1,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:11:35+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 82830,
+    "cached_input_tokens": 57372,
+    "cache_write_input_tokens": 25186,
+    "output_tokens": 1311,
+    "reasoning_output_tokens": 270
+  },
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g 'docs/agents/*.md' -g 'context/*.yaml' -g '*adr*' -g '*ADR*' -g 'types.ts' -g 'ai-workflow.md' | sort && rg -n \\\"interface JobOffer|type JobOffer|JobOffer|ADR|salaryCurrency|salary\\\" scraper/src/types.ts context docs/ai-workflow.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"salaryCurrency|salary currency|currency.*salary|salary:\" scraper/src scraper/test* scraper context/modules/scraper.yaml context/interfaces.yaml'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '65,140p' context/modules/scraper.yaml && sed -n '1,90p' context/decisions.yaml && sed -n '180,220p' docs/ai-workflow.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,90p' scraper/src/types.ts && sed -n '1,75p' context/interfaces.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '60,95p' scraper/src/check-manual.ts && sed -n '140,180p' scraper/src/scrapers/justjoin.ts && sed -n '155,190p' scraper/src/scrapers/nofluffjobs.ts && rg -n \\\"\"'^  ADR-0(1[7-9]|2[0-9]):\" context/decisions.yaml && sed -n '\"'1,90p' docs/adr/ADR-016-llm-provider-adapter-pattern.md\""
+    }
+  ],
+  "final_answer": "**Стадия:** Intake → уточнение контракта перед изменениями. Файлы не менял и команды с побочными эффектами не запускал.\n\nПроверил: `JobOffer` объявлен в `scraper/src/types.ts:5`; в нём есть только строковое `salary?: string`. Контракт также описан в `context/interfaces.yaml:44`. Оба скрапера формируют зарплату в `normalizeOffer`/`normalizePosting`, а ручной ввод обрабатывается в `scraper/src/check-manual.ts:80`. В текущих данных валюта включена в строку зарплаты, но отдельного `salaryCurrency` нет.\n\n**План и первые действия**\n- Уточнить контракт поля: по аналогии с `salary` предлагается `salaryCurrency?: string`, отсутствующий или неизвестный код — `undefined`. Формат и допустимые значения валют стоит определить до реализации.\n- До изменения `JobOffer` подготовить ADR: инструкции репозитория требуют ADR для изменений этого типа. Затем обновить интерфейс и его описание в `context/interfaces.yaml`.\n- Добавить поле в нормализацию JustJoin и No Fluff Jobs, а также учесть ручной ввод в `check-manual.ts`.\n- Проверить связанные тесты и добавить случаи для извлечённой, отсутствующей и неизвестной валюты; обновить `context/modules/scraper.yaml`.\n- После изменений проверить `npm run typecheck` и `npm test` из `scraper/`.\n\n**Следующий шаг:** согласовать формат `salaryCurrency` и решение записать в ADR. После этого можно переходить к реализации."
+}

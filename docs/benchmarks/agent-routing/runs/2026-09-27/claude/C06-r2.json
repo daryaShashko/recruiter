@@ -1,0 +1,67 @@
+{
+  "case": "C06",
+  "run": 2,
+  "tool": "claude",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:17:15+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.2626074,
+  "turns": 13,
+  "duration_ms": 119451,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "ls n8n/providers/ 2>/dev/null; echo \"---\"; cat .env.example 2>/dev/null | grep -i -A5 \"LLM_PROVIDER\""
+    },
+    {
+      "tool": "Bash",
+      "target": "ls context/ 2>/dev/null; echo \"---\"; find . -iname \"*provider*\" -not -path \"*/node_modules/*\" 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/index.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/openrouter.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/llm-provider-switching.md"
+    },
+    {
+      "tool": "Read",
+      "target": "context/env.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -3 -- n8n/providers/openrouter.ts .env.example docs/llm-provider-switching.md context/env.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/providers/README.md"
+    },
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "getProvider|LLM_PROVIDER|openrouter"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B2 -A15 \"openrouter\\|fallback\" context/ingest-workflow.yaml 2>/dev/null | head -100"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B2 -A15 \"openrouter\\|fallback\\|P15\" context/decisions.yaml 2>/dev/null | head -150"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B3 -A25 \"P15\" context/roadmap.yaml 2>/dev/null | head -150"
+    }
+  ],
+  "final_answer": "## Текущая поддержка провайдеров (проверено по коду)\n\n**Реестр адаптеров** (`n8n/providers/index.ts`) регистрирует 4 провайдера: `ollama`, `gemini`, `anthropic`, `openrouter`. `OpenRouterAdapter` (`n8n/providers/openrouter.ts`) реализован и покрыт тестами — задача **P15-4** в `context/roadmap.yaml` помечена `done`.\n\nНо есть расхождение между кодом и документацией/реальной проводкой:\n\n- `.env.example` и `docs/llm-provider-switching.md` до сих пор перечисляют только `ollama | gemini | anthropic` — про OpenRouter там ничего нет. Задача синхронизации (**P15-3**) в roadmap — `pending`.\n- По задумке (`context/env.yaml`, ADR-016 extension) OpenRouter — не равноправный провайдер, а **best-effort fallback для Gemini** при 429/503, через `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`. Проводка этого фолбэка в самой n8n-ноде `Code: LLM Router` — задача **P15-5**, статус `pending`, то есть в workflow это ещё не подключено.\n- Важный нюанс из roadmap (`CLOUD-11-A`): в облачном `ingest.json` провайдер сейчас **захардкожен на `gemini/gemini-2.0-flash`**, `$env`-переключение через `LLM_PROVIDER` из него убрано. Сам JSON воркфлоу не в этом чекауте (гитигнорится по правилам AGENTS.md), поэтому саму ноду я не смотрел — только заметку.\n\n## Что это значит для переключения на OpenRouter\n\nДва разных сценария, в зависимости от цели:\n\n1. **OpenRouter как основной провайдер для локальной разработки/promptfoo eval** — уже возможно технически, т.к. адаптер зарегистрирован в `getProvider()`: `LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY=sk-or-v1-...`, опционально `OPENROUTER_MODEL` (дефолт `deepseek/deepseek-chat-v3-0324:free`). Это не задокументировано, но код это поддерживает.\n2. **OpenRouter как fallback для Gemini в облачном воркфлоу** (изначальный дизайн P15-5) — требует правки самой ноды `Code: LLM Router` в `ingest.json`, которого нет в этом чекауте локально.\n\n## План (без внесения изменений — бенчмарк-режим)\n\n1. Уточнить у пользователя цель: ручной переключатель или автоматический fallback — от этого зависит объём работы.\n2. Если ручной переключатель для dev/eval — прогнать smoke-test `LLM_PROVIDER=openrouter npm run eval` (сначала `--dry-run`/без реальной отправки), затем обновить `.env.example`, `docs/llm-provider-switching.md`, `n8n/providers/README.md` (там сейчас OpenRouter вообще не упомянут, а остальные адаптеры помечены как \"Stub\" — тоже устарело).\n3. Если fallback — работа в `ingest.json` (нужен локальный экспорт от пользователя, т.к. файл гитигнорится) плюс проверка сценария 429 от Gemini.\n4. Изменения в `types.ts` не требуются → ADR не нужен.\n\nПервое конкретное действие: уточнить у вас, какой из двух сценариев нужен, и если fallback — попросить локальный экспорт `n8n/workflows/ingest.json` для правки ноды `Code: LLM Router`.",
+  "requested_model": "claude-sonnet-5"
+}

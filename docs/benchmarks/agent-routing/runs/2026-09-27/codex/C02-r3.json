@@ -1,0 +1,42 @@
+{
+  "case": "C02",
+  "run": 3,
+  "tool": "codex",
+  "commit": "153ba8f",
+  "started_utc": "2026-09-27T14:10:05+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 138088,
+    "cached_input_tokens": 109218,
+    "cache_write_input_tokens": 28462,
+    "output_tokens": 1442,
+    "reasoning_output_tokens": 151
+  },
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"nofluff|no-fluff|fluffjobs\" context scraper docs'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '90,130p' context/modules/scraper.yaml; sed -n '1,280p' scraper/src/scrapers/nofluffjobs.ts; sed -n '1,260p' scraper/tests/nofluffjobs.unit.test.ts; sed -n '1,120p' scraper/src/config.ts;\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"function extract|async function scrape|matchesPreFilter|serverApp|STORE_KEY|postings|totalPages|catch|waitFor\\\" scraper/src/scrapers/nofluffjobs.ts; nl -ba scraper/src/scrapers/nofluffjobs.ts | sed -n '100,290p'; nl -ba scraper/src/utils/browser.ts | sed -n '1,180p'; nl -ba scraper/src/index.ts | sed -n '55,95p'; rg -n \\\"extractSsr|matchesPreFilter|scrapeNoFluffJobs|totalPages|serverApp-state\\\" scraper/tests/nofluffjobs.unit.test.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"nl -ba scraper/src/scrapers/nofluffjobs.ts | sed -n '235,370p'; nl -ba scraper/src/utils/browser.ts | sed -n '1,58p'; nl -ba scraper/tests/nofluffjobs.unit.test.ts | sed -n '1,100p'; nl -ba docs/post-mortem.md | sed -n '79,105p'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"nl -ba scraper/src/scrapers/nofluffjobs.ts | sed -n '340,380p'; nl -ba scraper/src/utils/browser.ts | sed -n '1,28p'\""
+    }
+  ],
+  "final_answer": "**Предварительный вывод:** по коду нельзя подтвердить одну конкретную причину без свежего HTML-ответа от NoFluffJobs — я не запускал браузер и не обращался к сети. Но нашёл две вероятные точки отказа:\n\n- Экстрактор ожидает точную структуру: `<script id=\"serverApp-state\">` → `STORE_KEY.searchResponse.postings`. Если сайт поменял разметку или ключи, `extractSsrPostings()` молча возвращает пустой список, а скрапер завершает работу с `[]` (`scraper/src/scrapers/nofluffjobs.ts:240`, `scraper/src/scrapers/nofluffjobs.ts:292`).\n- Если SSR-данные извлеклись, фильтр оставляет только удалённые вакансии или вакансии в Гданьске и отбрасывает уровни junior/mid и другие заданные в конфиге (`scraper/src/scrapers/nofluffjobs.ts:144`, `scraper/src/config.ts`). Поэтому ноль после фильтра сам по себе не доказывает сбой парсинга.\n\n**Что проверено:** реализация парсера, фильтр, конфигурация, unit-тесты и заметка о прежнем SSR-инциденте. В заметке сбой перехода на Angular SSR помечен как исправленный в мае 2026 года (`docs/post-mortem.md:79`), но она не подтверждает, что текущая структура сайта по-прежнему совпадает с кодом.\n\n**План и первые действия:** первым делом посмотреть уже имеющиеся логи запуска — они различают ноль объявлений на странице и отбрасывание объявлений фильтром. Если логов нет или они показывают, что SSR-state пуст, следующий шаг — получить HTML безопасным локальным диагностическим запуском и сравнить тег, структуру `STORE_KEY` и статус ответа с ожиданиями парсера. Если объявления извлечены, проверить их локации и seniority относительно фильтра. Затем добавить регрессионный тест на обнаруженное расхождение, исправить первопричину и запустить проверки парсера.\n\nСейчас активен этап **диагностики**; для подтверждения причины нужен лог последнего запуска или разрешение на сетевую проверку. По вашему условию я не менял файлы и не запускал команды с побочными эффектами."
+}
