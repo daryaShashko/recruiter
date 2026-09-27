@@ -117,16 +117,19 @@ key_logic:
   llm_providers:
     source: >
       Inline code of Code: LLM Router in the local export. n8n/providers/*.ts adapters are
-      NOT used by the node (P15-5). Two generator versions; which one runs is known only
-      from the export or n8n:
+      NOT used by the node (P15-5). Two generator versions:
       scripts/p12_6_llm_router.py — $env.LLM_PROVIDER, fetch, timeouts below;
       scripts/patch_llm_router.py (CLOUD-11-A, later) — provider/model/key hardcoded
       (gemini, gemini-2.0-flash), no $env, this.helpers.httpRequest, no explicit timeout.
+    deployed: >
+      Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: Ingest Jobs is active, 27 nodes; the router uses
+      this.helpers.httpRequest, no $env, no explicit timeout, and no `const provider = '...'`
+      literal, so it matches neither generator exactly. Models in the workflow:
+      gemini-2.0-flash, gemini-2.5-flash. How the provider is selected is not yet checked.
     env_var: "$env.LLM_PROVIDER (+ $env.LLM_MODEL, $env.LLM_BASE_URL, $env.LLM_API_KEY) — p12_6 version only"
-    # Timeouts below are from the p12_6 version. Both generators use gemini-2.0-flash;
-    # UNCONFIRMED: the gemini-3.5-flash value below is in neither script (both use gemini-2.0-flash); check with scripts/inspect-n8n.py.
+    # The per-provider lines below describe the p12_6 version (timeouts); see deployed above.
     ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
-    gemini: "POST generativelanguage.googleapis.com; model=gemini-3.5-flash; responseMimeType=application/json; timeout=60s"
+    gemini: "POST generativelanguage.googleapis.com; model=gemini-2.0-flash (deployed workflow also has gemini-2.5-flash); responseMimeType=application/json; timeout=60s"
     anthropic: "POST api.anthropic.com; tool_use structured output; timeout=60s"
     output_schema: "{ overall_score, tech_stack_match, seniority_match, red_flags[], reason, url }"
 

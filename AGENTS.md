@@ -37,8 +37,10 @@ commands, and identifiers in English.
   `scripts/p12_6_llm_router.py` (selects the provider via `$env.LLM_PROVIDER`, `fetch`
   with 300 s / 60 s timeouts) and the later `scripts/patch_llm_router.py` (CLOUD-11-A:
   provider and model hardcoded, no `$env`, `this.helpers.httpRequest`, no explicit
-  timeout). Both handle only `ollama`, `gemini`, and `anthropic`. Which version runs is
-  known only from the local export or n8n itself; say so instead of guessing. The
+  timeout). Both handle only `ollama`, `gemini`, and `anthropic`. The deployed node
+  (checked 2026-09-27 with `scripts/inspect-n8n.py`) matches neither exactly: it uses
+  `this.helpers.httpRequest`, no `$env`, no explicit timeout, and the workflow contains
+  `gemini-2.0-flash` and `gemini-2.5-flash`. Re-run that script instead of guessing. The
   TypeScript adapters in `n8n/providers/` (including `openrouter`) are tested but not
   wired into n8n (roadmap P15-5); changing them does not change the running workflow.
 - Changes to `JobOffer`, `WebhookPayload`, or `EvaluationResult` (`scraper/src/types.ts`)

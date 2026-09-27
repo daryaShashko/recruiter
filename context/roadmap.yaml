@@ -510,20 +510,23 @@ phases:
         goal: "Move workflows from local n8n to cloud, replace Ollama with cloud LLM"
         tasks:
           CLOUD-9:
-            status: pending
+            status: done
             title: "Export all workflows from local n8n"
+            verified: 'Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: 3 workflows are in cloud n8n, so the export happened (inferred).'
             owner_agent: n8n-specialist
             note: "Export Ingest, Evaluate, Notify, Telegram Trigger workflows as JSON"
             estimate: "0.5d"
           CLOUD-10:
-            status: pending
+            status: done
             title: "Import workflows + restore credentials on cloud n8n"
+            verified: 'Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: Ingest Jobs and Feedback Handler are active; Telegram Bot is imported but inactive.'
             owner_agent: n8n-specialist
             note: "Import workflows. Re-enter Notion token, Telegram bot token in n8n Credentials."
             estimate: "0.5d"
           CLOUD-11:
-            status: pending
+            status: in_progress
             title: "Replace Ollama HTTP Request with Cloud LLM API node"
+            verified: 'Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: the router uses httpRequest and Gemini models (2.0-flash, 2.5-flash); acceptance (200 jobs, no 429) not verified.'
             owner_agent: n8n-specialist
             note: >
               In evaluate workflow: replace HTTP Request (localhost:11434/api/chat)

@@ -60,6 +60,8 @@ def router_summary(code):
     m = re.search(r"const\s+provider\s*=\s*'([a-z]+)'", code)
     if m:
         facts.append(f"version=CLOUD-11-A (hardcoded provider={m.group(1)})")
+    if not facts:
+        facts.append("version=neither generator (no $env, no provider literal)")
     facts.append("http=" + ("httpRequest" if "this.helpers.httpRequest" in code else "fetch" if "fetch(" in code else "?"))
     timeouts = sorted({n for line in code.splitlines() if re.search(r"timeout", line, re.I)
                        and not line.strip().startswith("//") for n in re.findall(r"\b\d{4,6}\b", line)})
