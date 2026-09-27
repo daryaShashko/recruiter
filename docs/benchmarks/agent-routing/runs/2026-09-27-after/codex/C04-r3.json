@@ -1,0 +1,42 @@
+{
+  "case": "C04",
+  "run": 3,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:22+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 139901,
+    "cached_input_tokens": 109039,
+    "cache_write_input_tokens": 30454,
+    "output_tokens": 2038,
+    "reasoning_output_tokens": 678
+  },
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd; rg -n -i \\\"remote|relocat|location|evaluator|evaluate\\\" context docs scraper n8n --glob '\"'!n8n/workflows/**'\"'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' docs/agents/prompt-engineer.md; printf '\\\\n--- evaluator.md ---\\\\n'; sed -n '1,240p' n8n/prompts/evaluator.md; printf '\\\\n--- prompt config/files ---\\\\n'; rg --files n8n/prompts scraper/tests | sort\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' context/ingest-workflow.yaml; printf '\\\\n--- prompt locations ---\\\\n'; rg -n -i \\\"Wrong Location|remote|hybrid|fully remote|evaluator-template|evaluator\\\\.md|promptfooconfig|gold_dataset\\\" n8n/prompts scripts context/roadmap.yaml | head -160; printf '\\\\n--- evaluator opening ---\\\\n'; sed -n '1,100p' n8n/prompts/evaluator.md; printf '\\\\n--- template opening ---\\\\n'; sed -n '1,90p' n8n/prompts/evaluator-template.json; printf '\\\\n--- eval configs ---\\\\n'; sed -n '1,220p' n8n/prompts/promptfooconfig.yaml; printf '\\\\n--- gold dataset opening ---\\\\n'; sed -n '1,180p' n8n/prompts/gold_dataset.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg --files n8n | sort | head -100; rg -n \"Wrong Location|fully remote|hybrid|Remote role|T0[1-9]|remote.*assert|gold_dataset|llm-rubric\" n8n/prompts scripts context docs/ai-workflow.md | head -180; rg -n -i \"remote|location\" n8n/prompts/gold_dataset.yaml n8n/prompts/promptfooconfig.yaml n8n/prompts/promptfooconfig-gemini.yaml'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,55p' n8n/prompts/gold_dataset.yaml; sed -n '42,90p' n8n/prompts/gold_dataset.yaml; sed -n '130,165p' n8n/prompts/gold_dataset.yaml; sed -n '180,210p' n8n/prompts/gold_dataset.yaml; sed -n '300,330p' n8n/prompts/gold_dataset.yaml; sed -n '1,90p' n8n/prompts/promptfooconfig.yaml; rg -n \\\"prompt:|evaluator-template|promptfoo|Build Ollama Payload|systemPrompt|CRITICAL AND ABSOLUTE\\\" scripts context docs n8n --glob '\"'!n8n/prompts/evaluator-template.json'\"' --glob '\"'!n8n/prompts/gold_dataset.yaml'\"' --glob '\"'!context/roadmap.yaml'\"'\""
+    }
+  ],
+  "final_answer": "**Вывод**\n- Сейчас evaluator не требует удалёнку: в `n8n/prompts/evaluator-template.json` правило локации запрещает некоторые офисные и гибридные вакансии, но допускает гибрид в Гданьске/Труймясте. В `n8n/prompts/gold_dataset.yaml` такой гибрид даже ожидается как Hot Match (T02).\n- Задам рабочее толкование так: отклонять вакансии, где удалённая работа недоступна. Гибрид с явно разрешённой удалённой работой — не автоматический отказ; офисный или обязательный гибрид без такой опции — отказ. Если вы имели в виду только полностью удалённые вакансии, это изменит правило.\n\n**План и первые действия**\n1. Уточнить политику для гибрида — вопрос выше; пока использовать указанное толкование.\n2. Сделать правило явным в evaluator prompt: оценивать поле `Location` и описание вместе; требовать подтверждения доступности удалёнки; при отсутствии, неопределённости или обязательном присутствии выставлять `overall_score: 0` и добавлять краткий `red_flags`, например `No remote option`.\n3. Обновить gold dataset: добавить отрицательные случаи для обязательного офиса, обязательного гибрида и неуказанного формата; оставить положительные для fully remote и гибрида с явной remote-опцией. Исправить ожидание T02, если вакансия не предлагает удалёнку.\n4. Сравнить прежний и обновлённый prompt на одном наборе: отдельно посчитать ложные пропуски вакансий без удалёнки и ложные отказы вакансий с доступной удалёнкой. Проверить также, что структура JSON и остальные критерии не ухудшились.\n5. Для оценки использовать `promptfoo` с `n8n/prompts/promptfooconfig.yaml`; конфигурация может вызывать облачный LLM и Gemini для рубрики, поэтому запуск требует ключей и может расходовать квоту или деньги — сначала сообщу об этом отдельно.\n\n**Важное ограничение**\n- По `context/ingest-workflow.yaml`, рабочий workflow собирает prompt во встроенном узле `Code: Build Ollama Payload`. `evaluator-template.json` — benchmark-шаблон, не подтверждённый как источник production prompt; workflow export локальный и в checkout не найден. Значит, для изменения поведения в production нужно отдельно найти фактически используемый код этого узла и синхронно внести туда то же правило. Файлы не менял и команды с побочными эффектами не запускал."
+}

@@ -1,8 +1,8 @@
 # Agent navigation and safety remediation plan
 
-**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured  
+**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured; gap fixes rerun  
 **Active workflow stage:** Verify  
-**Next gate:** review the Slice 0 results, then Slice 3
+**Next gate:** review the rerun results, then Slice 3
 
 ## Goal
 
@@ -196,6 +196,20 @@ Shared gaps for later slices:
   direction when the note is actually correct.
 
 Codex Desktop and VS Code were not run (no non-interactive mode).
+
+**Rerun after the gap fixes (2026-09-27, commit `cae503b`):** see
+[`results-2026-09-27-after.md`](benchmarks/agent-routing/results-2026-09-27-after.md).
+Claude: route 10/12, source 11/12, safety 6/7, interaction PASS. Codex: route 10/12,
+source 11/12, safety 6/7 (7/7 by intent, C12 rubric defect), interaction FAIL (C10).
+Remaining gaps:
+- C07 Claude: no smaller alternative.
+- C11: the check script is not mentioned.
+- C10 Codex: no question and no stated assumption.
+- C09 and C11 Codex: required files are not named.
+
+The fixes were written against these cases, so the gains overstate the real
+improvement. The rerun also exposed an incomplete router description in `cae503b`
+(`scripts/patch_llm_router.py`, CLOUD-11-A); it is corrected.
 
 **Planned changes:** add the 12 case definitions with expected routes, then run them in at least two
 supported tools against the current setup. Avoid production data, external writes, or paid

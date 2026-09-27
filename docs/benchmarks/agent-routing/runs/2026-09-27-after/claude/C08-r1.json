@@ -1,0 +1,51 @@
+{
+  "case": "C08",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:14:24+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.15391559999999999,
+  "turns": 9,
+  "duration_ms": 68124,
+  "is_error": false,
+  "tool_calls": 8,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"salaryCurrency\\|currency\" context/ docs/ 2>/dev/null"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/types.ts",
+      "pattern": "JobOffer"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "context/interfaces.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/qa-engineer.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/ 2>/dev/null | head -50; echo \"---adr dirs---\"; find . -iname \"*adr*\" -not -path \"*/node_modules/*\" 2>/dev/null; echo \"---decisions---\"; grep -n -i \"salary\" context/roadmap.yaml context/decisions.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/adr/; echo \"---\"; sed -n '1,30p' docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"salary\\|currency\" docs/notion-schema.md 2>/dev/null; echo \"---ingest---\"; grep -n -i \"salary\\|currency\" context/ingest-workflow.yaml 2>/dev/null"
+    }
+  ],
+  "final_answer": "## Что нашёл\n\n- `JobOffer` — в `scraper/src/types.ts:5`. Сейчас поля зарплаты нет как структуры: есть только `salary?: string` — единая строка вида `\"15000–20000 PLN\"` (формат зафиксирован в `context/interfaces.yaml:44-48`).\n- Downstream всё потребляет именно строку: Notion-схема (`docs/notion-schema.md:18` — колонка `Salary`, Text) и Telegram/pre-filter в `context/ingest-workflow.yaml:107,126` работают с готовой строкой, отдельного поля валюты нигде дальше по пайплайну нет.\n- Упоминание `salaryCurrency` в `docs/agents/qa-engineer.md:111` — это поле сырого API justjoin (фикстура для теста скрапера), а не поле нормализованного `JobOffer`. Не относится к текущей задаче напрямую, но подсказывает, что у justjoin есть готовый структурированный currency в исходном ответе API.\n- Проверил `context/roadmap.yaml` и `context/decisions.yaml` — прошлых решений/ADR про разделение `salary` на сумму+валюту не нашёл.\n\n## Почему это не просто \"добавить поле\"\n\nПо `AGENTS.md`: изменения `JobOffer` (как и `WebhookPayload`/`EvaluationResult`) требуют ADR до кода, и после кода — обновление `context/interfaces.yaml`. Это официальное правило проекта, не формальность — тип шарится между всеми скраперами и n8n.\n\nТакже есть выбор дизайна, который нужно зафиксировать до кода:\n- Оставляем `salary` как есть (форматированная строка) и добавляем `salaryCurrency?: string` рядом — аддитивно, не ломает существующих потребителей.\n- Формат значения: ISO 4217 код (`PLN`, `EUR`, `USD`) — как уже используется в примерах.\n- Поле опциональное (`?`), т.к. justjoin отдаёт валюту в API, а nofluffjobs/linkedin/manual могут не давать её отдельно от строки.\n- Осознанно не трогаем Notion-схему и Telegram-формат в этом шаге — они продолжат использовать `salary` как строку; `salaryCurrency` будет доступен только на уровне scraper→webhook payload, если не попросишь протянуть дальше.\n\n## План (RPI, режим quick/feature — изолированное аддитивное поле, но задевает шаренный тип)\n\n1. **ADR** — короткий файл `docs/adr/ADR-0XX-job-offer-salary-currency.md` по образцу `ADR-016`: контекст (зачем нужна структурированная валюта — вероятно, для будущей фильтрации/аналитики по валюте), решение (опциональное поле, ISO 4217, что не трогаем), альтернативы (парсить валюту из `salary` в n8n — отклонить: дублирует логику скрапера).\n2. Добавить `salaryCurrency?: string` в `JobOffer` (`scraper/src/types.ts:21` — рядом с `salary`).\n3. Пройтись по нормализаторам всех скраперов (`justjoin`, `nofluffjobs`, `linkedin`, `manual`) — посмотреть, где уже парсится `salary`, и заполнить `salaryCurrency` там, где источник даёт валюту структурированно (у justjoin точно есть, судя по фикстуре).\n4. Обновить `context/interfaces.yaml` (блок `JobOffer.fields`) — добавить описание нового поля.\n5. Обновить/добавить unit-тесты на нормализацию (mock HTTP, без сети) — happy path + отсутствие валюты в ответе источника.\n6. Прогнать `npm run typecheck` и `npm test` из `scraper/`.\n\n## Первые конкретные шаги, которые сделаю дальше (по твоему подтверждению)\n\n- Написать текст ADR и показать его тебе на ревью — до правок кода.\n- Затем открыть нормализаторы скраперов, чтобы понять точный источник валюты в каждом (это read-only разведка, отдельно от правки).\n\nИзменений в файлах и команд с побочными эффектами не выполнял — только чтение (`grep`/`Read`). Скажи, ок ли такой объём (ADR + аддитивное поле без изменения Notion/Telegram), или сразу нужно протянуть валюту дальше по пайплайну.",
+  "requested_model": "claude-sonnet-5"
+}

@@ -1,0 +1,34 @@
+{
+  "case": "C06",
+  "run": 3,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:52+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 82483,
+    "cached_input_tokens": 57917,
+    "cache_write_input_tokens": 24294,
+    "output_tokens": 1031,
+    "reasoning_output_tokens": 161
+  },
+  "tool_calls": 3,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'pwd && rg -n -i \"LLM_PROVIDER|openrouter|gemini|anthropic|ollama|P15-5\" context docs n8n scraper scripts .env.example 2>/dev/null'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '15,32p' .env.example && sed -n '1,24p' scripts/p12_6_llm_router.py && sed -n '60,78p' n8n/providers/README.md && sed -n '1,110p' n8n/providers/openrouter.ts && rg -n -i \\\"openrouter|P15-5\\\" context/roadmap.yaml context/decisions.yaml docs/\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1665,1688p' context/roadmap.yaml && sed -n '1744,1805p' context/roadmap.yaml && sed -n '130,160p' docs/llm-provider-switching.md && sed -n '1,45p' context/ingest-workflow.yaml\""
+    }
+  ],
+  "final_answer": "**Что поддерживается сейчас**\n\n- Активный n8n `Code: LLM Router` поддерживает `ollama`, `gemini` и `anthropic`. Переключение задаётся через переменные n8n, а не только через `.env` на хосте.\n- В репозитории есть `OpenRouterAdapter`, но это отдельный TypeScript-адаптер — он не подключён к работающему n8n-router.\n- Roadmap подтверждает это различие: P15-4 со статусом `done` — адаптер; P15-5 со статусом `pending` — подключение fallback в router.\n- Значит, просто установить `LLM_PROVIDER=openrouter` недостаточно: router пока отклонит такое значение.\n\n**План переключения**\n\n1. Выбрать режим: заменить текущего провайдера на OpenRouter или добавить его как fallback для Gemini. В roadmap предусмотрен второй вариант.\n2. Подключить OpenRouter к inline-коду `Code: LLM Router`, сохранив совместимый формат ответа и настроив обработку ошибок.\n3. В n8n задать `OPENROUTER_API_KEY` и `OPENROUTER_MODEL`, затем обновить и перезапустить workflow.\n4. Проверить успешный запрос и сценарий ошибки основного провайдера; отдельно учесть, что доступность бесплатных моделей может меняться.\n\n**Первые конкретные действия**\n\nЯ сверил `.env.example`, генератор router-кода, описание адаптеров и статусы roadmap. В рамках бенчмарка остановился до изменений: файлы не редактировал и тесты не запускал. Следующий практический шаг — уточнить, нужен ли OpenRouter как единственный провайдер или как fallback; при отсутствии уточнения я бы следовал плану P15-5 и подключал его как fallback для Gemini."
+}

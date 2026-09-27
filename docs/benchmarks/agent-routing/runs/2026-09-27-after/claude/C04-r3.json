@@ -1,0 +1,58 @@
+{
+  "case": "C04",
+  "run": 3,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:09:54+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.23733400000000002,
+  "turns": 11,
+  "duration_ms": 122276,
+  "is_error": false,
+  "tool_calls": 10,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"remote\\|удал\" context/roadmap.yaml context/decisions.yaml docs/ 2>/dev/null"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/prompts/**"
+    },
+    {
+      "tool": "Glob",
+      "target": "context/*.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/candidate_profile.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"remote\\|удал\" context/decisions.yaml docs/pe-tuning-log.md docs/post-mortem.md 2>/dev/null | head -80"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"remote\\|location\\|Gdańsk\\|Trójmiasto\\|Tricity\" n8n/prompts/gold_dataset.yaml | head -60"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/pe-tuning-log.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"remote\\|location\" context/project.yaml context/interfaces.yaml 2>/dev/null"
+    }
+  ],
+  "final_answer": "## Что нашёл перед правками\n\nПрежде чем трогать промпт, я посмотрел, что уже решено по теме удалёнки:\n\n- **`docs/agents/business-analyst.md:45`**: фильтрация — `location == \"Gdańsk\"/\"Trójmiasto\" OR remote == true`, явно \"never exclude remote\". Это решение про то, чтобы не терять remote-вакансии, не про ужесточение.\n- **`n8n/prompts/candidate_profile.md` (разд. 4)** и **`n8n/prompts/evaluator.md`** (CRITICAL RULE 6 \"Wrong Location\"): текущая политика — принимать **remote ИЛИ hybrid/office в Gdańsk/Trójmiasto**, отклонять всё остальное (Warsaw/Kraków/Wrocław/Katowice и т.п.).\n- **`n8n/prompts/gold_dataset.yaml` + `docs/pe-tuning-log.md`**: на бейзлайне (gemini-3.1-flash-lite, 2026-05-29) это уже проходит 22/22, включая F05 (Warsaw on-site → score 0).\n\nЗначит формально правило \"без удалёнки — отсекать\" уже есть и по последнему прогону работает на тестовых кейсах. Значит запрос — это либо (а) реальные false positives в проде, которых нет в gold-датасете, либо (б) желание расширить политику (например, больше не принимать даже Gdańsk-офис без remote-опции).\n\n## Уточняющий вопрос (меняет объём работы)\n\nОдин момент нужно решить, прежде чем писать код:\n\n**Вакансии Gdańsk/Trójmiasto hybrid/office без remote-опции — тоже отсекать как \"без удалёнки\", или они должны остаться допустимыми (как сейчас в `candidate_profile.md`)?**\nЕсли да — это смена политики кандидата (`candidate_profile.md`, `business-analyst.md`), а не просто более строгий промпт evaluator'а, и стоит явно это зафиксировать (кандидат физически теряет Tricity-офис как опцию).\nЕсли нет — задача уже, а именно уточнить обработку **неоднозначных/пограничных** случаев locations (пустое поле, \"Unknown\", \"remote-friendly\", \"частичный remote\", город не из списка), где нынешняя формулировка правила 6 (перечисление конкретных городов) может пропускать нестандартные формулировки.\n\nЯ предполагаю **второй вариант** (не менять политику по Gdańsk, ужесточить обработку пограничных/неоднозначных формулировок), если не скажете иначе — дальнейший план из этого.\n\n## План (без изменений, только описание действий)\n\n1. **Диагностика перед правкой промпта** — посмотреть реальные false positives: свежие записи в Notion/логах прогонов (`output/dry-run-*.json` или n8n executions), где `overall_score >= 50`, а location не remote и не Gdańsk/Trójmiasto. Без конкретных примеров правка рискует быть \"вслепую\".\n2. **Правка `n8n/prompts/evaluator.md`, правило 6** — переформулировать из блок-листа городов в позитивное правило: принимать только если явно (a) fully remote без обязательного офиса, или (b) hybrid/on-site явно в Gdańsk/Gdynia/Sopot/Trójmiasto; во всех остальных случаях, включая **пустое/\"Unknown\" location, город не из списка, \"remote-friendly\"/частичный remote без гарантии, противоречие location↔описание** — force reject с `red_flags: \"Wrong location\"` или `\"Location unclear\"`.\n3. **Расширить `n8n/prompts/gold_dataset.yaml`** новыми F-кейсами именно на пограничные формулировки (пустой location, \"hybrid 2 days/week\" без города вне Tricity, \"remote options available\" при обязательном офисе не в Tricity) — это то, чего сейчас не хватает по сравнению с F05 (Warsaw явный).\n4. **Прогон `npm run eval`** (promptfoo) из `scraper/` для сравнения с бейзлайном в `docs/pe-tuning-log.md`. Важно: это реальный вызов LLM (`LLM_PROVIDER`) + Gemini для grading — расходует квоту/деньги, нужен ключ и ваше согласие перед запуском.\n5. **Критерий \"стало лучше\"**: не общий % pass, а конкретно pass/score на location-кейсах (существующих + новых F-кейсах) без регрессии на T01–T08/E01–E04 (чтобы не сломать легитимные remote/Tricity матчи). Зафиксировать результат новой датированной секцией в `docs/pe-tuning-log.md`, как это сделано для предыдущих итераций.\n6. Если решите менять и Gdańsk-политику — тогда также правки `candidate_profile.md`, `docs/agents/business-analyst.md` и запись в `context/decisions.yaml`.\n\nИзменений в код/файлы и запуск `npm run eval` я не делал — режим бенчмарка. Готов начать с шага 1 (поиск реальных примеров ложных срабатываний), как только подтвердите объём (п. Gdańsk) или дадите доступ к логам прогонов.",
+  "requested_model": "claude-sonnet-5"
+}

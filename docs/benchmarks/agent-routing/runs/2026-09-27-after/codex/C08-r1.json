@@ -1,0 +1,34 @@
+{
+  "case": "C08",
+  "run": 1,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:04:19+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 74870,
+    "cached_input_tokens": 52307,
+    "cache_write_input_tokens": 22291,
+    "output_tokens": 988,
+    "reasoning_output_tokens": 317
+  },
+  "tool_calls": 3,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"(interface|type) JobOffer|JobOffer|salaryCurrency\\\" scraper/src/types.ts context docs/decisions* context/decisions.yaml 2>/dev/null; rg --files context docs | rg '(scraper\\\\.yaml|decisions|adr|agent)'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"(interface|type) JobOffer|JobOffer|salaryCurrency\\\" scraper/src/types.ts context/decisions.yaml context/modules/scraper.yaml; sed -n '1,200p' scraper/src/types.ts; sed -n '1,180p' context/modules/scraper.yaml; sed -n '1,180p' context/decisions.yaml; ls docs/adr\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"salary|currency|salaryCurrency\" context docs scraper/src scraper/test*; rg --files context'"
+    }
+  ],
+  "final_answer": "**План**\n- Добавить `salaryCurrency?: string` в `JobOffer`, сохранив необязательность: зарплата и валюта могут отсутствовать.\n- Зафиксировать изменение контракта в ADR **до правки кода** — это правило репозитория для изменений `JobOffer`.\n- Обновить `context/interfaces.yaml` и описание `src/types.ts` в `context/modules/scraper.yaml`.\n- Проверить источники зарплаты и тесты, чтобы определить, где заполнять валюту и как проверять её отсутствие.\n\n**Первые конкретные действия**\n- Проверил `scraper/src/types.ts`: сейчас `salary` — необязательная строка; отдельного поля валюты нет.\n- Нашёл контракт в `context/interfaces.yaml` и заметку о формате зарплаты в `context/modules/scraper.yaml`. В текущей логике JustJoin зарплата формируется строкой с валютой, поэтому перед реализацией стоит определить, извлекать ли код валюты из этой строки или из исходных данных.\n- В режиме бенчмарка остановился до изменений: файлы не редактировал, команды с побочными эффектами не запускал."
+}

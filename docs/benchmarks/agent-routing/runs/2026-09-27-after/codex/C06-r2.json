@@ -1,0 +1,34 @@
+{
+  "case": "C06",
+  "run": 2,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:51+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 83631,
+    "cached_input_tokens": 58339,
+    "cache_write_input_tokens": 25020,
+    "output_tokens": 1187,
+    "reasoning_output_tokens": 345
+  },
+  "tool_calls": 3,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'pwd; rg -n \"LLM_PROVIDER|openrouter|Code: LLM Router|P15-5\" context n8n scraper scripts docs'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,180p' docs/llm-provider-switching.md; sed -n '1,125p' scripts/p12_6_llm_router.py; sed -n '75,150p' context/env.yaml; sed -n '1,120p' n8n/providers/index.ts; rg -n \\\"P15-5|OpenRouter\\\" context/roadmap.yaml context/decisions.yaml docs/adr\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,115p' scripts/p12_6_llm_router.py; sed -n '82,145p' context/env.yaml; sed -n '1768,1790p' context/roadmap.yaml; rg -n \\\"P15-5|15.2 OpenRouter|status:\\\" context/roadmap.yaml | tail -25\""
+    }
+  ],
+  "final_answer": "Сейчас рабочий n8n-роутер поддерживает **Ollama, Gemini и Anthropic**; по умолчанию используется Ollama. Адаптер OpenRouter уже есть в `n8n/providers/`, но активный роутер его не вызывает. Задача P15-5 — резервный переход с Gemini на OpenRouter при 429/503 или таймауте — в roadmap отмечена как `pending`.\n\nПоэтому просто задать `LLM_PROVIDER=openrouter` сейчас **не сработает**: такого значения нет в роутере. Кроме того, для n8n переменные задаются в настройках n8n, а не только в локальном `.env`.\n\n**План переключения**\n1. Добавить OpenRouter в активный код роутера, используя существующий адаптер как ориентир. По текущему плану это именно fallback после сбоя Gemini, а не самостоятельный основной провайдер.\n2. Настроить в n8n `OPENROUTER_API_KEY` и `OPENROUTER_MODEL`; ключ хранить в настройках/секретах, не в файлах репозитория.\n3. Обновить генератор workflow и связанные заметки, затем добавить или проверить тесты отказа Gemini и успешного fallback.\n4. Проверить результат на тестовом сценарии и только после этого включать его в рабочий workflow.\n\nПервое конкретное действие — сверить фактический `Code: LLM Router` в workflow с генератором `scripts/p12_6_llm_router.py`; экспорт workflow локальный и может отсутствовать в checkout, поэтому нельзя считать генератор единственным актуальным экземпляром без такой проверки.\n\nВ этом бенчмарке я файлы не менял и команды с побочными эффектами не выполнял."
+}

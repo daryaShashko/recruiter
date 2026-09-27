@@ -1,0 +1,134 @@
+{
+  "case": "C09",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:15:33+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.3878138,
+  "turns": 27,
+  "duration_ms": 171664,
+  "is_error": false,
+  "tool_calls": 26,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "cat scraper/package.json 2>/dev/null | head -40"
+    },
+    {
+      "tool": "Glob",
+      "target": ".agents/skills/*/SKILL.md"
+    },
+    {
+      "tool": "Glob",
+      "target": ".agents/skills/create-skill/*"
+    },
+    {
+      "tool": "Read",
+      "target": ".agents/skills/create-skill/SKILL.md"
+    },
+    {
+      "tool": "Grep",
+      "target": "context",
+      "pattern": "release|pre-release|перед релизом|dry-run|dry run"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs",
+      "pattern": "release|dry.run"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/scraper-update-guide.md",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/local-ops-plan.md",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/scraper.yaml",
+      "pattern": "release|dry.run|dry_run"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls .agents/skills/ 2>/dev/null; echo \"---\"; ls docs/ | head -30"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/scraper-update-guide.md",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/local-ops-plan.md",
+      "pattern": "release|dry.run|dry_run"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/scraper-update-guide.md",
+      "pattern": "release|dry.run|dry_run|scrape:dry"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/local-ops-plan.md",
+      "pattern": "release|dry.run|dry_run"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/local-ops-plan.md"
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls context/decisions.yaml 2>/dev/null && echo \"exists\" || echo \"no decisions.yaml\"; echo \"---\"; ls scripts/run-local.sh 2>/dev/null && echo \"run-local exists\" || echo \"no run-local.sh\"; echo \"---\"; grep -n -i \"release.readiness\\|dry.run\\|scraper\" docs/agent-learning/LESSONS.md 2>/dev/null | head -30"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -- docs/local-ops-plan.md scripts/run-local.sh | head -20"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"release\\|dry.run\\|skill\" context/decisions.yaml | head -30"
+    },
+    {
+      "tool": "Read",
+      "target": "scripts/run-local.sh"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/check-manual.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"DRY_RUN\" scraper/src/index.ts scraper/src/sender.ts 2>/dev/null | head -30"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/index.ts"
+    }
+  ],
+  "final_answer": "## Что нашёл перед планированием\n\nПроверил `context/decisions.yaml` (совпадений с release/dry-run/skill нет), `context/roadmap.yaml` и `docs/local-ops-plan.md`: там уже запланирован ровно такой скилл — `/release-readiness` (задача **L2** в local-ops-plan, депенд от L1 `/run-local`, статус `pending`; также упомянут в `G2` плана отключения GitHub Actions). Роадмап описывает его через `owner_agent: devops` — это устаревшая формулировка, AGENTS.md сейчас прямо запрещает отдельные агент-сёрфейсы (\"Tool-specific agent or subagent definitions are not used in this repository\"), так что делаю его как обычный скилл, без привязки к «агенту devops».\n\nЗаодно проверил код: `scripts/run-local.sh` (L1) уже реализован (коммиты `3fa59c4`, `242a4c1`, `6ebfc36`), хотя roadmap.yaml до сих пор помечает L1/L2 как `pending` — статус в роадмапе устарел, доверять коду, а не заметке.\n\nРучной чек-лист для dry-run уже есть в `docs/scraper-update-guide.md` (строки ~301–312): typecheck → unit-тесты → `DRY_RUN=true npx ts-node src/index.ts` → проверка `output/dry-run-*.json` (оба источника, поля не null). `scraper/src/index.ts:88-95` сам завершается с кодом 1, если после дедупликации 0 вакансий — это уже встроенный гейт.\n\n## Контракт скилла\n\n- **Имя/путь:** `.agents/skills/release-readiness/SKILL.md` — совпадает с именем, уже зафиксированным в роадмапе.\n- **Когда триггерится:** перед мержем/релизом изменений в `scraper/` или перед ручным прогоном по чек-листу из `docs/scraper-update-guide.md`. Не триггерится на обычную разработку (для неё достаточно `npm run typecheck`/`npm test`).\n- **Шаги:**\n  1. Offline-гейт: `npm run typecheck && npm test` в `scraper/`.\n  2. Явное предупреждение пользователю, что дальше — не offline (Playwright бьёт по живым сайтам), и запрос подтверждения перед запуском — как того требует AGENTS.md для `scrape:dry`.\n  3. Запуск `DRY_RUN=true npx ts-node src/index.ts` (эквивалент `npm run scrape:dry`).\n  4. Найти новый `output/dry-run-*.json`, проверить: есть офферы из обоих источников (`justjoin`, `nofluffjobs`), у каждого офера непустые `id/title/company/url/body`.\n  5. Отчёт PASS/FAIL с числом офферов по источникам и списком проблемных полей; цифры из `scraper-update-guide.md` (>100 justjoin, >5 NFJ) даю как справочный ориентир, а не жёсткий порог — они не зафиксированы как критерий приёмки, только как ожидаемый результат отдельных тестов источников.\n  6. Явно не отправляет webhook, не коммитит, не пушит, не мержит.\n- **Небольшой helper:** простой Node-скрипт (без зависимостей) в `.agents/skills/release-readiness/scripts/validate-dry-run.mjs` для детерминированной проверки JSON вместо визуальной оценки — по правилу create-skill \"add references or scripts only when they save context or make a repeated check more reliable\".\n\n## Первые конкретные действия (после одобрения)\n\n1. Написать `.agents/skills/release-readiness/SKILL.md` с контрактом выше, сославшись на `docs/scraper-update-guide.md` и `AGENTS.md` вместо дублирования порогов.\n2. Добавить `scripts/validate-dry-run.mjs`.\n3. Прогнать `scripts/check-agent-surfaces.sh` (offline) — проверяет структуру, не полезность.\n4. Для проверки логики валидации — сначала попробовать на уже существующем `output/dry-run-*.json`, если такой есть в репо; если нет — спросить разрешение перед реальным запуском `DRY_RUN=true npx ts-node src/index.ts` (сетевой вызов к живым сайтам).\n\nФайлы не менял и команд с побочными эффектами не запускал — только чтение. Готов приступить к шагу 1, если план подходит.",
+  "requested_model": "claude-sonnet-5"
+}

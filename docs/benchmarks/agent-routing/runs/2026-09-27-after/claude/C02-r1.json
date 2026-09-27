@@ -1,0 +1,125 @@
+{
+  "case": "C02",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:27+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.5151206,
+  "turns": 26,
+  "duration_ms": 199029,
+  "is_error": false,
+  "tool_calls": 25,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": "NoFluffJobs",
+      "pattern": "NoFluffJobs"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/modules/scraper.yaml",
+      "pattern": "nofluffjobs|NoFluffJobs"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs/post-mortem.md",
+      "pattern": "NoFluffJobs"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -A 30 \"nofluffjobs\" \"context/modules/scraper.yaml\" | head -100"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B2 -A 20 \"nofluffjobs\" \"docs/post-mortem.md\""
+    },
+    {
+      "tool": "Read",
+      "target": "docs/scraper-update-guide.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B2 -A15 \"nofluffjobs\\|NFJ\" \"context/decisions.yaml\" \"context/roadmap.yaml\""
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -B2 -A15 \"nofluffjobs\\|NFJ\" \"context/roadmap.yaml\""
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.test.ts"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/tests/nofluffjobs*"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -n 15 -- scraper/src/scrapers/nofluffjobs.ts scraper/src/config.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "git show --stat 3d590be"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/utils/browser.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A15 \"USER_AGENTS\\|VIEWPORTS\\|pickRandom\" \"scraper/src/config.ts\""
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.unit.test.ts"
+    },
+    {
+      "tool": "Glob",
+      "target": "output/dry-run-*.json"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A20 \"zero.jobs\\|zero-jobs\\|0 offers\\|WARNING\" \".github/workflows/scraper.yml\" 2>/dev/null | head -60"
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && for f in output/dry-run-*.json; do\n  python3 -c \"\nimport json\ndata = json.load(open('$f'))\njj = sum(1 for x in data if x.get('source')=='justjoin')\nnfj = sum(1 for x in data if x.get('source')=='nofluffjobs')\nprint(f'$f: total={len(data)} justjoin={jj} nofluffjobs={nfj}')\n\"\ndone",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && python3 -c \"\nimport json, glob\nfor f in sorted(glob.glob('output/dry-run-*.json')):\n    data = json.load(open(f))\n    jj = sum(1 for x in data if x.get('source')=='justjoin')\n    nfj = sum(1 for x in data if x.get('source')=='nofluffjobs')\n    print(f'{f}: total={len(data)} justjoin={jj} nofluffjobs={nfj}')\n\"\n",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && python3 -c \"\nimport json, glob\nfor f in sorted(glob.glob('output/dry-run-*.json')):\n    data = json.load(open(f))\n    jj = sum(1 for x in data if x.get('source')=='justjoin')\n    nfj = sum(1 for x in data if x.get('source')=='nofluffjobs')\n    print(f + ': total=' + str(len(data)) + ' justjoin=' + str(jj) + ' nofluffjobs=' + str(nfj))\n\"\n",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && for f in output/dry-run-*.json; do jj=$(jq '[.[] | select(.source==\"justjoin\")] | length' \"$f\"); nfj=$(jq '[.[] | select(.source==\"nofluffjobs\")] | length' \"$f\"); total=$(jq 'length' \"$f\"); echo \"$f total=$total justjoin=$jj nofluffjobs=$nfj\"; done",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && jq -r '\"total=\" + (length|tostring) + \" justjoin=\" + ([.[] | select(.source==\"justjoin\")]|length|tostring) + \" nofluffjobs=\" + ([.[] | select(.source==\"nofluffjobs\")]|length|tostring)' output/dry-run-2026-05-22T16-01-38-832Z.json output/dry-run-2026-05-22T16-09-05-954Z.json output/dry-run-2026-05-22T16-18-02-285Z.json output/dry-run-2026-05-22T16-25-12-829Z.json output/dry-run-2026-05-22T16-33-18-010Z.json output/dry-run-2026-05-23T14-44-02-049Z.json output/dry-run-2026-05-24T15-44-31-616Z.json output/dry-run-2026-05-26T15-09-25-804Z.json output/dry-run-2026-05-26T22-17-22-081Z.json"
+    },
+    {
+      "tool": "Bash",
+      "target": "cd \".\" && ls -la output/ 2>/dev/null; echo \"---\"; git log --oneline -1 -- output/ 2>/dev/null; echo \"---last commit touching nofluffjobs area overall---\"; git log --oneline -n 5"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/config.ts"
+    }
+  ],
+  "final_answer": "## Что проверил (без сети, только локально)\n\n1. Прецедент — `docs/post-mortem.md` (INCIDENT-001) и `context/roadmap.yaml` (P1-11): в мае 2026 NFJ уже давал 0 вакансий из-за перехода на Angular SSR (данные теперь в `<script id=\"serverApp-state\">` → `STORE_KEY.searchResponse.postings`). Это тот же класс симптома, что и сейчас.\n2. Код `scraper/src/scrapers/nofluffjobs.ts`: если `extractSsrPostings()` не находит тег/ключ или `JSON.parse` падает — скрапер логирует `WARNING: 0 postings on page 1` / `SSR state not found` и возвращает `[]` (строки 292–301). Это единственная ветка, которая явно даёт «0, хотя на сайте есть вакансии».\n3. Проверил гипотезу «регрессия из-за ротации UA/locale» (коммит `3d590be`, добавил `locale: \"en-US\"` и `Accept-Language` с приоритетом на `en` при заходе на `/pl/praca/...`) — сравнил сохранённые артефакты `output/dry-run-*.json` по датам:\n   - до фикса SSR (22.05, 16:01–16:18): `nofluffjobs=0`\n   - после фикса SSR (22.05 16:25 → 26.05 22:17, включая прогоны **после** коммита с UA/locale от 23.05): `nofluffjobs=9–11`, стабильно\n   \n   → Гипотеза не подтвердилась: ротация UA/locale не ломала NFJ. Последний локальный прогон — 2026-05-26, значит с тех пор (4 месяца) сайт не проверялся вообще.\n4. Конфиг (`targetStack`, `rejectLevels`, `locations`) не менялся в сторону, которая могла бы обнулить пре-фильтр.\n\n## Рабочая гипотеза (не подтверждена, требует сети)\n\nНаиболее вероятно — повтор INCIDENT-001: NFJ снова изменил структуру страницы/SSR-схему (или усилил защиту от ботов) за прошедшие месяцы, и `extractSsrPostings()` перестал находить `STORE_KEY`/`serverApp-state` в актуальной верстке. Менее вероятно, но не исключено: пре-фильтр (`matchesNFJPreFilter` — remote/Gdańsk + не junior/mid) сейчас честно режет всё в 0 из-за состава реальных вакансий — это отличимо по логам самого скрапера (`[NoFluffJobs] Page 1: N postings` → `After reference dedup: M` → `Pre-filter: K kept`).\n\n## Следующие конкретные шаги (требуют сети — не выполняю их в этом режиме, нужно ваше «ок»)\n\n1. `docs/scraper-update-guide.md`, раздел 3, шаг 1 — `curl` на `https://nofluffjobs.com/pl/praca/javascript`, проверить, жив ли `STORE_KEY` в `serverApp-state`, и если да — сравнить ключи/форму первого posting с интерфейсом `RawNoFluffPosting`.\n2. Если curl отдаёт не HTML с этим тегом, а 403/challenge — это блокировка (Cloudflare), а не смена схемы; тогда смотреть в сторону антибот-защиты, а не парсера.\n3. Если тег/ключ на месте — прогнать `cd scraper && DRY_RUN=true npx ts-node src/index.ts` и прочитать консольные `[NoFluffJobs]`-логи, чтобы понять, на каком именно шаге (SSR-экстракция / дедуп / пре-фильтр) счётчик падает до 0.\n4. По результату — либо править `extractSsrPostings()`/`RawNoFluffPosting` по гайду (шаги 3–4 раздела 3), либо (если это пре-фильтр) обсуждать, ожидаемо ли сейчас 0 подходящих вакансий.\n5. После фикса — по правилам проекта: обновить `context/modules/scraper.yaml` (раздел NFJ) и добавить запись INCIDENT-002 в `docs/post-mortem.md` по аналогии с INCIDENT-001; ADR не нужен, если не меняется публичный контракт `JobOffer`/`WebhookPayload`.\n\nХотите, чтобы я выполнил шаг 1 (curl, без записи) — это первое реальное сетевое действие для диагностики?",
+  "requested_model": "claude-sonnet-5"
+}

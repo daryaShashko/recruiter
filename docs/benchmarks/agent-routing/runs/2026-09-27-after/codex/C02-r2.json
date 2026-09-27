@@ -1,0 +1,46 @@
+{
+  "case": "C02",
+  "run": 2,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:02:42+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 168258,
+    "cached_input_tokens": 138796,
+    "cache_write_input_tokens": 28986,
+    "output_tokens": 1842,
+    "reasoning_output_tokens": 376
+  },
+  "tool_calls": 6,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"nofluff|no-fluff|NoFluffJobs\" scraper context docs'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,420p' scraper/src/scrapers/nofluffjobs.ts && printf '\\\\n--- UNIT TESTS ---\\\\n' && sed -n '1,300p' scraper/tests/nofluffjobs.unit.test.ts && printf '\\\\n--- CONTEXT ---\\\\n' && sed -n '90,135p' context/modules/scraper.yaml && printf '\\\\n--- POSTMORTEM ---\\\\n' && sed -n '75,115p' docs/post-mortem.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"function extractSsr|function matchesPre|export async|page=|serverApp|totalPages|filtered|return \\\\[\\\\]\\\" scraper/src/scrapers/nofluffjobs.ts && sed -n '145,380p' scraper/src/scrapers/nofluffjobs.ts && sed -n '1,260p' scraper/tests/nofluffjobs.unit.test.ts && rg -n 'NOFLUFF|rejectLevels|location|seniority|PAGE_SIZE' scraper/src/config.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '235,370p' scraper/src/scrapers/nofluffjobs.ts; sed -n '1,180p' scraper/src/utils/browser.ts; sed -n '35,85p' scraper/src/config.ts; sed -n '1,100p' scraper/src/index.ts;\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg --files scraper output 2>/dev/null | rg '(dry-run|log|nofluffjobs|\\\\.json\"'$)'\"' | head -80; rg -n 'Page 1:|SSR state not found|After reference dedup|Pre-filter \\\\(location \\\\+ seniority\\\\)' . --glob '\"'!node_modules/**'\"' --glob '\"'!*.lock'\"' --glob '\"'!package-lock.json'\"'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"for f in output/dry-run-*.json; do printf '%s ' \\\"\"'$f\"; jq -r '\"'[length, ([.[] | select(.source == \\\"nofluffjobs\\\")] | length)] | @tsv' \\\"\"'$f\"; done'"
+    }
+  ],
+  "final_answer": "**Диагноз**\n\nПодтверждённой причины именно нынешнего нуля по имеющимся локальным данным нет: последние сохранённые dry-run датированы 26 мая 2026 года, а сетевые запросы я не выполнял. Но в коде видны две вероятные точки отказа:\n\n- Скрапер жёстко ожидает Angular SSR-состояние по пути `STORE_KEY.searchResponse.postings`. Если разметка или структура состояния изменилась либо сайт отдал страницу-блокировку без этого состояния, `extractSsrPostings()` молча возвращает пустой список, после чего скрапер завершает работу с `[]` (`scraper/src/scrapers/nofluffjobs.ts:235`, `:286`).\n- Даже при успешно извлечённых вакансиях фильтр оставляет только удалённые вакансии или вакансии с Гданьском и отбрасывает уровни Junior/Mid/Regular/Intern. Поэтому «на сайте есть вакансии» не гарантирует, что останутся вакансии по текущим критериям (`scraper/src/scrapers/nofluffjobs.ts:143`, `scraper/src/config.ts:42`, `:72`).\n\nЕсть ещё риск пагинации: если данные первой страницы извлечены, скрапер переходит на последнюю страницу, но не проверяет, что там действительно есть накопительный список, и не откатывается к первой странице при пустом результате (`scraper/src/scrapers/nofluffjobs.ts:303`). История локальных dry-run показывает, что ранее источник выдавал вакансии: от 9 до 11 в запусках 22–26 мая; это подтверждает прошлую работоспособность, но не объясняет текущий сбой.\n\n**План и первые действия**\n\n1. Сопоставить логи проблемного запуска с этапами `Page 1`, `Last page`, `After reference dedup` и `Pre-filter`: так станет ясно, теряются ли вакансии при загрузке, разборе, пагинации или фильтрации.\n2. Если `Page 1: 0`, проверить ответ страницы: HTTP-статус, наличие SSR-state, ключи и форму `STORE_KEY`, а также признаки блокировки. Если необработанные вакансии есть, но после фильтра остаётся ноль — проверить локации и уровни в них.\n3. По результатам внести минимальную правку и добавить тест на обнаруженный вариант ответа. В рамках этого запроса файлы не менял, тесты и сеть не запускал."
+}

@@ -1,0 +1,71 @@
+{
+  "case": "C04",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:09:54+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.34584500000000007,
+  "turns": 14,
+  "duration_ms": 134305,
+  "is_error": false,
+  "tool_calls": 13,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"remote\\|удал\" context/roadmap.yaml context/decisions.yaml docs/ 2>/dev/null | head -50"
+    },
+    {
+      "tool": "Bash",
+      "target": "find . -path ./node_modules -prune -o -iname \"*prompt*\" -print 2>/dev/null; echo \"---\"; find . -path ./node_modules -prune -o -iname \"*eval*\" -print 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/adr/ADR-013-prompt-evaluation-pipeline.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "sed -n '1,60p' n8n/prompts/promptfooconfig.yaml; echo \"---gold---\"; find n8n/prompts -iname \"*gold*\""
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"remote\\|location\\|Gdańsk\\|Trójmiasto\\|Tricity\\|hybrid\\|on-site\\|onsite\" n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/pe-tuning-log.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -rln \"candidate_profile\\|candidateProfile\" n8n/ scraper/src 2>/dev/null; echo \"---\"; sed -n '1,40p' n8n/prompts/evaluator-template.json 2>/dev/null; echo \"---gold N/A case---\"; sed -n '345,420p' n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "evaluator-template|evaluator\\.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A6 \"Location logic\\|business rule\\|## Location\" docs/agents/business-analyst.md | head -60"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -B2 -A8 -i \"location\\|remote\\|Gdańsk\" context/decisions.yaml | head -100"
+    },
+    {
+      "tool": "Bash",
+      "target": "git status --short | grep -v \"^ D \" | head -20; echo \"---npm eval script---\"; grep -n \"\\\"eval\\\"\" scraper/package.json 2>/dev/null; grep -n \"eval\" scraper/package.json 2>/dev/null | head"
+    }
+  ],
+  "final_answer": "## Что уже нашёл\n\n- Прежних решений про «строже про remote» в `context/roadmap.yaml` / `context/decisions.yaml` нет — только текущая логика в `docs/agents/business-analyst.md:122`: `Gdańsk/Trójmiasto in-person OR remote` → match.\n- Сама логика evaluator'а живёт в двух местах, которые нужно менять синхронно (генератора между ними нет):\n  - `n8n/prompts/evaluator.md` — документация промпта.\n  - `n8n/prompts/evaluator-template.json` — то, что реально гонит `promptfoo` и (по образцу) вставляется в n8n HTTP-node.\n- Правило 6 сейчас **не** блокирует «нет удалёнки» само по себе. Оно блокирует только явный hybrid/on-site в городе **кроме** Gdańsk/Tricity. Офис в Гданьске без удалёнки — это по дизайну match (кандидат согласен на Gdańsk-local ИЛИ remote, это закреплено в profile/business-analyst.md).\n- Тестов на «без удалёнки, но и без явно неверного города» в `n8n/prompts/gold_dataset.yaml` нет — есть только явный wrong-city (F05 Warsaw on-site, F09 Katowice hybrid) и явный remote (T01, T03-T05, T07). То есть вероятная утечка — вакансии без указания remote/hybrid И без явного города-нарушителя (пустая/неопределённая локация, \"office\" без города, \"1 день WFH в месяце\" и т.п.) — сейчас не покрыты ни правилом, ни тестом.\n\n## Развилка, которую нужно решить перед правкой\n\nФормулировка «отсекать вакансии без удалёнки» может значить два разных изменения:\n\n1. **A. Ужесточить детекцию, оставив текущую политику** (Gdańsk-офис всё еще ок, просто закрыть дыру для неоднозначных/неявных non-remote вакансий, которые сейчас проходят).\n2. **B. Изменить саму политику**: теперь match только если remote явно подтверждён, убрать исключение \"Gdańsk/Tricity office\" — тогда T02, T06, T08 (сейчас Hot/Review match) должны стать reject, и это меняет `docs/agents/business-analyst.md` и candidate profile, а не только промпт.\n\nЭто решение меняет объём работы и какие файлы трогать, поэтому уточню: **вам нужно A (закрыть утечку неявных non-remote) или B (полностью убрать Gdańsk-офис как альтернативу remote)?** Дальше пишу план для A, как более вероятного прочтения запроса — если это B, шаги 1 и 4 расширятся на docs/agents/business-analyst.md и профиль.\n\n## Конкретные первые шаги (ветка A)\n\n1. В `n8n/prompts/evaluator.md` и `n8n/prompts/evaluator-template.json` (правило 6) добавить явную ветку: если вакансия не указывает remote/hybrid явно **и** не подтверждает Gdańsk/Tricity как место работы — считать location неизвестным и не давать score ≥ 50 (сейчас правило срабатывает только на явно неверный город).\n2. Добавить в `n8n/prompts/gold_dataset.yaml` 3–4 новых кейса: пустая/неопределённая локация без remote-упоминания, \"office\" без названия города, символическая удалёнка (\"1 день WFH/месяц\" — не считается remote), и убедиться, что существующие T02/T06/T08 (Gdańsk hybrid) в assert'ах остаются Hot/Review — то есть тест должен проверять, что ужесточение не задело легитимный Gdańsk-кейс.\n3. Обновить `context/modules/n8n.yaml` (или соответствующую заметку в context/) с новой формулировкой location-правила — по правилу AGENTS.md про синхронизацию context-заметок после изменения промпта.\n\n## Как проверить, что стало лучше\n\n1. Прогнать baseline перед правкой: `cd scraper && LLM_PROVIDER=ollama:chat:llama3.1:latest npm run eval` — офлайн, без сети/денег, зафиксировать текущий pass rate (сейчас как минимум 22/22 при gemini, надо посмотреть текущий ollama-прогон).\n2. Внести правку, прогнать тем же провайдером повторно — сравнить pass rate и точечно проверить: новые \"no remote, no city\" кейсы стали < 50 с red_flag про location; старые remote- и Gdańsk-hybrid кейсы не регрессировали.\n3. Опционально прогнать `npm run eval:gemini` для кросс-проверки на другом провайдере — это уже расход квоты/ключа `GOOGLE_API_KEY` (llm-rubric), поэтому спрошу перед запуском, а не просто выполню.\n4. Зафиксировать результат в `docs/pe-tuning-log.md` по текущему шаблону (таблица score/TS/Sen/Pass + observations), как это сделано для предыдущих прогонов.\n\nНичего из этого я не менял и не запускал — только прочитал файлы и `git status --short`. Жду ответа на развилку A/B, чтобы двигаться дальше.",
+  "requested_model": "claude-sonnet-5"
+}

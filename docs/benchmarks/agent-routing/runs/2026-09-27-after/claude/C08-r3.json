@@ -1,0 +1,64 @@
+{
+  "case": "C08",
+  "run": 3,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:15:03+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.13261920000000002,
+  "turns": 11,
+  "duration_ms": 56569,
+  "is_error": false,
+  "tool_calls": 10,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": "scraper/src/types.ts",
+      "pattern": "interface JobOffer"
+    },
+    {
+      "tool": "Glob",
+      "target": "docs/adr/**"
+    },
+    {
+      "tool": "Glob",
+      "target": "context/*.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/interfaces.yaml",
+      "pattern": "JobOffer|salary"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src",
+      "pattern": "salary"
+    },
+    {
+      "tool": "Glob",
+      "target": "docs/adr/ADR-01*.md"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src",
+      "pattern": "salary"
+    },
+    {
+      "tool": "Grep",
+      "target": "n8n",
+      "pattern": "salary"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/justjoin.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": "n8n/prompts/gold_dataset.yaml",
+      "pattern": "salary|currency"
+    }
+  ],
+  "final_answer": "## Что нашла\n\n`JobOffer` сейчас (`scraper/src/types.ts:5-25`) хранит валюту только внутри отформатированной строки `salary` (`'{from}–{to} {currency}'`, см. `context/interfaces.yaml:44-47`). Оба скрейпера знают валюту раньше, чем строят эту строку:\n\n- `nofluffjobs.ts:69-74` — `salary.currency` берётся из API как есть.\n- `justjoin.ts:62-77` — валюта жёстко зашита как `\"PLN\"` (фильтр `currency === \"PLN\"`), других валют функция не возвращает.\n\nСтроку `salary` дальше читают: `check-manual.ts` (ручной ввод, включая CLI-флаг `--salary`), `index.ts` (лог), `scrape-one.ts` (LLM-промпт: `Salary: ${jobOffer.salary}`), и косвенно `n8n/prompts/gold_dataset.yaml`, где встречаются нестандартные форматы («€7,000 – €9,000 net/month» — без ISO-кода).\n\n## Почему не просто добавить поле\n\nПо `AGENTS.md`: изменения `JobOffer` требуют ADR до кода, и после кода нужно обновить `context/interfaces.yaml`. Кроме того, есть развилка, которая меняет объём работы:\n\n**Вопрос на решение:** `salaryCurrency` — это (а) отдельное поле-дубликат того, что уже зашито в строку `salary` (низкий риск, просто прокинуть значение), или (б) первый шаг к структурированной зарплате (`from`/`to`/`currency` вместо строки), что требует переписать оба скрейпера, `check-manual.ts`, промпт в `scrape-one.ts` и `gold_dataset.yaml`?\n\nБез ответа пользователя предполагаю **(а)**: минимальное дополнение, `salary` не трогаем, `salaryCurrency?: string` (ISO-код, напр. `\"PLN\"`, `\"USD\"`, `\"EUR\"`), `undefined` если валюта не определена (ручной ввод без явного указания).\n\n## План (после подтверждения объёма)\n\n1. ADR в `docs/adr/` (следующий свободный номер — сейчас последний `ADR-016`, значит `ADR-017`) — что за поле, зачем, какой контракт (опционально, ISO-4217 или свободная строка), что происходит при отсутствии данных.\n2. Код: `salaryCurrency?: string` в `JobOffer`; `nofluffjobs.ts` — вернуть `salary.currency` отдельно от `extractSalary`; `justjoin.ts` — то же (сейчас всегда `\"PLN\"`, зафиксировать это явно); `check-manual.ts` — поддержать в JSON-вводе и `--currency` в CLI.\n3. Тесты (mock, без сети) на happy path и на отсутствие валюты — по правилам тестирования из `AGENTS.md`.\n4. Обновить `context/interfaces.yaml` (блок `JobOffer.fields`).\n5. Проверить, нужно ли трогать `scrape-one.ts`/промпт — по варианту (а) не обязательно, `salary` как строка не меняется.\n\nНичего не менял и не запускал (режим бенчмарка). Жду подтверждения объёма (а)/(б) или явного решения, чтобы начать с ADR.",
+  "requested_model": "claude-sonnet-5"
+}

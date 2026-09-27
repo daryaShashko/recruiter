@@ -1,0 +1,50 @@
+{
+  "case": "C02",
+  "run": 3,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:02:42+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 120535,
+    "cached_input_tokens": 89576,
+    "cache_write_input_tokens": 30619,
+    "output_tokens": 1209,
+    "reasoning_output_tokens": 174
+  },
+  "tool_calls": 7,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"nofluff|no-fluff\" context docs scraper'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,260p' scraper/src/scrapers/nofluffjobs.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,260p' scraper/tests/nofluffjobs.unit.test.ts && sed -n '1,100p' scraper/tests/nofluffjobs.test.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '90,130p' context/modules/scraper.yaml && sed -n '70,115p' docs/post-mortem.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"scrapeNoFluffJobs|extractSsrPostings|STORE_KEY|searchResponse\" scraper/src scraper/tests'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '235,360p' scraper/src/scrapers/nofluffjobs.ts && sed -n '1,120p' scraper/src/utils/browser.ts && sed -n '1,120p' scraper/src/config.ts\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '50,105p' scraper/src/index.ts && nl -ba scraper/src/scrapers/nofluffjobs.ts | sed -n '8,15p;235,355p'\""
+    }
+  ],
+  "final_answer": "**Вывод**\n- Текущий парсер может вернуть `[]` по двум разным причинам: страница не содержит ожидаемый SSR-блок `#serverApp-state` с JSON в `STORE_KEY.searchResponse.postings` (`scraper/src/scrapers/nofluffjobs.ts:241`), либо вакансии извлечены, но все отсеяны фильтром по локации и seniority (`scraper/src/scrapers/nofluffjobs.ts:340`).\n- Первая проверка — логи запуска: `Page 1: 0 postings` указывает на проблему ответа/извлечения; ненулевые `Total raw postings collected`, но `Pre-filter …: 0 kept` — на фильтр. Фильтр оставляет только удалённые вакансии или вакансии с Gdańsk и исключает уровни, содержащие `junior`, `mid`, `regular`, `intern` или `trainee`.\n- В коде есть хрупкое допущение: HTML-разметка и путь данных должны совпадать с зашитым regex и схемой. Ошибки разбора превращаются в пустой список, а `index.ts` сообщает отдельно о сбое скрапера или о количестве собранных вакансий.\n- Документация описывает похожий случай перехода NoFluffJobs на Angular SSR и отмечает, что схема может меняться, но это ещё не доказывает, что именно сейчас причина в SSR.\n\n**План и первые действия**\n1. Сначала посмотреть логи конкретного запуска и определить, на каком этапе число становится нулём: извлечение, дедупликация или pre-filter.\n2. Если ноль уже после извлечения — проверить фактический ответ страницы: статус/редирект, наличие SSR-блока и его JSON-структуру; если вакансии есть в HTML, сопоставить текущую структуру с `extractSsrPostings()`.\n3. Если обнуляет фильтр — проверить локации и seniority извлечённых вакансий и решить, соответствует ли текущая фильтрация ожидаемому охвату.\n4. Затем подготовить точечную правку и офлайн-тесты на фактическую причину. Живой сетевой запуск мог бы подтвердить актуальный ответ сайта, но в режиме бенчмарка я его не выполнял. Файлы не изменял."
+}

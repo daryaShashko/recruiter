@@ -1,0 +1,22 @@
+{
+  "case": "C05",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:11:57+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.06332080000000001,
+  "turns": 2,
+  "duration_ms": 18438,
+  "is_error": false,
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "Read",
+      "target": ".github/workflows/context-check.yml"
+    }
+  ],
+  "final_answer": "Задача простая, локализованная — полноценный RPI-процесс не нужен, это просто добавление шага с логом.\n\n**План:**\n1. Добавить новый step в job `check-context-sync` (или можно отдельным job — но проще в этот же, после чекаута).\n2. По правилу AGENTS.md — не интерполировать `${{ ... }}` прямо в `run:`, а передавать через `env:` (это ещё и защита от command injection через заголовок PR, который контролирует автор PR).\n3. Шаг должен идти только в `pull_request` — `github.event.pull_request.title` доступен всегда в этом триггере, доп. условий не нужно.\n\n**Конкретная правка** (вставить после шага `Checkout`, до `Get changed files`):\n\n```yaml\n      - name: Debug PR title\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: |\n          echo \"PR title: $PR_TITLE\"\n```\n\nЭто не меняет существующую логику, только добавляет отладочный вывод в лог.\n\nРежим бенчмарка — файл не редактирую и команд не выполняю. Если план подходит, скажи — применю через Edit к `.github/workflows/context-check.yml`.",
+  "requested_model": "claude-sonnet-5"
+}

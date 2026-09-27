@@ -1,0 +1,59 @@
+{
+  "case": "C08",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:14:58+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.18757900000000002,
+  "turns": 11,
+  "duration_ms": 82459,
+  "is_error": false,
+  "tool_calls": 10,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "cat scraper/src/types.ts"
+    },
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "salary"
+    },
+    {
+      "tool": "Bash",
+      "target": "find . -iname \"*adr*\" -not -path \"*/node_modules/*\" 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"salary\" context/interfaces.yaml context/modules/scraper.yaml context/roadmap.yaml 2>/dev/null\necho \"---adr list---\"\nls docs/adr\necho \"---decisions---\"\nfind . -iname \"decisions*\" -not -path \"*/node_modules/*\"\necho \"---adr template check---\"\nhead -50 docs/adr/ADR-016-llm-provider-adapter-pattern.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"salary\" scraper/src/scrapers/*.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"currency\" -r context/ docs/ scraper/src/ 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "context/interfaces.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/qa-engineer.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"salary\\|currency\" context/decisions.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "sed -n '1,60p' scraper/src/check-manual.ts | grep -n \"salary\\|currency\\|interface\\|JobOffer\" \necho \"---check-manual salary block---\"\nsed -n '130,210p' scraper/src/check-manual.ts\necho \"---notion schema---\"\ngrep -n -i \"salary\\|currency\" docs/notion-schema.md\necho \"---ingest workflow---\"\ngrep -n -i \"salary\\|currency\" context/ingest-workflow.yaml"
+    }
+  ],
+  "final_answer": "## Что нашёл\n\n- В `scraper/src/types.ts` `JobOffer.salary?: string` — уже готовая строка вида `\"15000–20000 PLN B2B/mo\"`, валюта вшита в текст (`context/interfaces.yaml:44-48`).\n- В обоих скрейперах валюта уже есть как отдельное raw-поле **до** форматирования в строку:\n  - `justjoin.ts` — `RawEmploymentType.currency` (`extractSalary`, строка 62).\n  - `nofluffjobs.ts` — `RawNFJSalary.currency` (`extractSalary`, строка 69).\n  - `check-manual.ts` — та же raw-структура для JustJoin API (`extractJJSalary`).\n- В `context/decisions.yaml` и `context/roadmap.yaml` прошлых решений/задач про `salaryCurrency` нет — это новая доработка, а не забытая. (Строка `salaryCurrency: 'PLN'` в `docs/agents/qa-engineer.md:111` — просто пример тестовой фикстуры raw API, не связана с `JobOffer`.)\n- Downstream: `docs/notion-schema.md` — `Salary` в Notion сейчас один текстовый столбец, отдельной колонки под валюту нет; Telegram-формат (`context/ingest-workflow.yaml:126`) валюту отдельно тоже не использует.\n\n## Почему нужен ADR\n\n`JobOffer` в списке типов, изменения которых требуют ADR до кода (правило AGENTS.md). Задача небольшая, но правило безусловное для этих трёх типов — пропускать не буду.\n\n## План\n\n1. **ADR-017** (следующий номер после ADR-016) в `docs/adr/`: решение — добавить `salaryCurrency?: string` в `JobOffer`, заполнять из уже извлечённого raw `currency` в обоих скрейперах вместо парсинга строки `salary` на стороне n8n. Альтернатива (парсить строку `salary` regex'ом в n8n) — отклонить, т.к. формат строки различается между источниками и это дублирует логику.\n2. Код (после ADR):\n   - `scraper/src/types.ts` — `salaryCurrency?: string;` рядом с `salary?: string;`.\n   - `justjoin.ts`, `nofluffjobs.ts`, `check-manual.ts` — там, где сейчас вызывается `extractSalary(...)`, дополнительно вернуть/присвоить `currency` в `normalizeOffer`/сборке объекта.\n   - Тесты: расширить `scraper/tests/justjoin.unit.test.ts` (и аналог для nofluffjobs, если есть) — happy path и случай отсутствия зарплаты (`salaryCurrency` должен быть `undefined`).\n3. Обновить `context/interfaces.yaml` (добавить поле `salaryCurrency`) и `context/modules/scraper.yaml` (`salary_source`/`salary_logic`) — по правилу \"после изменения кода обновить соответствующий context/*.yaml\".\n4. Отдельно отметить (не в скоупе кода): `docs/notion-schema.md` и n8n workflow не имеют колонки под валюту — если нужно её видеть в Notion/Telegram, это отдельный follow-up по n8n workflow (JSON гитигнорится, локальный).\n5. Проверка: `npm run typecheck` и `npm test` из `scraper/` — офлайн, без побочных эффектов.\n\nПервое конкретное действие — черновик `docs/adr/ADR-017-job-offer-salary-currency.md`. Готов написать его, если подтвердите такое решение (тип поля — просто `string`, без строгого enum валют, т.к. текущий код это уже допускает: `currency: string; // 'PLN' | 'USD' | 'EUR' | ...`).",
+  "requested_model": "claude-sonnet-5"
+}

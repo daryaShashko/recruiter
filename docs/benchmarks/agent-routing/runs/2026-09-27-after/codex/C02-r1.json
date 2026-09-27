@@ -1,0 +1,46 @@
+{
+  "case": "C02",
+  "run": 1,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:02:41+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 159338,
+    "cached_input_tokens": 127745,
+    "cache_write_input_tokens": 31117,
+    "output_tokens": 1792,
+    "reasoning_output_tokens": 304
+  },
+  "tool_calls": 6,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg --files -g 'AGENTS.md' -g '*nofluff*' -g '*NoFluff*' -g '*fluff*' -g '*Fluff*' -g '*.yaml' -g '*.ts' scraper context docs | head -200\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,240p' scraper/src/scrapers/nofluffjobs.ts && printf '\\\\n--- unit tests ---\\\\n' && sed -n '1,280p' scraper/tests/nofluffjobs.unit.test.ts && printf '\\\\n--- integration tests ---\\\\n' && sed -n '1,260p' scraper/tests/nofluffjobs.test.ts && printf '\\\\n--- scraper context ---\\\\n' && cat context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '130,360p' scraper/src/scrapers/nofluffjobs.ts; printf '\\\\n--- unit tests ---\\\\n'; sed -n '1,260p' scraper/tests/nofluffjobs.unit.test.ts; printf '\\\\n--- config ---\\\\n'; sed -n '1,240p' scraper/src/config.ts; printf '\\\\n--- scraper context entry ---\\\\n'; rg -n -A42 -B3 'src/scrapers/nofluffjobs|NoFluff|rejectLevels|matchesPreFilter' context/modules/scraper.yaml scraper/src/config.ts scraper/src/scrapers/nofluffjobs.ts scraper/tests/nofluffjobs*\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '250,380p' scraper/src/scrapers/nofluffjobs.ts; rg -n 'describe|it\\\\(|test\\\\(|extractSsr|PreFilter|totalPages|page=' scraper/tests/nofluffjobs.unit.test.ts scraper/tests/nofluffjobs.test.ts; sed -n '1,140p' scraper/tests/nofluffjobs.unit.test.ts; sed -n '1,160p' scraper/tests/nofluffjobs.test.ts;\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n 'rejectLevels|nofluffjobs|searchResponse|STORE_KEY|serverApp-state|NoFluffJobs' scraper/src/config.ts context/decisions.yaml context/roadmap.yaml docs\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"nl -ba scraper/src/scrapers/nofluffjobs.ts | sed -n '205,350p'; nl -ba scraper/src/config.ts | sed -n '64,78p'; nl -ba context/modules/scraper.yaml | sed -n '90,130p'; nl -ba docs/post-mortem.md | sed -n '79,94p'\""
+    }
+  ],
+  "final_answer": "**Предварительный вывод:** по коду нельзя подтвердить, что именно ломается сейчас, без свежего HTML ответа NoFluffJobs или логов запуска. Но видно два разных пути к нулю:\n\n- **Данные не извлекаются.** Парсер ожидает `serverApp-state → STORE_KEY.searchResponse.postings`; если изменился HTML или форма состояния, он получает пустой список и сразу возвращает `[]`. Это ранний выход в `scraper/src/scrapers/nofluffjobs.ts:235` и `scraper/src/scrapers/nofluffjobs.ts:292`.\n- **Данные извлекаются, но всё отсеивается.** После дедупликации остаются только удалённые вакансии или вакансии в Гданьске, затем исключаются уровни `junior`, `mid`, `regular`, `intern` и `trainee`. Это фильтр в `scraper/src/scrapers/nofluffjobs.ts:145` и настройки в `scraper/src/config.ts:71`. Вакансии на сайте могут быть, но не подходить этим условиям.\n\nВ репозитории уже описан похожий инцидент за май 2026 года: тогда причиной был переход сайта с XHR на Angular SSR, а экстрактор под SSR отмечен как исправление (`docs/post-mortem.md:79`). Текущая реализация уже использует SSR, поэтому считать старую причину подтверждённой сейчас нельзя.\n\n**Первые действия и план**\n1. Сначала проверить фактические логи последнего запуска: число вакансий после извлечения, после дедупликации и после фильтрации. Эти счётчики сразу покажут, на каком этапе возникает ноль.\n2. Если уже на извлечении ноль — сверить сохранённый ответ страницы со структурой, которую ожидает экстрактор. Если до фильтра были вакансии — проверить распределение по локации и seniority.\n3. Затем подготовить узкий тест на выявленное расхождение и исправление корневой причины. Верификацию провести на зафиксированном примере HTML и офлайн-тестах.\n\nСейчас остановился до изменений и запусков, как требует режим бенчмарка. Дальше нужен лог проблемного запуска или сохранённый HTML ответа: без них точную причину выбрать нельзя."
+}

@@ -1,0 +1,38 @@
+{
+  "case": "C06",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:12:32+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.14482140000000002,
+  "turns": 6,
+  "duration_ms": 51767,
+  "is_error": false,
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"openrouter\" context/roadmap.yaml context/decisions.yaml docs/ 2>/dev/null | head -50"
+    },
+    {
+      "tool": "Bash",
+      "target": "find n8n/providers -type f 2>/dev/null; echo \"---\"; find scripts -iname \"*llm_router*\"; echo \"---\"; cat context/ingest-workflow.yaml 2>/dev/null | grep -n -i -A5 \"llm\" | head -80"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/llm-provider-switching.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "sed -n '1670,1830p' context/roadmap.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"provider\\|ollama\\|gemini\\|anthropic\\|openrouter\" scripts/p12_6_llm_router.py | head -60"
+    }
+  ],
+  "final_answer": "Картина ясна, файлы проверены. Отвечаю.\n\n## Что сейчас поддерживается\n\nРеально работающий узел `Code: LLM Router` в n8n (инлайн-код, генерируется `scripts/p12_6_llm_router.py`) поддерживает **только три провайдера** через `LLM_PROVIDER`:\n\n- `ollama` (локально, по умолчанию)\n- `gemini`\n- `anthropic`\n\nЭто подтверждается кодом генератора (`scripts/p12_6_llm_router.py:11-103`, ветки `if provider === 'ollama' | 'gemini' | 'anthropic'`, иначе — `throw new Error(\"Unknown LLM_PROVIDER\")`) и `docs/llm-provider-switching.md` (таблица провайдеров не включает OpenRouter).\n\nВажно: в `n8n/providers/` есть готовый, протестированный `openrouter.ts` (плюс `index.ts` со всеми провайдерами) — но этот код в n8n **не импортируется**. `Code: LLM Router` — самостоятельный инлайн-код, не зависящий от `n8n/providers/`. Так что адаптер существует, но никак не влияет на реальный пайплайн.\n\nЭто зафиксировано:\n- `context/ingest-workflow.yaml:117`: *\"n8n/providers/*.ts adapters are NOT used by the node (P15-5)\"*\n- `docs/llm-provider-switching.md:148-151`: явно называет `openrouter` примером незаподключённого адаптера.\n- `context/roadmap.yaml` — задача **P15-5** (\"Add Gemini to OpenRouter fallback chain in n8n LLM Router Code Node\") — статус **pending**, часть фазы P15 (Gemini primary + OpenRouter fallback), которая сама помечена `pending`.\n\n## Почему просто выставить `LLM_PROVIDER=openrouter` не сработает\n\nИнлайн-код упадёт с `Unknown LLM_PROVIDER: \"openrouter\"` — ветки для него нет.\n\n## План, чтобы реально включить OpenRouter\n\nРаз это задача с кодом/конфигурацией пайплайна — по `docs/ai-workflow.md` это уровень P15-5, не тривиальная правка «в одну строку», плюс задача уже расписана в роадмапе с acceptance-критериями. Предлагаю:\n\n1. **Уточнить цель**: нужен ли OpenRouter как *fallback* при 429/503/timeout от Gemini (так задумано в P15-5) или как самостоятельный `LLM_PROVIDER=openrouter` (проще, но расходится с дизайном роадмапа — это решение мне нужно от вас, оно меняет объём работы).\n2. Если fallback-схема (по P15-5):\n   - Прочитать текущий узел: `grep -A 30 '\"name\": \"Code: LLM Router\"' n8n/workflows/ingest.json` (файл гитигнорится, локально может не быть — тогда работать через `scripts/p12_6_llm_router.py` и пересобрать).\n   - Добавить в генератор ветку: при ошибке Gemini (429/503/timeout) — retry через OpenRouter (`POST https://openrouter.ai/api/v1/chat/completions`, `Authorization: Bearer $OPENROUTER_API_KEY`, модель из `OPENROUTER_MODEL`, по умолчанию `deepseek/deepseek-chat-v3-0324:free`).\n   - Прописать `$json.provider_used = 'gemini' | 'openrouter'`.\n   - Добавить `OPENROUTER_API_KEY`/`OPENROUTER_MODEL` в `.env.example` и в n8n Environment Variables (не в host `.env` — n8n переменные отдельные, см. `context/ingest-workflow.yaml:118`).\n   - Обновить `docs/llm-provider-switching.md` (диаграмма цепочки) и `context/ingest-workflow.yaml`.\n3. Проверка: `npm run typecheck` / `npm test` в `scraper/` (офлайн), затем ручной smoke-тест в n8n с намеренной ошибкой Gemini (например, неверный ключ) — сеть и запись в n8n делать нельзя без вашего отдельного разрешения (это уже сайд-эффекты, выходящие за рамки текущего бенчмарк-режима).\n4. ADR не требуется — `ADR-016` (адаптер-паттерн) уже покрывает добавление провайдеров; ADR нужен только при изменении `JobOffer`/`WebhookPayload`/`EvaluationResult`, чего эта задача не касается.\n\nДальше я не вношу изменений (режим бенчмарка). Если подтвердите вариант (fallback vs. standalone provider) и разрешите редактировать файлы, начну с правки `scripts/p12_6_llm_router.py`.",
+  "requested_model": "claude-sonnet-5"
+}

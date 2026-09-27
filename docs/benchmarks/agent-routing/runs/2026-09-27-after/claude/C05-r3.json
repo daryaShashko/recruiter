@@ -1,0 +1,22 @@
+{
+  "case": "C05",
+  "run": 3,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:12:16+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.0662336,
+  "turns": 2,
+  "duration_ms": 22472,
+  "is_error": false,
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "Read",
+      "target": ".github/workflows/context-check.yml"
+    }
+  ],
+  "final_answer": "## План\n\nФайл: `.github/workflows/context-check.yml`. Добавляю отдельный debug-шаг, который просто печатает заголовок PR в лог.\n\nКлючевой момент из `AGENTS.md` (раздел CI): нельзя интерполировать `${{ ... }}` прямо в `run:` — заголовок PR - это непроверенный ввод пользователя, и его прямая вставка в shell-скрипт (`echo \"${{ github.event.pull_request.title }}\"`) — классическая инъекция команд (title вида `` `curl ...` `` или `$(...)`). Поэтому значение должно идти через `env:`.\n\nПредлагаемый шаг (вставить, например, сразу после шага `Checkout`):\n\n```yaml\n      - name: Debug: print PR title\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: |\n          echo \"PR title: $PR_TITLE\"\n```\n\nЭто соответствует существующему стилю файла (остальные шаги тоже прокидывают `${{ steps.changed.outputs.* }}` через `env:`, а не подставляют напрямую).\n\nОграничение: триггер workflow — только `pull_request`, так что `github.event.pull_request.title` доступен; для других триггеров (например `workflow_dispatch`) это поле было бы пустым, но это не тот случай здесь.\n\nДальше (если подтвердишь) — правка файла через Edit, без коммита (в бенчмарк-режиме изменения не делаю).",
+  "requested_model": "claude-sonnet-5"
+}

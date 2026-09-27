@@ -1,0 +1,89 @@
+{
+  "case": "C02",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:38+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.3383584,
+  "turns": 17,
+  "duration_ms": 126363,
+  "is_error": false,
+  "tool_calls": 16,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "nofluffjobs"
+    },
+    {
+      "tool": "Read",
+      "target": "context/modules/scraper.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls -la output/ | tail -20"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "nofluffjobs|NFJ"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "nofluffjobs|NFJ"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "nofluffjobs|NFJ"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "nofluffjobs|NFJ"
+    },
+    {
+      "tool": "Bash",
+      "target": "python3 -c \"\nimport json\nwith open('output/dry-run-2026-05-26T22-17-22-081Z.json') as f:\n    data = json.load(f)\nif isinstance(data, dict):\n    print(list(data.keys()))\n    for k,v in data.items():\n        if isinstance(v, list):\n            print(k, len(v))\n\"\n",
+      "error": true
+    },
+    {
+      "tool": "Read",
+      "target": "docs/scraper-update-guide.md"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.test.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/tests/nofluffjobs.unit.test.ts"
+    },
+    {
+      "tool": "Bash",
+      "target": "git -C . log --oneline -- scraper/src/scrapers/nofluffjobs.ts | head -20",
+      "error": true
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --oneline -- scraper/src/scrapers/nofluffjobs.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/config.ts"
+    }
+  ],
+  "final_answer": "## Что нашёл\n\n- **Это уже было** — `docs/post-mortem.md` (INCIDENT-001, май 2026): NFJ тогда перешёл с POST XHR на Angular SSR, скрапер стал возвращать 0. Исправили, добавив `extractSsrPostings()` в `scraper/src/scrapers/nofluffjobs.ts:235`, который читает `<script id=\"serverApp-state\">` → `STORE_KEY.searchResponse.postings`.\n- **Код не менялся с мая**: `git log` по файлу — последний коммит `26ee0db` (тот самый майский фикс). Сегодня 2026-09-27, то есть прошло ~4 месяца.\n- **Мониторинга нет**: ISSUE-003 в post-mortem («нет оповещения при 0 вакансиях») до сих пор открыт (`P6-4` в roadmap), поэтому повторная поломка SSR-ключа могла произойти незаметно и никто бы не узнал до ручной проверки — как раз то, что сейчас увидел пользователь.\n- В коде есть явный лог на этот случай (`nofluffjobs.ts:292-300`): если `batch1.length === 0`, скрапер пишет `WARNING: 0 postings on page 1` / `SSR state not found — site structure may have changed` и возвращает `[]` без исключения (`never_throws` по контракту `context/modules/scraper.yaml`).\n- Раздел 3 `docs/scraper-update-guide.md` — уже готовый плейбук именно под этот симптом («0 вакансий с одного источника» → «изменилась HTML-структура/ключ»).\n\n## Гипотезы (по вероятности)\n\n1. **NFJ снова изменил SSR-структуру** — переименовали `STORE_KEY`, изменили путь `searchResponse.postings` или вообще ушли от SSR-подхода. Самое вероятное, раз это уже случалось.\n2. **Cloudflare/бот-защита** — блокирует headless Playwright (fingerprint из `config.ts` статичен: один User-Agent/viewport, ротации нет — `P6-5` открыт), возвращает challenge-страницу без `serverApp-state`.\n3. **URL/параметр листинга изменился** (`/pl/praca/javascript` больше не тот путь или требует других query-параметров) — SSR грузится, но с пустым списком.\n4. Менее вероятно: pre-filter (`matchesNFJPreFilter`) отфильтровал всё — но это дало бы другой лог (`Pre-filter: 0/N kept`, а не `0 postings on page 1`), и обычно не даёт ровно 0 при наличии вакансий на сайте.\n\n## План (без выполнения сетевых/деструктивных команд — бенчмарк-режим)\n\nПервые конкретные действия, которые я бы предложил выполнить (согласовать перед запуском, т.к. они трогают сеть/пишут файлы):\n\n1. `cd scraper && npx ts-node src/debug-urls.ts` — посмотреть реальные сетевые запросы NFJ сейчас: вернулась ли XHR или всё ещё SSR.\n2. Диагностика по `docs/scraper-update-guide.md`, раздел 3, шаг 1 — скачать HTML страницы и проверить, жив ли `STORE_KEY`:\n   ```bash\n   curl -sA \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126\" \\\n     \"https://nofluffjobs.com/pl/praca/javascript\" | grep -o '\"STORE_KEY\"' | head -3\n   ```\n   Если пусто — искать новый ключ (шаг 2 того же раздела) или проверять на challenge-страницу Cloudflare.\n3. Если ключ/путь изменился — точечно поправить `extractSsrPostings()` (`scraper/src/scrapers/nofluffjobs.ts:247-263`) и интерфейс `RawNoFluffPosting`, затем прогнать:\n   ```bash\n   npx tsc --noEmit\n   npm test -- --testPathPattern=nofluffjobs.unit\n   DRY_RUN=true npx ts-node src/index.ts\n   ```\n4. После фикса — обновить `context/modules/scraper.yaml` (секция `nofluffjobs.ts`, поле `note`/`ssr_response_shape`) и дописать инцидент в `docs/post-mortem.md` (INCIDENT-002), как это сделано для INCIDENT-001.\n5. Отдельно стоит поднять `P6-4` (алерт при 0 вакансиях) — именно его отсутствие позволило поломке остаться незамеченной несколько месяцев; это решение на твоей стороне, не блокирует текущий фикс.\n\nДальше не пошёл — команды выше трогают сеть и (dry-run) пишут файлы, поэтому жду подтверждения, прежде чем их выполнять.",
+  "requested_model": "claude-sonnet-5"
+}

@@ -1,0 +1,39 @@
+{
+  "case": "C06",
+  "run": 3,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:13:01+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.1662736,
+  "turns": 6,
+  "duration_ms": 51759,
+  "is_error": false,
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"openrouter\\|llm_provider\\|LLM_PROVIDER\" context/*.yaml docs/ scripts/p12_6_llm_router.py n8n/ 2>/dev/null | head -80"
+    },
+    {
+      "tool": "Bash",
+      "target": "echo \"--- p12_6_llm_router.py ---\"; sed -n '1,200p' scripts/p12_6_llm_router.py 2>/dev/null | grep -n \"provider\\|ollama\\|gemini\\|anthropic\\|openrouter\" -i\necho \"--- providers dir ---\"; ls -la n8n/providers/ 2>/dev/null\necho \"--- roadmap P15 status ---\"; grep -n \"P15\\|status:\" context/roadmap.yaml | sed -n '1,60p' | grep -i \"p15\\|status\" | head -40"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"P15-2\\|P15-5\\|15.2 OpenRouter\\|15.5\\|status: done\\|status: pending\" context/roadmap.yaml | awk -F: '{print NR\": \"$0}' | sed -n '1,5p'\necho \"---\"\nsed -n '1670,1840p' context/roadmap.yaml",
+      "error": true
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/llm-provider-switching.md 2>/dev/null && sed -n '1,120p' docs/llm-provider-switching.md 2>/dev/null"
+    }
+  ],
+  "final_answer": "Теперь картина ясна, отвечу.\n\n## Что сейчас реально работает\n\nПайплайн переключает провайдера через `LLM_PROVIDER` в n8n Environment Variables. Это читает inline-код узла `Code: LLM Router` (генерируется `scripts/p12_6_llm_router.py`, `n8n/providers/index.ts`, `context/ingest-workflow.yaml:74`), и он поддерживает **только три значения**:\n\n- `ollama` (по умолчанию, локально, без ключа)\n- `gemini` (Google AI Studio, `LLM_API_KEY`, дефолт модели `gemini-2.0-flash`)\n- `anthropic` (Claude API, `LLM_API_KEY`, дефолт `claude-haiku-4-5`)\n\nИсточники: `scripts/p12_6_llm_router.py:13-103`, `docs/llm-provider-switching.md`, `docs/adr/ADR-016-llm-provider-adapter-pattern.md`.\n\n## Про OpenRouter — важный нюанс\n\nВ `n8n/providers/openrouter.ts` есть полностью реализованный и протестированный адаптер (`openrouter.test.ts`, ≥6 тестов), но он **не подключён к работающему workflow**. Это подтверждается и правилом в AGENTS.md, и роадмапом:\n\n- `context/roadmap.yaml:1770-1784` — задача **P15-5** (\"Add Gemini to OpenRouter fallback chain in n8n LLM Router Code Node\") имеет `status: pending`.\n- Инлайн-код роутера (`p12_6_llm_router.py:103`) явно бросает `Unknown LLM_PROVIDER` для всего, кроме `ollama|gemini|anthropic`.\n\nТак что `LLM_PROVIDER=openrouter` **не сработает** — узел его не знает.\n\n## Как переключиться на OpenRouter — план\n\nЭто не однострочный конфиг, а нереализованная фича (P15.2 в роадмапе). Шаги:\n\n1. **ADR не нужен** — `LLMProvider`/типы в `_interface.ts` не входят в `JobOffer`/`WebhookPayload`/`EvaluationResult`, так что порог ADR из AGENTS.md не срабатывает. Но нужно решение: добавлять ли OpenRouter как отдельное значение `LLM_PROVIDER`, либо как fallback-цепочку (так задумано в роадмапе — Gemini→OpenRouter при 429/503/timeout), а не замену.\n2. Взять готовый `n8n/providers/openrouter.ts` за основу инлайн-кода.\n3. Обновить `scripts/p12_6_llm_router.py`: добавить ветку `provider === 'openrouter'` (или try/catch-фоллбэк вокруг `gemini`) — POST на `https://openrouter.ai/api/v1/chat/completions`, `Authorization: Bearer ${OPENROUTER_API_KEY}`, модель из `OPENROUTER_MODEL` (дефолт `deepseek/deepseek-chat-v3-0324:free`), парсинг `.choices[0].message.content`.\n4. Перегенерировать `n8n/workflows/ingest.json` через скрипт (файл gitignored/локальный — правки применяются на локальной копии, экспорт не коммитится).\n5. Добавить `OPENROUTER_API_KEY`/`OPENROUTER_MODEL` в `.env.example`, обновить `docs/llm-provider-switching.md` (уже частично готово в `context/env.yaml:121-139` — там уже описан warning про отсутствие SLA у бесплатных моделей).\n6. Обновить `context/ingest-workflow.yaml` под правило \"после изменения кода — обновить `context/*.yaml`\".\n7. Тесты: покрыть 429/503/timeout у Gemini → фоллбэк на OpenRouter, и отказ обоих провайдеров (не должен падать workflow) — офлайн, через mock HTTP.\n\nЭто уже операции с файлами и локальным workflow — в текущем бенчмарк-режиме (без изменений) я останавливаюсь здесь. Если подтвердишь объём (просто добавить `openrouter` как ручной провайдер vs. полная fallback-цепочка по P15-5), продолжу с правками.",
+  "requested_model": "claude-sonnet-5"
+}

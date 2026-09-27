@@ -1,0 +1,106 @@
+{
+  "case": "C04",
+  "run": 1,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:09:54+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.432788,
+  "turns": 21,
+  "duration_ms": 186373,
+  "is_error": false,
+  "tool_calls": 20,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "remote"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/prompts/**"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/types.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/candidate_profile.md"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/gold_dataset.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"remote\\|location\\|tricity\\|gdańsk\\|gdansk\" context/roadmap.yaml docs/pe-tuning-log.md 2>/dev/null | head -80"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls context/ 2>/dev/null; echo ---; ls scripts/ 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"remote\\|location\\|tricity\\|gdańsk\\|gdansk\" context/decisions.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src",
+      "pattern": "matchesPreFilter|workplaceType|remote"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/scrapers/justjoin.ts",
+      "pattern": "remote|location|Gdańsk|Gdansk|Tricity|matchesPreFilter|workplaceType"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/scrapers/nofluffjobs.ts",
+      "pattern": "remote|location|Gdańsk|Gdansk|Tricity|matchesPreFilter|workplaceType"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/config.ts",
+      "pattern": "location|remote|Gdańsk|Tricity"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/scrapers/justjoin.ts",
+      "pattern": "remote|location|Gdańsk|Gdansk|Tricity|matchesPreFilter|workplaceType"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/scrapers/nofluffjobs.ts",
+      "pattern": "remote|location|Gdańsk|Gdansk|Tricity|matchesPreFilter|workplaceType"
+    },
+    {
+      "tool": "Grep",
+      "target": "scraper/src/config.ts",
+      "pattern": "location|remote|Gdańsk|Tricity"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/evaluator-template.json"
+    },
+    {
+      "tool": "Bash",
+      "target": "sed -n '1,60p' scripts/p12_6_llm_router.py"
+    },
+    {
+      "tool": "Read",
+      "target": "n8n/prompts/promptfooconfig.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -A2 '\"eval' scraper/package.json; echo ---; grep -n -i \"LLM_PROVIDER\" context/env.yaml"
+    }
+  ],
+  "final_answer": "Собрал полную картину. Отвечаю без изменений в файлах, как договорились.\n\n## Что уже устроено сейчас\n\nФильтр по удалёнке двухступенчатый, а не только в evaluator:\n\n1. **Pre-filter в скрапере** (`scraper/src/scrapers/justjoin.ts:134`, `nofluffjobs.ts:145`, список городов в `scraper/src/config.ts:43`) — уже сейчас в LLM вообще не попадает ничего, кроме `isRemote OR hasGdansk`. Это осознанное решение: кандидат в `candidate_profile.md` (раздел 4) принимает и full remote, и гибрид в Гданьске/Труймясте.\n2. **LLM evaluator** (`n8n/prompts/evaluator.md` rule 6, продублировано в `n8n/prompts/evaluator-template.json` — это отдельные файлы, синхронизируются вручную, скрипта на автогенерацию нет) — дальше отсекает гибрид/офис в Варшаве/Кракове/Вроцлаве/Катовице/«любом другом городе, кроме Гданьска/Труймяста».\n3. `gold_dataset.yaml` уже фиксирует это поведение: T02/T06/T08 (гибрид Гданьск) ожидаются как match, F05/F09 (Варшава/Катовице) — как reject.\n\nПрежних ADR/решений именно про ужесточение remote-фильтра в `context/decisions.yaml`/`roadmap.yaml` я не нашёл — только запись, что pre-filter реализован через `matchesPreFilter()`.\n\n## Развилка, которая меняет объём работы\n\nИз-за такого устройства «просачивание вакансий без удалёнки» может значить два разных запроса:\n\n**(a) Кандидат больше не хочет гибрид вообще** — тогда меняется предпочтение, а не строгость детекции: `config.ts` (locations), `matchesPreFilter()` в обоих скраперах, `candidate_profile.md` (раздел 4), `evaluator.md` rule 6 + `evaluator-template.json`, и придётся пересчитать ожидания T02/T06/T08 в `gold_dataset.yaml` (сейчас они assert score ≥50/≥80 именно для гибрида Гданьск).\n\n**(b) Гибрид Гданьск/Труймясто остаётся ок, но текущие правила пропускают вакансии, где удалёнка заявлена только «на бумаге»** — например: у NoFluffJobs/JustJoin метка `fullyRemote`/`workplaceType=remote` стоит true, а в тексте описания на самом деле «hybrid, 2 дня в офисе» или ротация по нескольким городам, где Гданьск — просто один из вариантов. Сейчас в evaluator.md нет явного правила «текст описания важнее лейбла локации», поэтому такие карточки могут получить высокий score. Это чинится только в промпте + новых кейсах gold_dataset, без изменений в скрапере/типах.\n\n**Вопрос:** вам нужно (a) убрать допущение гибрида в Гданьске и требовать только полный remote, или (b) оставить гибрид Гданьск/Труймясто как есть, но жёстче ловить вакансии, где «Remote» в метаданных противоречит тексту описания? Это разные наборы файлов, и от ответа зависит, с чего начинать.\n\n## Проверка (для обоих вариантов)\n\nИнструмент уже есть — ADR-013 / promptfoo: `cd scraper && npm run eval` (`n8n/prompts/promptfooconfig.yaml`, gold_dataset как test-кейсы). Важно: это обращается к провайдеру из `LLM_PROVIDER` и к Gemini для `llm-rubric` (`GOOGLE_API_KEY`) — расходует квоту/деньги и уходит golden-датасет наружу, поэтому запускать буду только с вашего подтверждения. План проверки: прогнать eval до изменений (baseline pass/fail по T02/T06/T08/F05/F09 и новым кейсам), внести правку, прогнать снова, сравнить конкретно по location-кейсам — не по общему проценту.\n\n## Первые конкретные шаги (независимо от ответа на вопрос выше)\n\n1. По RPI-подходу — сначала Test Design: добавить в `gold_dataset.yaml` 2–4 новых кейса на конфликт «label vs текст» (Remote-метка + «hybrid 2 days/week» в теле; несколько офисов, где Гданьск — один из многих с обязательной ротацией) — это нужно в любом случае, независимо от (a)/(b).\n2. Затем править `evaluator.md` rule 6 (и синхронно `evaluator-template.json`, они не связаны генератором) — добавить явное правило: при конфликте между полем `Location` и текстом описания приоритет у описания; если текст описания требует обязательного присутствия не в Гданьске/Труймясте — reject, даже если location помечен Remote.\n3. Если выберете (a) — дополнительно правки в `config.ts`, `matchesPreFilter()` в обоих скраперах, `candidate_profile.md`, и пересчёт ожиданий T02/T06/T08.\n4. Прогнать `npm run eval` до/после (с вашего ОК) и сверить именно эти кейсы.\n\nADR не требуется — `JobOffer`/`WebhookPayload`/`EvaluationResult` (`scraper/src/types.ts`) не меняются ни в одном из вариантов.",
+  "requested_model": "claude-sonnet-5"
+}

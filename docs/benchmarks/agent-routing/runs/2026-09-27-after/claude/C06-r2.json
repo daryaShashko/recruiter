@@ -1,0 +1,72 @@
+{
+  "case": "C06",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:12:39+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.2542912,
+  "turns": 14,
+  "duration_ms": 104577,
+  "is_error": false,
+  "tool_calls": 13,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "find scripts n8n context -iname \"*llm_router*\" -o -iname \"*provider*\" 2>/dev/null | head -50"
+    },
+    {
+      "tool": "Glob",
+      "target": "n8n/providers/**"
+    },
+    {
+      "tool": "Grep",
+      "target": "context",
+      "pattern": "P15-5"
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "scripts/p12_6_llm_router.py"
+    },
+    {
+      "tool": "Bash",
+      "target": "head -60 scripts/patch_llm_router.py"
+    },
+    {
+      "tool": "Read",
+      "target": "context/env.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --follow --format='%h %ad %s' --date=short -- scripts/patch_llm_router.py scripts/p12_6_llm_router.py",
+      "error": true
+    },
+    {
+      "tool": "Read",
+      "target": "context/ingest-workflow.yaml"
+    },
+    {
+      "tool": "Bash",
+      "target": "git log --format='%h %ad %s' --date=short -- scripts/patch_llm_router.py\necho ---\ngit log --format='%h %ad %s' --date=short -- scripts/p12_6_llm_router.py\necho ---\ngrep -rn \"patch_llm_router\" --include=\"*.md\" --include=\"*.yaml\" --include=\"*.py\" . 2>/dev/null | grep -v \"^./scripts/patch_llm_router.py\""
+    },
+    {
+      "tool": "Bash",
+      "target": "ls docs/llm-provider-switching.md 2>/dev/null && echo EXISTS || echo MISSING\necho ---\ncat n8n/providers/README.md 2>/dev/null | head -60\necho ---\nsed -n '1,50p' n8n/providers/openrouter.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/llm-provider-switching.md"
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    }
+  ],
+  "final_answer": "Собрал полную картину из кода и roadmap, не только из AGENTS.md. Отвечаю.\n\n## Что сейчас поддерживает пайплайн\n\nПровайдер выбирается в узле **`Code: LLM Router`** воркфлоу `ingest.json` (сам JSON гитигнорится — в чекауте его нет, но код узла генерируется скриптом `scripts/p12_6_llm_router.py:11-136`). Узел читает `LLM_PROVIDER` (переменная n8n, не `.env` хоста) и умеет три ветки:\n\n- **`ollama`** — POST на `{LLM_BASE_URL}/api/chat`, дефолтная модель `llama3.1:latest`\n- **`gemini`** — POST на `generativelanguage.googleapis.com`, дефолт `gemini-2.0-flash`\n- **`anthropic`** — POST на `api.anthropic.com`, дефолт `claude-haiku-4-5`\n\nЛюбое другое значение `LLM_PROVIDER` даёт `throw new Error('Unknown LLM_PROVIDER...')` (`p12_6_llm_router.py:103`).\n\nЭто подтверждается и `context/ingest-workflow.yaml:117-121`, и `docs/llm-provider-switching.md`.\n\n## OpenRouter — сейчас недоступен как переключение через переменную\n\nАдаптер `n8n/providers/openrouter.ts` реализован и протестирован (roadmap `P15-4: status: done`), формирует запрос к `https://openrouter.ai/api/v1/chat/completions`, читает `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`. Но папка `n8n/providers/` **не импортируется** узлом `Code: LLM Router` — это отдельный, не подключённый код (`README.md` в этой папке прямо пишет: \"Today the n8n workflow still uses its own inline router... switching among ollama/gemini/anthropic is an LLM_PROVIDER change; any other provider needs a node code change\").\n\nЗадача подключить fallback на OpenRouter — **`P15-5: status: pending`** (roadmap строка 1770), и документация по нему (`P15-6`, тоже `pending`) ещё не написана: в `docs/llm-provider-switching.md` есть таблица только для ollama/gemini/anthropic, раздела по OpenRouter нет.\n\n**Важно, найденное несоответствие**: в `scripts/` есть второй, более новый скрипт `scripts/patch_llm_router.py` (коммит `2928534`, 2026-06-02, позже чем `p12_6_llm_router.py` от 2026-05-28), который генерирует **другую** версию того же узла `Code: LLM Router` — использует `this.helpers.httpRequest` вместо `fetch` (с комментарием \"fetch not available in n8n sandbox\") и **хардкодит** `provider = 'gemini'` и placeholder-ключ прямо в коде, без чтения env-переменных вообще. Этот скрипт не упомянут ни в `AGENTS.md`, ни в `context/ingest-workflow.yaml`, ни в доках — только в собственном файле. Раз реальный `ingest.json` не в репозитории, из кода нельзя точно сказать, какая из двух версий сейчас реально стоит в n8n.\n\n## План (без изменений — только план)\n\n1. **Снять неоднозначность перед любым изменением**: открыть узел `Code: LLM Router` в живом n8n и проверить, какой вариант там сейчас — с `fetch`+env-переключением (`p12_6_llm_router.py`) или с `httpRequest`+хардкодом (`patch_llm_router.py`). Это меняет объём работы: во втором случае сначала нужно вернуть env-переключение, потом добавлять OpenRouter.\n2. Чтобы реально включить OpenRouter как fallback (это и есть P15-5): добавить в инлайн-код узла ветку try/catch — при 429/503/timeout от gemini повторить запрос через OpenRouter API (`https://openrouter.ai/api/v1/chat/completions`, `Authorization: Bearer OPENROUTER_API_KEY`), проставлять `$json.provider_used`. Менять нужно именно код узла в `ingest.json`/n8n UI, а не `n8n/providers/openrouter.ts` — правки в TS-адаптере воркфлоу не затронут.\n3. Добавить `OPENROUTER_API_KEY`/`OPENROUTER_MODEL` в `.env.example` и секцию в `docs/llm-provider-switching.md` (P15-6).\n4. Обновить `context/ingest-workflow.yaml` (`llm_providers.source`) — правило проекта требует синхронизировать context-заметку после изменения кода.\n\nЕсли нужно — могу сформулировать конкретный diff для узла (P15-5) или сначала проверить в самом n8n, какая версия сейчас реально запущена.",
+  "requested_model": "claude-sonnet-5"
+}

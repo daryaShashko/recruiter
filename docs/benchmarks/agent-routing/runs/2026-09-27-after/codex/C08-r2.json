@@ -1,0 +1,47 @@
+{
+  "case": "C08",
+  "run": 2,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:04:20+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 80553,
+    "cached_input_tokens": 55224,
+    "cache_write_input_tokens": 25057,
+    "output_tokens": 1157,
+    "reasoning_output_tokens": 137
+  },
+  "tool_calls": 6,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd; rg -n \\\"JobOffer|salaryCurrency\\\" scraper/src/types.ts context docs/decisions* context/decisions.yaml 2>/dev/null; rg --files -g 'AGENTS.md' -g 'docs/agents/*.md' -g 'context/*.yaml' -g '*ADR*'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"scraper|JobOffer|salary|context\" context/modules/scraper.yaml context 2>/dev/null'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -C 10 \"export interface JobOffer|type JobOffer|salary\" scraper/src/types.ts; rg -n \"JobOffer\" scraper/src scraper/test scraper/tests 2>/dev/null'",
+      "error": true
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"salary|currency|JobOffer|offer\" context/decisions.yaml context/interfaces.yaml context/roadmap.yaml docs/adr docs/agents/developer.md docs/agents/architect.md'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,75p' context/interfaces.yaml; sed -n '1,110p' docs/adr/ADR-016-llm-provider-adapter-pattern.md; sed -n '145,178p' context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '55,75p' docs/agents/developer.md; rg -n -i \\\"salaryCurrency|salary currency|currency field\\\" context docs scraper\""
+    }
+  ],
+  "final_answer": "Файлы не изменял и команды с побочными эффектами не запускал.\n\nПроверил определение в `scraper/src/types.ts:5`, описание контракта в `context/interfaces.yaml` и историю решений по `salaryCurrency`. Поле в коде и контракте не описано; отдельного решения о нём не нашёл. По правилам репозитория изменение `JobOffer` требует ADR до изменения кода.\n\n**План**\n1. Согласовать в ADR назначение и тип поля. Предварительный вариант — необязательное `salaryCurrency?: string`, поскольку `salary` уже необязательное и валюта может отсутствовать.\n2. После ADR добавить поле в `JobOffer` и синхронизировать `context/interfaces.yaml` и подходящую заметку модуля.\n3. Проверить места, где собираются `JobOffer`, и связанные тесты; при необходимости обновить ожидаемые данные.\n4. Запустить офлайн-проверки `npm run typecheck` и `npm test` из `scraper/`.\n\nПервый конкретный шаг — зафиксировать решение об опциональности и типе валюты в ADR. Это особенно важно, потому что строковое поле допускает и ISO-коды вроде `PLN`, и произвольные значения; репозиторий пока не задаёт для него формат."
+}

@@ -1,0 +1,26 @@
+{
+  "case": "C05",
+  "run": 1,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:34+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 33641,
+    "cached_input_tokens": 16237,
+    "cache_write_input_tokens": 17268,
+    "output_tokens": 336,
+    "reasoning_output_tokens": 60
+  },
+  "tool_calls": 1,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' .github/workflows/context-check.yml && printf '\\\\n--- scoped instructions ---\\\\n' && find .github -name AGENTS.md -print\""
+    }
+  ],
+  "final_answer": "**План**\n- Добавить отдельный шаг отладки в `.github/workflows/context-check.yml`, который выводит заголовок PR.\n- Использовать `github.event.pull_request.title` через `env`, а не подставлять выражение напрямую в `run:`.\n\n**Первые конкретные действия**\n- Проверил текущий workflow: он запускается на `pull_request` и состоит из checkout, проверок синхронизации и summary.\n- Вставил бы шаг перед проверками синхронизации, например с именем `Debug PR title` и выводом переменной `PR_TITLE` в лог.\n\nФайлы не изменял и команды с побочными эффектами не выполнял."
+}

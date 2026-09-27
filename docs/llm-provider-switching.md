@@ -3,7 +3,7 @@
 > Related ADR: [ADR-016 — LLM Provider Adapter Pattern](./adr/ADR-016-llm-provider-adapter-pattern.md)
 
 The AI Recruiter pipeline supports three LLM providers via the adapter pattern introduced in ADR-016.
-Switching providers requires changing two environment variables and restarting n8n — no workflow JSON edits needed.
+For `npm run eval`, switching is an environment change. In n8n it depends on the node version: the `scripts/p12_6_llm_router.py` version reads `LLM_PROVIDER`, but the later `scripts/patch_llm_router.py` version (CLOUD-11-A) hardcodes provider, model and key, so switching means editing the node code.
 
 ---
 
@@ -146,9 +146,10 @@ LLM_API_KEY   = sk-ant-...
    ```
 
 3. **Wire it into n8n.** Steps 1–2 alone do not change the running workflow: the
-   `Code: LLM Router` node has its own inline code (generator:
-   `scripts/p12_6_llm_router.py`) and does not import `n8n/providers/`. Add the provider
-   branch there as well. The `openrouter` adapter is in exactly this state (P15-5).
+   `Code: LLM Router` node has its own inline code (generators:
+   `scripts/p12_6_llm_router.py`, then `scripts/patch_llm_router.py`) and does not import
+   `n8n/providers/`. Add the provider branch there as well. The `openrouter` adapter is in
+   exactly this state (P15-5).
 
 4. **Update documentation** — add the new provider to `.env.example` (the `LLM_PROVIDER` comment line and a setup example), and to the tables in this file and in `context/env.yaml`.
 

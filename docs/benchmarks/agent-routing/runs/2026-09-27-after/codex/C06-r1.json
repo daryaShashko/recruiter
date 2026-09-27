@@ -1,0 +1,42 @@
+{
+  "case": "C06",
+  "run": 1,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:03:46+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 90562,
+    "cached_input_tokens": 62565,
+    "cache_write_input_tokens": 27725,
+    "output_tokens": 1645,
+    "reasoning_output_tokens": 428
+  },
+  "tool_calls": 5,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"pwd && rg -n \\\"LLM_PROVIDER|openrouter|ollama|gemini|anthropic|LLM Router|providers\\\" context docs scraper n8n scripts --glob '\"'!**/node_modules/**'\"'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"cat context/ingest-workflow.yaml && printf '\\\\n--- env context ---\\\\n' && cat context/env.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,200p' n8n/providers/index.ts && printf '\\\\n--- openrouter adapter ---\\\\n' && sed -n '1,180p' n8n/providers/openrouter.ts && printf '\\\\n--- env example ---\\\\n' && rg -n \\\"LLM_PROVIDER|LLM_API_KEY|LLM_MODEL|LLM_BASE_URL\\\" .env.example scraper/.env.example 2>/dev/null\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' scripts/p12_6_llm_router.py && printf '\\\\n--- switching guide relevant sections ---\\\\n' && sed -n '1,165p' docs/llm-provider-switching.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"rg -n \\\"llm_providers:|source:|env_var:|Supported:|const provider|provider === 'anthropic'|OPENROUTER_API_KEY|OPENROUTER_MODEL|openrouter.*state|P15-5\\\" context/ingest-workflow.yaml scripts/p12_6_llm_router.py n8n/providers/index.ts n8n/providers/openrouter.ts docs/llm-provider-switching.md\""
+    }
+  ],
+  "final_answer": "**Что поддерживает пайплайн сейчас**\n- В работающей n8n-нोडе `Code: LLM Router` реально подключены три провайдера: Ollama, Gemini и Anthropic. Она читает `LLM_PROVIDER` из переменных n8n, а не из `.env`. Это подтверждают код генератора [`scripts/p12_6_llm_router.py:18`](scripts/p12_6_llm_router.py:18) и карта workflow [`context/ingest-workflow.yaml:116`](context/ingest-workflow.yaml:116).\n- OpenRouter есть как TypeScript-адаптер и зарегистрирован в фабрике, но рабочая нода его не использует. Включить его одной сменой `LLM_PROVIDER` нельзя: Router завершится ошибкой `Unknown LLM_PROVIDER`. См. [`n8n/providers/index.ts:19`](n8n/providers/index.ts:19), [`scripts/p12_6_llm_router.py:103`](scripts/p12_6_llm_router.py:103) и [`docs/llm-provider-switching.md:149`](docs/llm-provider-switching.md:149).\n\n**План переключения на OpenRouter**\n1. Добавить OpenRouter-ветку в шаблон Router в `scripts/p12_6_llm_router.py`: запрос к Chat Completions API, обработку ответа и нормализацию результата для следующей ноды. Сейчас адаптер использует `OPENROUTER_API_KEY` и `OPENROUTER_MODEL`; их имена нужно согласовать с переменными, которые будет читать n8n Router. См. [`n8n/providers/openrouter.ts:34`](n8n/providers/openrouter.ts:34).\n2. Обновить и задействовать экспорт workflow в n8n, потому что правка генератора сама по себе не меняет уже установленную ноду.\n3. В переменных n8n установить `LLM_PROVIDER=openrouter`, API-ключ и идентификатор модели; затем перезапустить или повторно загрузить workflow.\n4. Проверить путь без сетевых вызовов тестами адаптера и проверкой сгенерированного кода. Реальный вызов к OpenRouter потребует сети и ключа, поэтому я бы запускал его только отдельно и с вашего разрешения.\n\nЭто план, а не выполненные изменения: в режиме бенчмарка файлы не менял и команды с побочными эффектами не запускал."
+}

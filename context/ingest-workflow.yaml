@@ -71,7 +71,7 @@ flow:
     desc: Builds systemPrompt (scoring rules + rejection criteria) + userMessage (job fields)
 
   - node: "Code: LLM Router"
-    desc: "Provider-agnostic LLM call; reads LLM_PROVIDER env → ollama|gemini|anthropic"
+    desc: "LLM call; ollama|gemini|anthropic. Provider from LLM_PROVIDER env (p12_6 version) or hardcoded (CLOUD-11-A version) — see llm_providers"
 
   - node: "Code: Parse Ollama Response"
     desc: >
@@ -114,8 +114,15 @@ key_logic:
     notion_dedup: "Notion OR-filter on Fingerprint + urlNorm + url (Notion: Find Existing URL)"
 
   llm_providers:
-    source: "Inline code of Code: LLM Router (generator: scripts/p12_6_llm_router.py). n8n/providers/*.ts adapters are NOT used by the node (P15-5)."
-    env_var: "LLM_PROVIDER in n8n Variables (NOT host .env)"
+    source: >
+      Inline code of Code: LLM Router in the local export. n8n/providers/*.ts adapters are
+      NOT used by the node (P15-5). Two generator versions; which one runs is known only
+      from the export or n8n:
+      scripts/p12_6_llm_router.py — $env.LLM_PROVIDER, fetch, timeouts below;
+      scripts/patch_llm_router.py (CLOUD-11-A, later) — provider/model/key hardcoded
+      (gemini, gemini-2.0-flash), no $env, this.helpers.httpRequest, no explicit timeout.
+    env_var: "LLM_PROVIDER in n8n Variables (NOT host .env) — p12_6 version only"
+    # Timeouts below are from the p12_6 version.
     ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
     gemini: "POST generativelanguage.googleapis.com; model=gemini-3.5-flash; responseMimeType=application/json; timeout=60s"
     anthropic: "POST api.anthropic.com; tool_use structured output; timeout=60s"

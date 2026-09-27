@@ -1,0 +1,42 @@
+{
+  "case": "C07",
+  "run": 3,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:14:18+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.1293408,
+  "turns": 7,
+  "duration_ms": 44655,
+  "is_error": false,
+  "tool_calls": 6,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"linkedin\" context/roadmap.yaml context/decisions.yaml docs/ context/ 2>/dev/null"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls scraper/src/scrapers/ 2>/dev/null; echo \"---\"; cat context/modules/scraper.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/business-analyst.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/business-analyst.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i -A5 \"P6\" context/roadmap.yaml | head -100"
+    }
+  ],
+  "final_answer": "## Итог проверки\n\nВопрос уже разбирался — это не новая идея.\n\n**Что нашёл:**\n- `docs/agents/business-analyst.md:162-172` — готовый пример оценки этой ровно фичи: Business Value MEDIUM, Risk HIGH (агрессивный анти-скрапинг, зарплата скрыта в большинстве постов → хуже сигнал для LLM-оценки), **Recommendation: DEFER**. Условие для ревизии — \"когда пайплайн стабилен и измерен false positive rate\".\n- `docs/post-mortem.md:211` — отдельно зафиксировано: \"LinkedIn скрапер — Требует авторизации — отдельная задача\".\n- `context/roadmap.yaml:372-412` (P6) — статус **6/7 done**, но именно P6-7 (7-дневный прогон на продакшене, финальные метрики false positive rate) — **partial**: пока только шаблон с dry-run данными, реальные данные не заполнены.\n\n## Вывод\n\nУсловие для ревизии решения (\"пайплайн стабилен + false positive rate измерен\") **пока не выполнено**. Формально пересматривать DEFER сейчас рано — сначала нужно закрыть P6-7 реальными продакшен-данными за 7 дней.\n\nДополнительно к прежней оценке — риски доступа для LinkedIn как нового источника (по чек-листу AGENTS.md для новых источников):\n- **Авторизация**: в отличие от JustJoin/NoFluffJobs (`context/modules/scraper.yaml` — оба скрапера анонимные, XHR-based), LinkedIn требует залогиненную сессию для полноценного листинга вакансий — это новый паттерн, не покрытый текущим `browser.ts` контрактом.\n- **ToS**: LinkedIn User Agreement прямо запрещает автоматизированный скрапинг.\n- **Анти-бот**: агрессивная блокировка headless Playwright (уже отмечено бизнес-аналитиком).\n- **Риск бана аккаунта**: если скрапинг идёт через личный аккаунт — реальный риск потери доступа к LinkedIn.\n\n## Рекомендация\n\nНе добавлять сейчас. Если хочешь пересмотреть — первый конкретный шаг: закончить P6-7 (собрать 7 дней продакшен-метрик: сколько вакансий/неделю, % match=true, false positive rate у Ollama), и только потом заново прогонять Problem & Value Check для LinkedIn с этими цифрами на руках — сейчас это будет гипотеза без данных.\n\nЭто рекомендация, не решение о слиянии/реализации — файлы я не менял, только читал.",
+  "requested_model": "claude-sonnet-5"
+}

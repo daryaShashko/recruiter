@@ -1,0 +1,70 @@
+{
+  "case": "C07",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:13:53+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.16622,
+  "turns": 13,
+  "duration_ms": 64452,
+  "is_error": false,
+  "tool_calls": 12,
+  "actions": [
+    {
+      "tool": "Grep",
+      "target": ".",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Glob",
+      "target": "context/*.yaml"
+    },
+    {
+      "tool": "Glob",
+      "target": "scraper/src/**/*.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/business-analyst.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/agents/business-analyst.md"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/post-mortem.md"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "linkedin|P6|P15"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "linkedin"
+    },
+    {
+      "tool": "Read",
+      "target": "context/decisions.yaml"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/roadmap.yaml",
+      "pattern": "^phase|current_phase|status:"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/utils/browser.ts"
+    },
+    {
+      "tool": "Read",
+      "target": "scraper/src/config.ts"
+    }
+  ],
+  "final_answer": "Нашёл готовое решение по этому вопросу — не с нуля.\n\n## Что уже есть\n\n- **`docs/agents/business-analyst.md:162-172`** — прямой пример оценки этой самой фичи: `Recommendation: DEFER`. Причина: JustJoin.it + NoFluffJobs уже покрывают ~80% сеньорских JS/TS позиций в Польше; LinkedIn даёт объём, но ухудшает соотношение сигнал/шум (зарплата скрыта в большинстве постов, что снижает качество LLM-матчинга). Решение было — «пересмотреть в P6, когда пайплайн стабилен и измерен false positive rate».\n- **`context/roadmap.yaml:1`** — сейчас фаза **P13**, то есть контрольная точка P6 давно прошла, но в `context/roadmap.yaml` LinkedIn-скрапер как задача не появился (совпадений по `linkedin` нет).\n- **`docs/post-mortem.md:211`** — задача висит в «Плановые улучшения (post-POC)» без ID и без оценки: *«LinkedIn скрапер — Требует авторизации — отдельная задача»*.\n- **`scraper/src/types.ts:17`** — `source` union уже включает `'linkedin'`, так что ADR на изменение типа не нужен, если формат JobOffer не меняется.\n- **`scraper/src/utils/browser.ts`** — текущая анти-детект инфраструктура (fingerprint, UA-rotation) рассчитана на анонимный доступ к JustJoin/NoFluffJobs. Механизма логина/хранения сессии/cookie нигде в `scraper/` нет — для LinkedIn это придётся строить с нуля.\n\n## Риски доступа (пункт из AGENTS.md для нового источника)\n\n- **Авторизация обязательна** — публичные объявления LinkedIn ограничены без логина, а логин через личный аккаунт создаёт риск **бана аккаунта** (ToS прямо запрещает автоматизированный скрапинг).\n- **ToS** — LinkedIn User Agreement прямо запрещает scraping/automated data collection; выше юридический риск, чем у JustJoin/NoFluffJobs.\n- **Анти-бот** — агрессивнее, чем на текущих источниках; ожидаемо частые блокировки даже с текущей fingerprint-маскировкой.\n- Всё это уже отражено в исходной оценке (`Risk: HIGH`), пересмотра оценки риска с тех пор не нашёл.\n\n## Вывод\n\nСтатус не изменился: **DEFER**, но с уточнением — контрольная точка \"revisit в P6\" пропущена без пересмотра, и в бэклоге это висит как задача без ID/оценки. Прежде чем брать в работу, стоит либо:\n1. явно подтвердить, что решение остаётся DEFER (и завести настоящий roadmap-item с новой контрольной точкой), либо\n2. пересмотреть решение сейчас, потому что дало ли P6-P13 нужные метрики (false positive rate, объём вакансий/неделю) для повторной оценки — это можно проверить по `docs/post-mortem.md` разделу \"Что проверить через 7 дней\" (там нет данных, только чек-лист).\n\nЯ ничего не менял в файлах — это только разбор вопроса в режиме бенчмарка. Если решишь двигаться вперёд, первый конкретный шаг — не код, а обновление `context/roadmap.yaml` (завести задачу с ID) плюс явное решение по логину (использовать личный аккаунт или отказаться) до старта реализации.",
+  "requested_model": "claude-sonnet-5"
+}

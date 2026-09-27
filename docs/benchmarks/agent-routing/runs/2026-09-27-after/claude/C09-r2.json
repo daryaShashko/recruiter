@@ -1,0 +1,76 @@
+{
+  "case": "C09",
+  "run": 2,
+  "tool": "claude",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:16:00+00:00",
+  "exit_code": 0,
+  "model": "claude-sonnet-5",
+  "cost_usd": 0.19495859999999998,
+  "turns": 15,
+  "duration_ms": 100261,
+  "is_error": false,
+  "tool_calls": 14,
+  "actions": [
+    {
+      "tool": "Bash",
+      "target": "grep -rn -i \"dry-run\\|dry_run\\|scrape:dry\\|release\" context/roadmap.yaml context/decisions.yaml 2>/dev/null"
+    },
+    {
+      "tool": "Glob",
+      "target": ".agents/skills/*/SKILL.md"
+    },
+    {
+      "tool": "Glob",
+      "target": "context/*.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    },
+    {
+      "tool": "Read",
+      "target": "context/roadmap.yaml"
+    },
+    {
+      "tool": "Glob",
+      "target": ".agents/skills/release-readiness/**"
+    },
+    {
+      "tool": "Glob",
+      "target": ".agents/skills/*"
+    },
+    {
+      "tool": "Grep",
+      "target": "docs",
+      "pattern": "run-local|weekly-health-check|adr-check|release-readiness"
+    },
+    {
+      "tool": "Bash",
+      "target": "ls -la .agents/skills/ 2>/dev/null; echo \"---\"; ls -la .agents/skills/create-skill/ 2>/dev/null"
+    },
+    {
+      "tool": "Read",
+      "target": "docs/local-ops-plan.md"
+    },
+    {
+      "tool": "Read",
+      "target": ".agents/skills/create-skill/SKILL.md"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n \"scrape:dry\\|\\\"typecheck\\\"\\|\\\"test\\\"\\|\\\"eval\\\"\" scraper/package.json"
+    },
+    {
+      "tool": "Bash",
+      "target": "grep -n -i \"dry.run\\|DRY_RUN\" -r .github/workflows/ 2>/dev/null; echo \"---scripts---\"; ls scripts/ 2>/dev/null; echo \"---run-local---\"; sed -n '1,80p' scripts/run-local.sh 2>/dev/null"
+    },
+    {
+      "tool": "Grep",
+      "target": "context/decisions.yaml",
+      "pattern": "release|Release\""
+    }
+  ],
+  "final_answer": "## Что нашёл\n\n- Готового скилла с такой функцией нет: в `.agents/skills/` есть только `create-skill`. Значит новый скилл создаём по конвенции `create-skill/SKILL.md`.\n- В `context/roadmap.yaml` и `docs/local-ops-plan.md` (задача L2) уже зарезервировано имя `/release-readiness` — но под другую задачу (закрепление локального env-профиля + CI override policy), пока `status: pending`, не реализовано. Брать это же имя для скилла с другим контрактом — коллизия, лучше своё, более узкое имя.\n- `npm run scrape:dry` (`scraper/package.json:9`, `DRY_RUN=true ts-node src/index.ts`) по `AGENTS.md` **не offline**: гоняет Playwright по живым сайтам, пропускает только отправку в webhook. Значит скилл при каждом запуске трогает сеть и внешние сайты — это надо явно проговаривать перед запуском, а не прятать.\n- В `.github/workflows/scraper.yml` уже есть еженедельный `scraper-health-check`, но он гоняет `npm test` с `DRY_RUN=true` (юнит-тесты), а не сам `npm run scrape:dry` — это не то же самое, дублирования нет, но стоит явно развести в тексте скилла, чтобы не путали.\n- `context/decisions.yaml` — упоминаний release-процесса нет, ADR не требуется (не трогаем `JobOffer`/`WebhookPayload`/`EvaluationResult`).\n\n## План (без выполнения — режим бенчмарка)\n\n1. Зафиксировать контракт скилла:\n   - **Имя**: `scraper-dry-run-check` (не `release-readiness`, чтобы не конфликтовать с зарезервированной задачей L2).\n   - **Когда триггерится**: перед релизом/мержем изменений в `scraper/`, по явной просьбе — не на каждый мелкий диф.\n   - **Что делает**: `cd scraper && npm run scrape:dry`, проверяет exit code, наличие и валидность `output/dry-run-*.json`, отсутствие `[SourceName]` ошибок сверх ожидаемого, даёт итог PASS/FAIL с числом собранных офферов по источникам.\n   - **Явное предупреждение перед запуском**: команда не offline (живые сайты, риск антибот-блокировки/бана) — спросить подтверждение перед запуском, как требует `AGENTS.md` для команд с сетевыми эффектами.\n   - **Границы**: скилл только проверяет и докладывает; не мержит, не пушит, не меняет CI, не является автоматическим релиз-гейтом (это решение остаётся за человеком/стадией \"Ready to Merge\").\n2. Создать `.agents/skills/scraper-dry-run-check/SKILL.md` с frontmatter `name`/`description` и шагами выше (по формату `create-skill`).\n3. Прогнать `scripts/check-agent-surfaces.sh` — проверка структуры, не полезности.\n4. Отдельно проверить сам скилл на реальном запросе (например, \"проверь готовность к релизу scraper\") — сравнить с базовым поведением без скилла.\n5. Если поведение подтвердится и найдётся что-то неочевидное — одна строка в `docs/agent-learning/LESSONS.md`, иначе не трогаем.\n\nПервое конкретное действие, которое я бы сделал дальше (не выполняю сейчас): написать сам файл `.agents/skills/scraper-dry-run-check/SKILL.md`. Прежде чем реально запускать `npm run scrape:dry` в рамках проверки скилла — отдельно спрошу подтверждение, так как это живой сетевой вызов по внешним сайтам.\n\nПодходит план — или хочешь другое имя/область (например, включить сюда ещё и `npm run typecheck`/`npm test` как часть pre-release проверки)?",
+  "requested_model": "claude-sonnet-5"
+}

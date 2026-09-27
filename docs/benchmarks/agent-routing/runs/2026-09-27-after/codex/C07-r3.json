@@ -1,0 +1,66 @@
+{
+  "case": "C07",
+  "run": 3,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:04:09+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 80810,
+    "cached_input_tokens": 38728,
+    "cache_write_input_tokens": 28650,
+    "output_tokens": 1918,
+    "reasoning_output_tokens": 562
+  },
+  "tool_calls": 11,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n \"sources|SourceName|JobOffer|scrap|Indeed|Pracuj|NoFluff|JustJoin\" scraper/src context/modules/scraper.yaml'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' docs/ai-workflow.md && printf '\\\\n--- SCRAPER FILES ---\\\\n' && rg --files scraper/src scraper/test scraper/tests 2>/dev/null | head -100\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"linkedin|linked in|job source|источник ваканс|скрапер\" context/roadmap.yaml context/decisions.yaml docs/'"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_04556acc5ea72c6e016ab9306e33e48197aa635891d6880111\", \"type\": \"web_search\", \"query\": \"LinkedIn User Agreement scraping automated methods prohibited official\", \"action\": {\"type\": \"search\", \"query\": \"LinkedIn User Agreement scraping automated methods prohibited official\", \"queries\": [\"Linked"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_04556acc5ea72c6e016ab9307125f481978cb6096edef97116\", \"type\": \"web_search\", \"query\": \"site:linkedin.com/legal/user-agreement scraping crawlers bots LinkedIn User Agreement\", \"action\": {\"type\": \"search\", \"query\": \"site:linkedin.com/legal/user-agreement scraping crawlers bots LinkedIn User A"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '215,250p' context/decisions.yaml; sed -n '15,40p' docs/agents/business-analyst.md; sed -n '155,180p' docs/agents/business-analyst.md; sed -n '200,218p' docs/post-mortem.md\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,130p' scraper/src/index.ts; sed -n '1,100p' scraper/src/config.ts; sed -n '1,130p' context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"linkedin|P6|scrap\" context/roadmap.yaml context/decisions.yaml'"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_04556acc5ea72c6e016ab93075e6cc819796e63a0bd0bb8c24\", \"type\": \"web_search\", \"query\": \"LinkedIn User Agreement automated scraping bots official LinkedIn legal\", \"action\": {\"type\": \"search\", \"query\": \"LinkedIn User Agreement automated scraping bots official LinkedIn legal\", \"queries\": [\"Link"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_04556acc5ea72c6e016ab93078556c81978929661f19da65f3\", \"type\": \"web_search\", \"query\": \"LinkedIn User Agreement 8.2 bots unauthorized automated methods LinkedIn official\", \"action\": {\"type\": \"search\", \"query\": \"LinkedIn User Agreement 8.2 bots unauthorized automated methods LinkedIn official"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_04556acc5ea72c6e016ab9307aa1408197ba285ac066da0fb2\", \"type\": \"web_search\", \"query\": \"https://www.linkedin.com/legal/user-agreement\", \"action\": {\"type\": \"other\"}}"
+    }
+  ],
+  "final_answer": "## Вывод\n\n**Пока не добавлять LinkedIn-скрапер.** Вернуться к идее стоит, если текущие источники пропускают нужные вакансии и это подтверждается замерами. Иначе дополнительный объём может увеличить шум и поддержку, не улучшив подбор.\n\n**Что проверил**\n- Ранее в `docs/agents/business-analyst.md` уже рекомендовали отложить LinkedIn: там отмечены шум, часто скрытая зарплата и риск блокировок. В `docs/post-mortem.md` указана необходимость авторизации.\n- Roadmap показывает, что P6 выполнен на 6 из 7 пунктов; в коде `scraper/src/index.ts` фактически запускаются только JustJoin и NoFluffJobs. Поэтому старое условие «вернуться в P6» уже не даёт основания начинать работу.\n- LinkedIn предупреждает об ограничениях на скрейпинг и автоматизированный доступ в User Agreement; автоматизация также может привести к ограничениям аккаунта. Перед любым прототипом нужно сверить актуальные условия и выяснить, возможен ли разрешённый способ доступа без обхода защит. ([linkedin.com](https://www.linkedin.com/legal/user-agreement))\n\n**Карточка решения — Problem & Value Check**\n- **Проблема:** пока не подтверждено, что текущие источники упускают достаточно релевантных вакансий.\n- **Факты:** LinkedIn требует отдельного решения по доступу; в текущем пайплайне нет LinkedIn-скрапера.\n- **Гипотеза:** источник может добавить вакансии, но также больше нерелевантных результатов и вакансий без зарплаты.\n- **Риски доступа:** возможна авторизация; условия LinkedIn ограничивают автоматизированный сбор; антибот-защита и блокировка аккаунта — существенные операционные риски.\n- **Маленькая альтернатива:** сначала измерить качество текущего потока и вручную проверить, какие подходящие вакансии в нём отсутствуют.\n\n**План и первые действия**\n1. Зафиксировать базовый период по текущим источникам: число релевантных вакансий, долю совпадений и типичные причины отсева. Не запускать скрапер для сбора этих данных — это потребует сети, а локальный dry-run ещё и создаёт файл.\n2. Проверить вручную, встречаются ли на LinkedIn подходящие вакансии, которых нет в текущем потоке. Это проверка ценности идеи, не сбор данных для автоматизации.\n3. Сверить допустимый способ доступа и его условия. Если приемлемого разрешённого способа нет — отказаться от скрейпера.\n4. Если пробел в покрытии подтвердится, перейти к спецификации ограниченного пилота с критериями качества и остановки. До этого к изменениям кода не переходить.\n\n**Режим бенчмарка соблюдён:** файлы не изменял, команды выполняли только чтение."
+}

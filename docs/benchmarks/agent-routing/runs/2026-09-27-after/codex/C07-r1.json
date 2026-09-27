@@ -1,0 +1,50 @@
+{
+  "case": "C07",
+  "run": 1,
+  "tool": "codex",
+  "commit": "cae503b",
+  "started_utc": "2026-09-27T15:04:05+00:00",
+  "exit_code": 0,
+  "warnings": [
+    "Model metadata for `gpt-6-luna` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+  ],
+  "usage": {
+    "input_tokens": 73691,
+    "cached_input_tokens": 38388,
+    "cache_write_input_tokens": 26509,
+    "output_tokens": 1609,
+    "reasoning_output_tokens": 423
+  },
+  "tool_calls": 7,
+  "actions": [
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg --files scraper/src context docs | sort'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc 'rg -n -i \"linkedin|linked in|источник ваканс|job source|scraper\" context/roadmap.yaml context/decisions.yaml docs/ scraper/src 2>/dev/null'"
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' docs/ai-workflow.md; printf '\\\\n--- scraper context ---\\\\n'; sed -n '1,220p' context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '220,250p' context/decisions.yaml; sed -n '600,635p' context/decisions.yaml; rg -n -i \\\"linkedin\\\" context/roadmap.yaml context/decisions.yaml docs/adr docs/*.md context/modules/scraper.yaml scraper/src --glob '\"'!docs/agents/*'\"'\""
+    },
+    {
+      "tool": "shell",
+      "target": "/bin/zsh -lc \"sed -n '1,220p' scraper/src/index.ts; sed -n '1,100p' scraper/src/types.ts; sed -n '1,130p' scraper/src/config.ts; sed -n '1,70p' context/modules/scraper.yaml\""
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_00961102efd3a77c016ab9306d01d48197a988daf8e5a49a04\", \"type\": \"web_search\", \"query\": \"site:linkedin.com/legal user agreement scrape copy profiles jobs automated software\", \"action\": {\"type\": \"search\", \"query\": \"site:linkedin.com/legal user agreement scrape copy profiles jobs automated soft"
+    },
+    {
+      "tool": "web_search",
+      "target": "{\"id\": \"ws_00961102efd3a77c016ab930703dc881979858ac2b8f7e82b3\", \"type\": \"web_search\", \"query\": \"LinkedIn User Agreement 8.2 scrape official linkedin.com/legal/user-agreement\", \"action\": {\"type\": \"search\", \"query\": \"LinkedIn User Agreement 8.2 scrape official linkedin.com/legal/user-agreement\", \"quer"
+    }
+  ],
+  "final_answer": "**Этап: Problem & Value Check. Рекомендация: пока не добавлять LinkedIn-скрапер.**\n\n- **Факты в репозитории:** текущий пайплайн запускает только скраперы JustJoin.it и NoFluffJobs (`scraper/src/index.ts`). `linkedin` уже есть среди допустимых значений `JobOffer.source` и в вариантах Notion, но это лишь задел в схеме, не работающая интеграция (`scraper/src/types.ts`, `docs/notion-schema.md`). В `docs/post-mortem.md` отдельно отмечено, что LinkedIn требует авторизации. Предыдущего решения именно «добавлять скрапер» не нашёл; есть лишь заметка о возможной маршрутизации LinkedIn в n8n.\n- **Проблема и ценность:** LinkedIn может дать дополнительные вакансии, но в репозитории нет данных о том, сколько подходящих вакансий там пропускается и насколько они улучшат текущий поток. Пока это гипотеза, а не подтверждённая потребность.\n- **Риски:** LinkedIn запрещает автоматизированный сбор в условиях платформы; возможны блокировка аккаунта или IP и юридические риски. Особенно рискован вариант с авторизацией, cookies или обходом технических ограничений. Публичность отдельных страниц сама по себе не устраняет договорные и privacy-риски. ([aeroleads.com](https://aeroleads.com/blog/linkedin-scraping-compliance-linkedins-terms-service/))\n- **Самая дешёвая альтернатива:** вручную добавлять отдельные найденные вакансии через существующий `source: 'manual'` — это уже соответствует замыслу ADR-018 для корпоративных сайтов. Сначала проверить, решает ли такой сценарий реальную проблему.\n- **Следующий шаг:** если LinkedIn действительно регулярно содержит нужные вакансии, отдельно исследовать разрешённый способ доступа и подтвердить конкретный прирост относительно текущих источников. Только после этого решать, нужна ли интеграция. Обычный скрапер LinkedIn без разрешения не рекомендую.\n- **Первые конкретные действия перед возможной реализацией:** собрать несколько примеров вакансий, которые не находятся на JustJoin.it или NoFluffJobs; оценить, нельзя ли обрабатывать их вручную; проверить официальные условия и доступные способы интеграции. До подтверждения ценности и допустимого доступа — не менять код и не подключать аккаунт.\n\nВыполнен только Problem & Value Check; изменений и команд с побочными эффектами не было."
+}
