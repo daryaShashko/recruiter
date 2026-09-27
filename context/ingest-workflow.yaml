@@ -114,6 +114,7 @@ key_logic:
     notion_dedup: "Notion OR-filter on Fingerprint + urlNorm + url (Notion: Find Existing URL)"
 
   llm_providers:
+    source: "Inline code of Code: LLM Router (generator: scripts/p12_6_llm_router.py). n8n/providers/*.ts adapters are NOT used by the node (P15-5)."
     env_var: "LLM_PROVIDER in n8n Variables (NOT host .env)"
     ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
     gemini: "POST generativelanguage.googleapis.com; model=gemini-3.5-flash; responseMimeType=application/json; timeout=60s"

@@ -145,7 +145,12 @@ LLM_API_KEY   = sk-ant-...
      return new MyProviderAdapter();
    ```
 
-3. **Update documentation** — add the new provider to `.env.example` (the `LLM_PROVIDER` comment line and a setup example), and to the tables in this file and in `context/env.yaml`.
+3. **Wire it into n8n.** Steps 1–2 alone do not change the running workflow: the
+   `Code: LLM Router` node has its own inline code (generator:
+   `scripts/p12_6_llm_router.py`) and does not import `n8n/providers/`. Add the provider
+   branch there as well. The `openrouter` adapter is in exactly this state (P15-5).
+
+4. **Update documentation** — add the new provider to `.env.example` (the `LLM_PROVIDER` comment line and a setup example), and to the tables in this file and in `context/env.yaml`.
 
 ---
 

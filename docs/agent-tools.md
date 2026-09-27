@@ -37,4 +37,23 @@ Adapter rules:
 No MCP server is required to work in this repository. If you use one (for example a
 browser server for manual checks), configure it in your user-level tool settings, pin the
 package version, and keep credentials in environment variables. Do not commit
-machine-specific MCP configuration.
+machine-specific MCP configuration, and do not add a workspace `.vscode/mcp.json` for
+personal servers.
+
+Tool-specific or personal preferences follow the same rule: user-level config
+(`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, VS Code user settings), not the adapters.
+
+### GitHub MCP
+
+Use GitHub's official server, [`github/github-mcp-server`](https://github.com/github/github-mcp-server)
+(checked 2026-09-27):
+
+- **Preferred:** the remote server `https://api.githubcopilot.com/mcp/`, added in VS Code's
+  user-level MCP settings. VS Code signs in with OAuth, so there is no token to create or
+  store.
+- **Local alternative:** the Docker image `ghcr.io/github/github-mcp-server`, pinned to a
+  release tag from the repository's releases page. Pass the token through the
+  `GITHUB_PERSONAL_ACCESS_TOKEN` environment variable of your user session, with the
+  minimum scopes needed.
+- **Do not use** `@modelcontextprotocol/server-github`: it is deprecated on npm.
+- A token pasted into a chat or a file is exposed. Revoke it and issue a new one.
