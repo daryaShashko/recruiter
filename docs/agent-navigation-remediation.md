@@ -24,8 +24,8 @@ Desktop, VS Code**. Zed and VS Code custom agents/prompt files are no longer use
 ## Baseline and current state
 
 Baseline measured from the checked-in repository on 2026-09-27 and cross-checked against
-files, git history, and the npm registry. "Now" reflects the working tree after Slices 1–2
-(uncommitted at the time of writing). Counts describe files/configuration, not runtime
+files, git history, and the npm registry. "Now" reflects the repository after Slices 1–2
+(commit `252a8a3`). Counts describe files/configuration, not runtime
 behavior.
 
 | Measure | Baseline | Now |
