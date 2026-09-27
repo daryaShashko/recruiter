@@ -1,0 +1,3 @@
+interface:
+  display_name: "Create Skill"
+  short_description: "Create and improve Codex skills with lightweight evaluation"
