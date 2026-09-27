@@ -62,8 +62,10 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="❌ Prompt eval failed%0ARun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}%0ABranch: ${{ github.ref_name }}"
+            -d text="❌ Prompt eval failed%0ARun: ${RUN_URL}%0ABranch: ${BRANCH}"

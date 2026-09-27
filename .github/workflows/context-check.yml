@@ -27,8 +27,9 @@ jobs:
           echo "$CHANGED"
 
       - name: Check interfaces.yaml sync
+        env:
+          CHANGED: ${{ steps.changed.outputs.changed_files }}
         run: |
-          CHANGED="${{ steps.changed.outputs.changed_files }}"
           if echo "$CHANGED" | grep -q "scraper/src/types.ts"; then
             if ! echo "$CHANGED" | grep -q "context/interfaces.yaml"; then
               echo "::warning file=scraper/src/types.ts::types.ts changed but context/interfaces.yaml was not updated. Run: update context/interfaces.yaml to reflect new/changed interfaces."
@@ -36,8 +37,9 @@ jobs:
           fi
 
       - name: Check scraper module sync
+        env:
+          CHANGED: ${{ steps.changed.outputs.changed_files }}
         run: |
-          CHANGED="${{ steps.changed.outputs.changed_files }}"
           if echo "$CHANGED" | grep -q "scraper/src/config.ts"; then
             if ! echo "$CHANGED" | grep -q "context/modules/scraper.yaml"; then
               echo "::warning file=scraper/src/config.ts::config.ts changed but context/modules/scraper.yaml was not updated."
@@ -45,8 +47,9 @@ jobs:
           fi
 
       - name: Check n8n module sync
+        env:
+          CHANGED: ${{ steps.changed.outputs.changed_files }}
         run: |
-          CHANGED="${{ steps.changed.outputs.changed_files }}"
           if echo "$CHANGED" | grep -q "n8n/prompts/evaluator.md"; then
             if ! echo "$CHANGED" | grep -q "context/modules/n8n.yaml"; then
               echo "::warning file=n8n/prompts/evaluator.md::evaluator.md changed but context/modules/n8n.yaml was not updated."
@@ -59,8 +62,9 @@ jobs:
           fi
 
       - name: Check CI module sync
+        env:
+          CHANGED: ${{ steps.changed.outputs.changed_files }}
         run: |
-          CHANGED="${{ steps.changed.outputs.changed_files }}"
           if echo "$CHANGED" | grep -q ".github/workflows/"; then
             if ! echo "$CHANGED" | grep -q "context/modules/ci.yaml"; then
               echo "::warning::.github/workflows changed but context/modules/ci.yaml was not updated."
@@ -68,8 +72,9 @@ jobs:
           fi
 
       - name: Check env.yaml sync
+        env:
+          CHANGED: ${{ steps.changed.outputs.changed_files }}
         run: |
-          CHANGED="${{ steps.changed.outputs.changed_files }}"
           if echo "$CHANGED" | grep -q ".env.example"; then
             if ! echo "$CHANGED" | grep -q "context/env.yaml"; then
               echo "::warning file=.env.example::.env.example changed but context/env.yaml was not updated."

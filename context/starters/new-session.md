@@ -1,11 +1,9 @@
-# Как начать новую сессию в Zed AI
+# Как начать новую сессию
 
-## 🚀 Zed Skills — самый быстрый старт
-
-Введи в чат Zed AI:
-
-- **`/skill orchestrator-session`** — автоматически загружает контекст, текущую фазу и открытые задачи, запускает Оркестратора
-- **`/skill task-brief`** — канонический шаблон Task Brief для делегирования агентам
+Работает одинаково в Claude Code, Codex (CLI/Desktop) и VS Code: агент сам читает
+`AGENTS.md`. Ниже — готовые формулировки, которые называют нужные файлы явно.
+Пути указаны как обычный текст, чтобы не зависеть от синтаксиса `@file` конкретного
+инструмента.
 
 ---
 
@@ -16,7 +14,7 @@
 ### 🎯 Не знаю с чего начать / планирование задач
 
 ```
-@docs/agents/orchestrator.md @context/project.yaml @context/roadmap.yaml
+Прочитай: docs/agents/orchestrator.md, context/project.yaml, context/roadmap.yaml
 
 Ты — Orchestrator. Прочитай контекст и скажи:
 1. Текущая фаза и открытые задачи
@@ -28,7 +26,7 @@
 ### 💻 Пишем TypeScript / Playwright код
 
 ```
-@docs/agents/developer.md @context/interfaces.yaml @context/modules/scraper.yaml
+Прочитай: docs/agents/developer.md, context/interfaces.yaml, context/modules/scraper.yaml
 
 Ты — TypeScript Developer. Задача: [ОПИСАНИЕ]
 ```
@@ -38,7 +36,7 @@
 ### 🏗️ Архитектурное решение / review кода
 
 ```
-@docs/agents/architect.md @context/interfaces.yaml @context/decisions.yaml
+Прочитай: docs/agents/architect.md, context/interfaces.yaml, context/decisions.yaml
 
 Ты — Architect. Вопрос: [ОПИСАНИЕ]
 ```
@@ -48,7 +46,7 @@
 ### ⚙️ GitHub Actions / CI/CD
 
 ```
-@docs/agents/devops.md @context/modules/ci.yaml @context/env.yaml
+Прочитай: docs/agents/devops.md, context/modules/ci.yaml, context/env.yaml
 
 Ты — DevOps Engineer. Задача: [ОПИСАНИЕ]
 ```
@@ -58,7 +56,7 @@
 ### 🔄 Настройка n8n воркфлоу / Ollama
 
 ```
-@docs/agents/n8n-specialist.md @context/modules/n8n.yaml @context/interfaces.yaml
+Прочитай: docs/agents/n8n-specialist.md, context/modules/n8n.yaml, context/interfaces.yaml
 
 Ты — n8n Specialist. Задача: [ОПИСАНИЕ]
 ```
@@ -68,7 +66,7 @@
 ### 🧪 Тесты / отладка
 
 ```
-@docs/agents/qa-engineer.md @context/modules/scraper.yaml @context/interfaces.yaml
+Прочитай: docs/agents/qa-engineer.md, context/modules/scraper.yaml, context/interfaces.yaml
 
 Ты — QA Engineer. Задача: [ОПИСАНИЕ]
 ```
@@ -78,7 +76,7 @@
 ### ✍️ Промпт для Ollama / улучшение промптов агентов
 
 ```
-@docs/agents/prompt-engineer.md @n8n/prompts/evaluator.md
+Прочитай: docs/agents/prompt-engineer.md, n8n/prompts/evaluator.md
 
 Ты — Prompt Engineer. Задача: [ОПИСАНИЕ]
 ```
@@ -95,4 +93,4 @@
 
 ## Правило одной строки
 
-> Zed: `/skill orchestrator-session` — или — `@docs/agents/[кто нужен]` + `@context/project.yaml` + `@context/modules/[что делаем].yaml`
+> Назови задачу; при необходимости добавь «прочитай `docs/agents/<роль>.md` и `context/modules/<модуль>.yaml`».

@@ -1,5 +1,10 @@
 # Instructions for AI work in this repository
 
+This file is the single canonical instruction set for every AI agent, CLI, and IDE used
+in this repository. Tool-specific files (`CLAUDE.md`, `.github/copilot-instructions.md`,
+`.claude/skills`) are thin pointers to this file and `.agents/skills/`; do not add rules
+to them. See [`docs/agent-tools.md`](docs/agent-tools.md) for the adapter map.
+
 Use Russian with the user. Keep explanations short and concrete. Keep code, paths,
 commands, and identifiers in English.
 
@@ -11,13 +16,44 @@ commands, and identifiers in English.
   claims against the relevant source before relying on them.
 - Do not report a roadmap phase or task as current without checking its status and
   relevant files. Do not load the full roadmap for an unrelated small change.
-- `docs/agents/` and `.github/agents/` describe role prompts for other tools. They do
-  not, by themselves, start or delegate work to those agents in Codex.
-- In Codex, use the repository skill at `.agents/skills/create-skill/` for requests to
-  create or improve reusable skills. It consults `docs/agent-learning/LESSONS.md`
-  selectively; do not load that lesson index for ordinary tasks. Codex custom subagent
-  definitions are a separate surface under `.codex/agents/*.toml` and should be added
-  only for an intentional, demonstrated need.
+- `docs/agents/*.md` are plain-text role notes (domain rules and checklists). Read the
+  one that matches the task when useful. They do not start, configure, or delegate to
+  separate agents.
+- Reusable skills live in `.agents/skills/<name>/SKILL.md` (open Agent Skills format).
+  Use `.agents/skills/create-skill/` for requests to create or improve a skill. It
+  consults `docs/agent-learning/LESSONS.md` selectively; do not load that lesson index
+  for ordinary tasks. Do not add tool-specific agent or subagent definitions without an
+  intentional, demonstrated need.
+
+## Project rules
+
+- Pipeline: TypeScript scraper (`scraper/`) → n8n webhook → LLM evaluation → Notion →
+  Telegram. The LLM provider is selected by `LLM_PROVIDER` (`.env.example`); adapters are
+  in `n8n/providers/`. No paid services by default.
+- Changes to `JobOffer`, `WebhookPayload`, or `EvaluationResult` (`scraper/src/types.ts`)
+  need an ADR before code. After code changes, update the matching `context/*.yaml` note.
+- Scraper: no `any` (use `unknown` and narrow); config only in `scraper/src/config.ts`;
+  open browsers through `scraper/src/utils/browser.ts`; scrapers return `JobOffer[]`, log
+  errors with a `[SourceName]` prefix, and return `[]` instead of throwing. Extraction
+  method per source is recorded in `context/modules/scraper.yaml`.
+- Tests: mock HTTP (nock/msw) and Playwright API responses (`page.route()`); no real
+  network calls. Cover empty response, timeout, JSON structure drift, invalid JSON, and
+  happy path.
+- n8n: workflow JSON exports in `n8n/workflows/` are local-only and gitignored (they
+  contain personal IDs); do not assume they exist in a checkout. For the ingest workflow,
+  read `context/ingest-workflow.yaml` first and grep a specific node instead of loading
+  the whole JSON. Webhooks respond 200 before processing; strip markdown fences before
+  `JSON.parse` and use a safe fallback object on parse errors.
+- CI: GitHub Actions free tier, `ubuntu-latest`, 15-minute budget, no GPU. Keep
+  `workflow_dispatch` and debug artifacts. Do not interpolate `${{ ... }}` expressions
+  directly into `run:` scripts; pass them through `env:`.
+
+## Commands
+
+Run from `scraper/`: `npm run typecheck`, `npm test`, `npm run scrape:dry` (no webhook
+send), `npm run eval` (promptfoo). Local end-to-end run: `scripts/run-local.sh --dry-run`
+first; ask before running without `--dry-run`. Agent setup check from the repository
+root: `scripts/check-agent-surfaces.sh`.
 
 ## Workflow: task-centered, staged RPI
 

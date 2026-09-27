@@ -1967,10 +1967,10 @@ next_execution_plan:
       status: pending
       title: "Prompt pack for operational commands"
       owner_agent: prompt-engineer
-      skill: "agent-customization"
-      inputs: [".github/prompts/", ".github/agents/"]
+      skill: "create-skill"
+      inputs: [".agents/skills/", "docs/agent-tools.md"]
       output: "Prompts for run-now, catch-up, and incident triage"
-      acceptance: "Slash-commands produce deterministic operator actions"
+      acceptance: "Skills produce deterministic operator actions in every supported tool"
       estimate: "0.5d"
   execution_order:
     - "L1 -> L2 -> L3"
