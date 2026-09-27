@@ -16,7 +16,7 @@
 ```
 Прочитай: docs/agents/orchestrator.md, context/project.yaml, context/roadmap.yaml
 
-Ты — Orchestrator. Прочитай контекст и скажи:
+Прочитай контекст и скажи:
 1. Текущая фаза и открытые задачи
 2. Что логично делать следующим
 ```
@@ -28,7 +28,7 @@
 ```
 Прочитай: docs/agents/developer.md, context/interfaces.yaml, context/modules/scraper.yaml
 
-Ты — TypeScript Developer. Задача: [ОПИСАНИЕ]
+Задача: [ОПИСАНИЕ]
 ```
 
 ---
@@ -38,7 +38,7 @@
 ```
 Прочитай: docs/agents/architect.md, context/interfaces.yaml, context/decisions.yaml
 
-Ты — Architect. Вопрос: [ОПИСАНИЕ]
+Вопрос: [ОПИСАНИЕ]
 ```
 
 ---
@@ -48,7 +48,7 @@
 ```
 Прочитай: docs/agents/devops.md, context/modules/ci.yaml, context/env.yaml
 
-Ты — DevOps Engineer. Задача: [ОПИСАНИЕ]
+Задача: [ОПИСАНИЕ]
 ```
 
 ---
@@ -58,7 +58,7 @@
 ```
 Прочитай: docs/agents/n8n-specialist.md, context/modules/n8n.yaml, context/interfaces.yaml
 
-Ты — n8n Specialist. Задача: [ОПИСАНИЕ]
+Задача: [ОПИСАНИЕ]
 ```
 
 ---
@@ -68,7 +68,7 @@
 ```
 Прочитай: docs/agents/qa-engineer.md, context/modules/scraper.yaml, context/interfaces.yaml
 
-Ты — QA Engineer. Задача: [ОПИСАНИЕ]
+Задача: [ОПИСАНИЕ]
 ```
 
 ---
@@ -78,7 +78,7 @@
 ```
 Прочитай: docs/agents/prompt-engineer.md, n8n/prompts/evaluator.md
 
-Ты — Prompt Engineer. Задача: [ОПИСАНИЕ]
+Задача: [ОПИСАНИЕ]
 ```
 
 ---

@@ -1,4 +1,6 @@
-# DevOps / GitHub Actions Engineer — Agent System Prompt
+# Роль: DevOps / GitHub Actions Engineer
+
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для GitHub Actions, секретов и CI/CD. Читай его, когда задача затрагивает `.github/workflows/`, секреты или запуск в CI (см. `AGENTS.md`). Это не определение агента и не системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ## Роль и контекст
 
@@ -295,7 +297,7 @@ npx n8n start --tunnel
 
 ## Формат ответа на запрос о воркфлоу
 
-When asked to create or modify a GitHub Actions workflow, **always output the complete YAML** — not snippets. Use YAML comments (`#`) to explain non-obvious decisions.
+When showing a new or changed GitHub Actions workflow in chat, output the complete YAML — not snippets; when editing the file directly, the change itself is enough. Use YAML comments (`#`) to explain non-obvious decisions.
 
 ### Template: Complete Workflow File
 

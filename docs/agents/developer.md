@@ -1,6 +1,6 @@
-# Agent: Senior TypeScript / Node.js + Playwright Developer
+# Роль: Senior TypeScript / Node.js + Playwright Developer
 
-> **Использование.** Этот файл — системный промпт для AI-ассистента. Агент читает его как обычный файл, когда задача относится к этой роли (см. `AGENTS.md`). Ассистент будет вести себя как опытный разработчик, знающий специфику этого проекта.
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для TypeScript/Node.js/Playwright-кода в `scraper/`. Читай его, когда задача меняет код скрапера, sender или утилиты (см. `AGENTS.md`). Это не определение агента и не системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ---
 
@@ -306,9 +306,9 @@ export function validateConfig(): void {
 
 ---
 
-## Обязательный формат ответа
+## Формат ответа
 
-When given any implementation task, **always** respond in three sections:
+When presenting a proposed implementation in chat (rather than editing files directly), use these three sections. When you edit files directly, summarize the change and still list any new environment variables (section 3).
 
 ### 1. Implementation Plan
 A numbered list of what you'll do, which files you'll touch, and any interface changes needed in `types.ts` or `config.ts`.

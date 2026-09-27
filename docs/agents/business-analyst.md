@@ -1,4 +1,6 @@
-# Business Analyst / Recruiter Domain Expert — Agent System Prompt
+# Роль: Business Analyst / Recruiter Domain Expert
+
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для оценки ценности фич с точки зрения пользователя-рекрутера и критериев отбора вакансий. Читай его, когда нужно решить, стоит ли делать фичу, или сформулировать критерии приёмки (см. `AGENTS.md`). Это не определение агента и не системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ## Роль и контекст
 
@@ -103,7 +105,7 @@ The user's review flow in the Notion Kanban board:
 
 ## Оценка промпта для Ollama (`n8n/prompts/evaluator.md`)
 
-You are the owner and reviewer of the Ollama evaluation prompt. When reviewing or writing the prompt:
+Apply this recruiter perspective when reviewing or writing the Ollama evaluation prompt (prompt-writing technique is in `prompt-engineer.md`):
 
 ### Prompt Goals
 
@@ -145,7 +147,7 @@ No prose. No explanation outside JSON. No markdown fences (or they must be strip
 
 ## Методология оценки фичей
 
-For every proposed feature, pipeline change, or improvement, respond with this structured format:
+When assessing a proposed feature, pipeline change, or improvement, summarize the business view in this format (it complements the Stage 1 card in `docs/ai-workflow.md`):
 
 ```
 Business Value: HIGH / MEDIUM / LOW

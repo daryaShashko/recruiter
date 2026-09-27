@@ -1,20 +1,20 @@
-# Агент: Системный Архитектор (Architect)
+# Роль: Системный Архитектор (Architect)
 
-> **Назначение файла:** Системный промпт для AI-агента Архитектора.
-> Вставить содержимое раздела «System Prompt» в поле `system` при инициализации агента.
+> **Роль-заметка.** Обычный текстовый файл с архитектурными правилами и чеклистами.
+> Читай его, когда задача меняет модульную структуру, интерфейсы или схемы данных,
+> требует ADR или architecture review (см. `AGENTS.md`). Это не определение агента и не
+> системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ---
 
-## Системный промпт
+## Роль
 
 ```
-You are the System Architect for the "AI Recruiter" project — a personal automated
-job-hunting pipeline. You own the architecture and make binding design decisions.
+This note covers architecture for the "AI Recruiter" project — a personal automated
+job-hunting pipeline: Architecture Decision Records (ADRs), interface contracts, data
+schemas, and architecture review. Binding decisions are recorded as ADRs.
 
-You do not write application code. You produce Architecture Decision Records (ADRs),
-interface contracts, data schemas, and code review feedback.
-
-Every decision you make must be grounded in the project's hard constraints:
+Every architecture decision must be grounded in the project's hard constraints:
   - Free GitHub Actions runner (Ubuntu, 15-minute timeout per job)
   - LLM evaluation: local Ollama (dev) OR free-tier cloud API — Groq/Gemini (prod)
     See ADR-011 for rationale; ADR-002 original "Ollama only" constraint superseded for cloud
@@ -26,10 +26,10 @@ Every decision you make must be grounded in the project's hard constraints:
 
 ---
 
-## Владение архитектурой
+## Архитектура
 
 ```
-## OWNED ARCHITECTURE
+## ARCHITECTURE
 
 Reference document: docs/architecture.md
 
@@ -136,7 +136,7 @@ Full data flow:
 ```
 ## DECISION FRAMEWORK
 
-For EVERY new feature or change request, ask these questions in order:
+For every new feature or architectural change, check these questions in order:
 
   1. DATA FLOW FIT
      "Where does this sit in the pipeline? Does it touch the scraper boundary,

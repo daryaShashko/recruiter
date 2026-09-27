@@ -1,7 +1,8 @@
-# Multi-Agent System — AI Recruiter Pipeline
+# Role notes — AI Recruiter Pipeline
 
-> **Как пользоваться этим файлом:** Это справочник по команде агентов. Читай перед
-> началом сессии, чтобы понять, кому делегировать задачу и как устроен контекст.
+> **Как пользоваться этим файлом:** Это справочник по роль-заметкам: какая заметка
+> покрывает какую область и как устроен контекст. Читать его перед каждой задачей не
+> нужно.
 
 > **Статус файлов.** `docs/agents/*.md` — обычные текстовые заметки о ролях (правила
 > домена и чеклисты), единые для всех инструментов. Это не определения агентов и не
@@ -12,7 +13,7 @@
 
 ## Обзор
 
-The agent team automates all development work on the **AI Recruiter** pipeline — a
+These notes support development work on the **AI Recruiter** pipeline — a
 personal job-hunting system that scrapes IT job boards daily, evaluates postings with
 a local LLM, and writes matching roles to Notion while alerting via Telegram.
 
@@ -23,17 +24,18 @@ GitHub Actions (Playwright scraper)
         → IF match: true → Notion Create Page + Telegram alert
 ```
 
-The team has **9 specialist agents**. Each agent has a skill file at `docs/agents/<name>.md`
-that serves as its system prompt. No agent does everything — each has a strict domain.
-The Orchestrator coordinates the team and routes tasks using Task Briefs.
+There are **9 role notes** at `docs/agents/<name>.md`. Each holds the domain rules and
+checklists for one area. The agent working on a task reads the note(s) for the areas the
+task touches and does the work itself; notes do not coordinate, delegate, or hand off
+work, and a clear request needs no Task Brief or task ID.
 
 ---
 
 ## Состав команды
 
-| Agent | File | Primary Role | When to Use |
+| Role | File | Covers | Read when |
 |---|---|---|---|
-| **Orchestrator** | `orchestrator.md` | Coordinates the team, decomposes goals, tracks the Roadmap | When you don't know what to work on next, or need a task broken down |
+| **Planning / Roadmap** | `orchestrator.md` | Goal decomposition, roadmap status, task IDs | When deciding what to work on next, breaking down a multi-area goal, or updating roadmap status |
 | **Architect** | `architect.md` | Architecture decisions, ADRs, code review against architecture | When designing a new module, changing interfaces, or reviewing structure |
 | **TypeScript Developer** | `developer.md` | All TypeScript / Node.js / Playwright code | When writing or fixing any scraper, sender, or utility code |
 | **QA Engineer** | `qa-engineer.md` | Jest + Playwright tests, edge cases, coverage | When writing tests or investigating a bug |
@@ -55,8 +57,8 @@ The `context/` directory contains compact YAML manifest files that describe the
 project state — interfaces, environment variables, module exports, roadmap status,
 and architecture decisions. They are maintained in sync with the source code.
 
-Agents read these YAML files **instead of** reading raw source files, except when
-they need a specific implementation detail.
+Read these YAML files to orient before opening raw source files. They may be stale:
+verify important claims against the relevant code or configuration (see `AGENTS.md`).
 
 ### Почему это важно
 
@@ -82,36 +84,25 @@ earlier instructions.
 | `context/modules/n8n.yaml` | n8n workflows, Ollama config, Notion field mapping |
 | `context/modules/ci.yaml` | GitHub Actions workflows, job names, secrets used |
 
-### Правило сессии
+### Когда читать контекст
 
-> **At the start of EVERY session:**
-> 1. Load `context/project.yaml` — project overview, tech stack, current phase
-> 2. Load the module YAML relevant to the task (scraper / n8n / ci)
-> 3. Only read actual source files if the YAML context is insufficient for the task
+> There is no mandatory session-start load. Read the module YAML relevant to the task
+> (scraper / n8n / ci) or `context/project.yaml` only when it answers a question the
+> task needs, then inspect the relevant source.
 
 ---
 
-## Начало сессии
+## Как работать с задачей
 
-Follow these steps every time you open a new conversation with an agent:
-
-**Step 1 — State your goal to the Orchestrator in plain language.**
-Example: *"I want to add a LinkedIn scraper."* or *"The Ollama evaluator is returning
-match: true for Junior roles, fix it."*
-
-**Step 2 — The Orchestrator loads `context/roadmap.yaml`** to check the current
-phase, identify open tasks, and find any blockers.
-
-**Step 3 — The Orchestrator produces a Task Brief and routes it to the right agent.**
-The Task Brief is a structured document (see `orchestrator.md`) that specifies goal,
-inputs, expected outputs, acceptance criteria, and blockers.
-
-**Step 4 — The assigned agent loads the relevant context YAML, then works.**
-The agent does NOT read all source files. It reads `context/project.yaml` + the
-relevant module YAML, then fetches specific source files only if needed.
-
-**Step 5 — After the work is done, update the relevant YAML files.**
-See the Sync Protocol section below.
+1. **State the goal in plain language.** Example: *"I want to add a LinkedIn scraper."*
+   or *"The Ollama evaluator is returning match: true for Junior roles, fix it."* No role
+   name, task ID, or brief is needed.
+2. **The agent reads `AGENTS.md`, then only what the task needs:** the matching role
+   note, a relevant `context/` file, and the actual source/configuration.
+3. **The agent does and verifies the work.** For a roadmap planning question it checks
+   `context/roadmap.yaml` (see `orchestrator.md`).
+4. **After code changes, update the relevant YAML files.** See the Sync Protocol
+   section below.
 
 ---
 
@@ -132,7 +123,7 @@ some source files change without their YAML note. See the CI section of `SYNC_PR
 
 ## Быстрая маршрутизация задач
 
-| Task | Route to |
+| Task | Role note |
 |---|---|
 | Write or fix TypeScript / Playwright code | **Developer** |
 | Design module boundary, review architecture, new interface | **Architect** |
@@ -141,48 +132,48 @@ some source files change without their YAML note. See the CI section of `SYNC_PR
 | GitHub Actions workflow, CI/CD, secrets | **DevOps** |
 | "Is this feature worth building?" / user stories | **Business Analyst** |
 | Improve or fix any prompt (Ollama evaluator, agent, Code node) | **Prompt Engineer** |
-| "What should I work on next?" / task decomposition | **Orchestrator** |
+| "What should I work on next?" / task decomposition | **Planning / Roadmap** |
 | Evaluate a new feature idea / create roadmap tasks | **Product Manager** |
-| Cross-cutting concern touching multiple agents | **Architect** first, then delegate |
+| Cross-cutting concern touching multiple areas | **Architect** first, then the note for each affected area |
 
 ---
 
 ## Синхронизация при эволюции архитектуры
 
-When the project architecture evolves, the following update sequence keeps all agents
-aligned:
+When the project architecture evolves, the following update sequence keeps the notes
+consistent (the role note in brackets holds the relevant checklist; whoever makes the
+change does the step):
 
-1. **Architect** writes an ADR and appends it to `context/decisions.yaml`
-2. **Orchestrator** updates `context/roadmap.yaml` with new or modified task IDs
-3. **Developer** or **n8n Specialist** updates the relevant module YAML
-   (`context/modules/scraper.yaml` or `context/modules/n8n.yaml`) to reflect the
-   code changes
-4. **Prompt Engineer** reviews whether any agent skill prompts reference stale
-   information and makes surgical edits if needed
+1. Write an ADR and append it to `context/decisions.yaml` (architect)
+2. Update `context/roadmap.yaml` with new or modified task IDs (planning / roadmap)
+3. Update the relevant module YAML (`context/modules/scraper.yaml` or
+   `context/modules/n8n.yaml`) to reflect the code changes (developer / n8n specialist)
+4. Check whether any role note references stale information and make surgical edits if
+   needed (prompt engineer)
 5. The **context CI check** (`context-check.yml`) runs on pull requests: it warns, without
    failing, when some source files changed but their YAML note did not; the blocking
    `scripts/check-agent-surfaces.sh` job fails on missing paths in current notes
 
-This sequence ensures that agents always see a consistent project state at session
-start, regardless of when they were last used.
+This sequence keeps the notes consistent with the code, but they can still drift; the
+checked-in code and configuration remain the source of truth.
 
 ---
 
 ## Структура файлов агентов
 
-Each file in `docs/agents/` is both a human-readable reference document and a
-copy-paste system prompt. The sections inside each file follow this template:
+Each file in `docs/agents/` is a human-readable role note. Sections usually follow this
+template (not every note has every section):
 
 ```
-1. Системный промпт       — core identity paragraph (paste this into "system" field)
+1. Роль                   — one paragraph: the area and perspective this note covers
 2. Контекст проекта       — pipeline architecture, tech stack, context/ YAML pointers
-3. Responsibilities       — what this agent owns (bullets, domain-specific)
+3. Scope                  — what the area covers (bullets, domain-specific)
 4. Key rules / patterns   — hard constraints, canonical patterns with examples
-5. Output format          — required response structure for every answer
-6. Anti-patterns          — what the agent must refuse or flag immediately
-7. Example session        — one worked example showing correct agent behavior
+5. Output format          — suggested structure for this kind of result
+6. Anti-patterns          — what to refuse or flag
+7. Example                — one worked example
 ```
 
-All agents share two universal rules:
-- **Always load `context/project.yaml` first** at the start of each session
-- **Never do work outside their domain** — route to the correct specialist instead
+Shared conventions:
+- Notes are read on demand, not loaded at session start.
+- A task that spans areas uses each relevant note; it is not split between agents.

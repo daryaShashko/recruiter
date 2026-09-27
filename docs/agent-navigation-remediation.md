@@ -1,8 +1,8 @@
 # Agent navigation and safety remediation plan
 
-**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured; gap fixes rerun; Slice 3 done, pending review  
+**Status:** tool-agnostic setup implemented (Slices 1–2); Slice 0 baseline measured; gap fixes rerun; Slices 3–4 done, pending review  
 **Active workflow stage:** Verify  
-**Next gate:** review Slice 3, then Slice 4
+**Next gate:** review Slices 3–4, then Slice 5
 
 ## Goal
 
@@ -310,7 +310,7 @@ Known limitation: check 9 is a phrase heuristic (Russian and English wordings); 
 Next gate: review Slice 3 (including whether the new CI job should block), then Slice 4
 ```
 
-### Slice 4 — Simplify routing and prompt contracts
+### Slice 4 — Simplify routing and prompt contracts — **done, pending review**
 
 **Scope:** remove mandatory task IDs, Task Briefs, questions, and handoffs from
 `docs/agents/*.md` when the request is already clear (for example the Orchestrator's
@@ -319,6 +319,32 @@ role notes describe domain rules rather than claim to be separate agents.
 
 **Proof:** fixed clear-task cases complete without avoidable questions or handoffs; the
 ambiguous case still asks the minimum decision-changing question.
+
+```text
+Slice: 4 — Simplify routing and prompt contracts
+Changed files: docs/agents/{orchestrator,README,prompt-engineer,architect,product-manager,
+  business-analyst,developer,qa-engineer,devops,n8n-specialist}.md;
+  context/starters/new-session.md (persona lines only); context/SYNC_PROTOCOL.md
+  (pre-session checklist only)
+Before (Layer A / Layer B): 10 PASS, 0 FAIL (after Slice 3); 53 mandatory-ritual phrases
+  in role notes, starter and SYNC_PROTOCOL (session-start loads and status report,
+  mandatory task IDs, Task Brief contract, delegation/handoff rules, "system prompt"
+  headers, always-respond-in-N-sections) / rerun interaction: Claude PASS, Codex FAIL (C10)
+After (Layer A / Layer B): 10 PASS, 0 FAIL; 0 mandatory-ritual phrases (remaining
+  "Task Brief"/"task ID"/"handoff" hits are negations, optional templates, roadmap-ID
+  conventions, or the AGENTS.md ambiguity rule) / Layer B not run (deferred to Slice 5)
+Cases improved / regressed / unchanged: not measured (Slice 5)
+Proof/check and result: static only — before/after grep of ritual phrases (53 → 0); every
+  role note opens with a "role note, not an agent definition or system prompt" header,
+  consistent with AGENTS.md; domain rules, checklists, and prior decisions unchanged.
+Impact on agent navigation or safety: notes no longer tell an agent to load project and
+  roadmap YAML at session start, report roadmap status, require IDs or briefs, hand off
+  to other "agents", or ask for confirmation before clear work.
+Known limitation: static proof only. docs/ai-workflow.md (user-owned draft) still names
+  Codex subagents and asks for a Stage 0 "task envelope"; not edited. The SYNC_PROTOCOL
+  "Кто отвечает" column still lists role names.
+Next gate: Slice 5 — rerun Layer A and Layer B; add unseen cases to offset overfitting.
+```
 
 ### Slice 5 — Re-run benchmark and publish the delta
 

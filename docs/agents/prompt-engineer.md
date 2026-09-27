@@ -1,24 +1,26 @@
-# Агент: Prompt Engineer
+# Роль: Prompt Engineer
 
-> **Назначение файла:** Системный промпт для AI-агента Prompt Engineer.
-> Вставить содержимое раздела «System Prompt» в поле `system` при инициализации агента.
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для промптов
+> проекта. Читай его, когда задача касается промпта оценщика, роль-заметок в
+> `docs/agents/` или разбора текста в n8n Code nodes (см. `AGENTS.md`). Это не
+> определение агента и не системный промпт; он не запускает других агентов и не
+> передаёт им работу.
 
 ---
 
-## Системный промпт
+## Роль
 
 ```
-You are the Prompt Engineer for the "AI Recruiter" project — an automated IT job-hunting
-pipeline. You own every prompt in the system: the Ollama LLM evaluator prompt, the
-agent skill prompts in docs/agents/, and any JavaScript snippets in n8n Code nodes
-that transform or parse text.
+This note covers every prompt in the "AI Recruiter" project — an automated IT
+job-hunting pipeline: the Ollama LLM evaluator prompt, the role notes in docs/agents/,
+and any JavaScript snippets in n8n Code nodes that transform or parse text.
 
-Your job is NOT to write application code. Your job is to write, review, and maintain
-prompts that make the LLM and agents behave correctly and efficiently.
+Its focus is writing, reviewing, and maintaining prompts that make the LLM and agents
+behave correctly and efficiently; application code is covered by other role notes.
 
 Every prompt you write or review must be grounded in the project's hard constraints:
   - Local Ollama only — llama3.1:8b model, ~8k context window, no streaming
-  - Agent prompts are loaded at session start — token budget matters
+  - Role notes are read on demand alongside the task — token budget matters
   - YAML context files at context/ are the source of truth — never embed raw source code
     in agent prompts when a YAML reference suffices
 ```
@@ -100,15 +102,16 @@ Model constraints (llama3.1:8b):
 TYPE 2: AGENT SKILL PROMPTS (docs/agents/*.md)
 ───────────────────────────────────────────────
 
-  Goal: a human-readable file that doubles as a system prompt.
+  Goal: a human-readable role note (domain rules and checklists), not an agent
+  definition or system prompt.
   Target length: ≤ 800 tokens for simple agents, ≤ 2 000 tokens for complex ones.
 
   Required sections (in order):
-    1. Role identity — one paragraph, who the agent is and what it owns
+    1. Role — one paragraph: the area and perspective the note covers
     2. Project context — short: pipeline, tech stack, pointer to context/ YAML files
     3. Core responsibilities — bulleted, specific to this agent's domain
     4. Key constraints — the hard limits the agent must never violate
-    5. Output format — how the agent must structure its responses
+    5. Output format — a suggested structure, only where one helps the result
     6. Anti-patterns — what the agent must refuse or flag
 
   Token-efficiency rules for agent prompts:
@@ -116,9 +119,9 @@ TYPE 2: AGENT SKILL PROMPTS (docs/agents/*.md)
     - NEVER embed full file contents — write "See context/modules/scraper.yaml"
     - NEVER hardcode values that live in config.ts — write "See context/env.yaml"
     - DO write the exact YAML file path so the agent knows what to load
-    - At the start of the prompt, instruct the agent:
-        "Load context/project.yaml first. Then load the module YAML relevant to this
-         task. Only read actual source files if the YAML context is insufficient."
+    - Name the context/ file(s) relevant to the area. Do not add a mandatory
+      session-start load, task ID, Task Brief, handoff, or up-front questions: AGENTS.md
+      already covers when to read notes and when to ask.
 
 ───────────────────────────────────────────────
 TYPE 3: n8n CODE NODE SNIPPETS
@@ -208,14 +211,12 @@ Golden rule for agent prompts:
   Wrong: paste all of types.ts into the agent prompt
   Right: "All TypeScript interfaces are in context/interfaces.yaml"
 
-Session start instruction to include in every agent prompt:
-  "At the start of every session:
-   1. Load context/project.yaml — project overview, tech stack, current phase
-   2. Load the module YAML relevant to your task:
+Context pointer pattern for role notes (read when needed, not at session start):
+  "Relevant context for this area:
         context/modules/scraper.yaml  — for scraper work
         context/modules/n8n.yaml      — for n8n workflow work
         context/modules/ci.yaml       — for GitHub Actions work
-   3. Only read actual source files if the YAML context is insufficient."
+   Notes may be stale; verify important claims against the relevant source."
 
 Context YAML file map:
   context/project.yaml       — project overview, tech stack, current phase
@@ -278,7 +279,7 @@ When asked to review an existing prompt, check IN THIS ORDER:
       - Check: does the agent prompt embed full file contents instead of YAML refs?
 
   [6] YAML CONTEXT REFERENCES
-      - Agent prompts: does it point to context/ files at session start?
+      - Role notes: does it point to the relevant context/ files?
       - Are hardcoded values (interface shapes, config values) replaced with YAML refs?
 
   [7] HALLUCINATION TRAPS
@@ -365,9 +366,10 @@ PART 5 — SYNC NOTE
     Especially: agent prompts with duplicate information across sections.
     Fix: deduplicate, replace embedded content with YAML references.
 
-  MISSING_SESSION_BOOTSTRAP
-    Agent prompt does not instruct the agent to load context/project.yaml first.
-    Fix: add the standard session start instruction (see TOKEN EFFICIENCY section).
+  MANDATORY_RITUAL
+    Role note requires a session-start load, a task ID, a Task Brief, a handoff to
+    another "agent", or questions before a clear request can proceed.
+    Fix: remove the ritual and keep the domain rules; AGENTS.md covers when to ask.
 
   COT_ON_SMALL_MODEL
     Chain-of-thought instruction on the Ollama evaluator prompt.
@@ -434,33 +436,34 @@ What does NOT work well:
 ## Взаимодействие с командой
 
 ```
-## TEAM INTERACTION RULES
+## CHANGE CHECKLISTS
 
 When the evaluator prompt (n8n/prompts/evaluator.md) changes:
   1. Validate the new prompt against all edge cases in the evaluator.md Edge Cases table
   2. Check that the output contract { match, reason, url } is unchanged
-  3. If the output contract changes → flag for Architect (ADR required) and
-     n8n Specialist (Code: Parse Response node must be updated)
+  3. If the output contract changes → an ADR is required (architect.md) and the
+     Code: Parse Response node must be updated (n8n-specialist.md)
   4. Update context/modules/n8n.yaml to reflect the prompt change
   5. Note in SYNC_PROTOCOL whether the change triggers a cascade update
 
-When an agent skill prompt changes:
-  1. Make surgical edits — do NOT rewrite the entire prompt unless the agent's role changed
-  2. Check if the changed section is referenced by the Orchestrator's routing rules
+When a role note changes:
+  1. Make surgical edits — do NOT rewrite the entire note unless its area changed
+  2. Check if the changed section is referenced by the role-note lookup in
+     orchestrator.md or docs/agents/README.md
   3. Update context/decisions.yaml if the change reflects an architectural decision
-  4. If the agent now references a new context/ YAML file, verify that file exists
+  4. If the note now references a new context/ YAML file, verify that file exists
 
-When asked to create a NEW agent skill prompt:
-  1. Follow the required sections template (Role → Context → Responsibilities →
+When asked to create a NEW role note:
+  1. Follow the required sections template (Role → Context → Scope →
      Constraints → Output Format → Anti-patterns)
-  2. Include the standard session bootstrap instruction
-  3. Verify the Orchestrator's routing rules cover this new agent
-  4. Add the agent to docs/agents/README.md agent roster
+  2. Point to the relevant context/ files (no session-start ritual)
+  3. Add it to the role-note lookup in orchestrator.md
+  4. Add it to the docs/agents/README.md roster
 
-Do NOT:
-  - Write TypeScript or n8n workflow code — delegate to Developer or n8n Specialist
-  - Make architecture decisions about interfaces — delegate to Architect
-  - Change the output contract of the evaluator without an ADR from the Architect
+Out of scope for this note:
+  - TypeScript or n8n workflow code — see developer.md or n8n-specialist.md
+  - Interface decisions — see architect.md (ADR)
+  - Changing the evaluator output contract without an ADR
 ```
 
 ---

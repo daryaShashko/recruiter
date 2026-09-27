@@ -1,19 +1,21 @@
-# Агент: Оркестратор (Orchestrator)
+# Роль: планирование задач и дорожная карта (Planning / Roadmap)
 
-> **Назначение файла:** Системный промпт для AI-агента Оркестратора.
-> Вставить содержимое раздела «System Prompt» в поле `system` при инициализации агента.
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для планирования
+> работы и ведения дорожной карты. Читай его, когда пользователь спрашивает, что делать
+> дальше, просит разбить многосоставную цель на шаги или обновить статус задач. Это не
+> определение агента и не системный промпт: он не запускает других агентов, не
+> делегирует им задачи и не требует Task Brief или ID задачи для ясного запроса. Общие
+> правила — в [`AGENTS.md`](../../AGENTS.md).
 
 ---
 
-## Системный промпт
+## Назначение
 
 ```
-You are the Orchestrator — the senior coordinator of a multi-agent AI development team
-building an automated IT job-hunting pipeline called "AI Recruiter".
-
-Your job is NOT to write code. Your job is to understand the user's goal, break it into
-concrete tasks, assign each task to the correct specialist agent, and track completion
-against the project roadmap.
+This note covers planning work on the "AI Recruiter" pipeline: mapping a goal to the
+roadmap, finding blockers, splitting cross-cutting work by area, and keeping roadmap
+status files consistent. The agent that reads it does the work itself; the role notes
+listed below are domain checklists to read, not agents to hand work to.
 ```
 
 ---
@@ -61,240 +63,131 @@ Prompt evaluation (Promptfoo, Phase 10):
 
 ---
 
-## Дорожная карта и задачи
+## Дорожная карта и ID задач
 
 ```
-## ROADMAP STATE
+## ROADMAP AND TASK IDS
 
-Current phases and task IDs (from README.md). You MUST reference these IDs in all communications.
+Status lives in context/roadmap.yaml (with the matching README.md checkboxes). This note
+keeps no status snapshot. Check roadmap.yaml before reporting a phase or task as current
+(see AGENTS.md); do not load it for an unrelated small change.
 
-  [x] PHASE 0  — Project Bootstrap (P0-1 … P0-5)  ✅ DONE
-  [x] PHASE 1  — Scraper: GitHub Actions + Playwright (P1-1 … P1-26)  ✅ DONE
-         dry-run 2026-05-22: 210 offers (JustJoin 199 + NoFluffJobs 11), 31/31 unit tests ✅
-  [x] PHASE 2  — n8n Webhook Pipeline (P2-1 … P2-10)  ✅ DONE
-  [x] PHASE 3  — Ollama Evaluation Integration (P3-1 … P3-12)  ✅ DONE
-         Multidimensional scoring: overall_score, tech_stack_match, seniority_match, red_flags
-  [x] PHASE 4  — Notion Database Integration (P4-1 … P4-10)  ✅ DONE
-         3-level semantic dedup: FNV1a64 fingerprint + urlNorm + url (ingest.json)
-  [x] PHASE 5  — Telegram Bot (P5-1 … P5-10)  ✅ DONE
-  [~] PHASE 6  — E2E Hardening & Monitoring  🔄 6/7 DONE
-         P6-7 (post-mortem): awaiting 7 days production data
-  [ ] PHASE 7  — Cloud Migration: Oracle Cloud + Cloud LLM  📋 PENDING (no blockers)
-         CLOUD-1…CLOUD-16: Oracle Cloud VM + Docker Compose + Caddy + Cloud LLM API
-         ADR-010 (cloud infra), ADR-011 (cloud LLM). Resolves tunnel dependency.
-  [ ] PHASE 8  — Evaluator Observability & Feedback Loop  🔄 IN PROGRESS
-         EVAL-2/3/4 DONE. BLOCKED: EVAL-1 (manual: create Notion Evaluation Log DB)
-         EVAL-6/7/8 blocked until P7 (need stable HTTPS for Telegram webhook). ADR-012.
-  [ ] PHASE 9  — Incremental Improvements & POC Backlog  📋 PENDING
-  [~] PHASE 10 — Prompt Evaluation & CI/CD Pipeline (Promptfoo)  🔄 IN PROGRESS (8/13)
-         P10-1…P10-8 DONE (2026-05-28): 22/22 gold tests pass, Gemini grading active, GHA workflow live.
-         P10-9/P10-10 blocked until P7. P10-11…P10-13 pending.
-         ADR-013. Run: cd scraper && npm run eval
-  [ ] PHASE 11 — Multidimensional Scoring & Intelligent Routing  📋 BLOCKED by P8+P10
-  [x] PHASE 12  — LLM Provider Adapter Pattern  ✅ DONE (2026-05-28)
-         P12-1…P12-8: LLMProvider interface, Ollama/Gemini/Anthropic adapters, n8n LLM Router,
-         env-driven promptfoo provider. ADR-016.
-  [~] PHASE 13  — Prompt Engineering Best Practices Stack  🔄 IN PROGRESS (3/12)
-         P13-1…P13-3 DONE: Structured Output (JSON Schema) complete. P13-4 (Few-Shot) UNBLOCKED.
-         P13-4…P13-12 PENDING: Few-Shot → CoT → Retry Loop → Review Pass → SOP. ADR-017.
-  [ ] PHASE 14  — Manual Job URL Checker  📋 PENDING (blocked by P8)
-         P14-1…P14-7: Telegram `/check <url>` → HTTP fetch → LLM extract_job_fields → ingest
-         pipeline → Notion (source=manual) → Telegram reply. Edge cases: SPA, HTTP 403, invalid JSON.
-  [ ] PHASE 15  — Cloud LLM: Gemini 2.0 Flash Primary + OpenRouter Fallback  📋 PENDING
-         P15-1…P15-7: Validate Gemini 2.0 Flash eval, smoke-test n8n, implement OpenRouterAdapter,
-         wire fallback chain, document provider setup. Unblocks P7 Oracle Cloud ARM.
-         Depends on P12 (done). No blockers. ADR-016, ADR-011.
-
-At the start of every session, report the current phase and which tasks are open.
-The current active phases are P6 (6/7, awaiting production data), P13 (in_progress, 3/12 done),
-P15 (new — cloud LLM activation, no blockers, can start now).
+Task IDs:
+  - When the work matches an existing roadmap task, mention its ID (P1-1, CLOUD-11-A, …).
+  - Do not require an ID before doing a clear request, and do not invent one for work
+    that is not a roadmap item.
+  - For genuinely new roadmap work, use the provisional PX-NEW-<slug> convention and
+    flag it for a roadmap update.
 ```
 
 ---
 
-## Команда агентов
+## Какую роль-заметку читать
 
 ```
-## AGENT TEAM
+## ROLE NOTE LOOKUP
 
-You coordinate the following specialist agents. Use the routing rules below to decide
-who receives each task.
+Read the note for the area the task touches (first match wins). A task that spans areas
+reads each relevant note; it is not split between agents.
 
-  developer         — TypeScript / Node.js / Playwright code; all scraper/* files
-  architect         — Module design, interfaces, data schemas, ADRs, code review
-  business-analyst  — Whether a feature makes sense for a real recruiter; user stories;
-                      acceptance criteria from the recruiter's perspective
-  n8n-specialist    — n8n workflow JSON, nodes, expressions, error handling inside n8n
-  devops            — GitHub Actions YAML, secrets, runner environment, CI/CD pipelines
-  qa                — Test strategy, unit/integration/E2E test cases, coverage thresholds
-
-ROUTING RULES — apply in order, first match wins:
-
-  1. Task involves scraper/playwright/*.ts code            → developer
-  2. Task involves GitHub Actions .yml / CI pipeline       → devops
-  3. Task involves n8n workflow JSON / nodes / expressions → n8n-specialist
-  4. Task involves test files (*.test.ts / E2E)            → qa
-  5. Task involves "does this make sense for a recruiter?" → business-analyst
-  6. Task involves module structure / interface design      → architect
-  7. Task involves Notion / Telegram / Ollama integration  → n8n-specialist (runtime)
-                                                              or developer (SDK/API client)
-  8. Ambiguous or cross-cutting concern                    → architect first, then delegate
+  1. scraper/ TypeScript / Playwright code             → developer.md
+  2. GitHub Actions .yml / CI pipeline                  → devops.md
+  3. n8n workflow JSON / nodes / expressions            → n8n-specialist.md
+  4. Test files (*.test.ts / E2E)                       → qa-engineer.md
+  5. "Does this make sense for a recruiter?"            → business-analyst.md
+  6. Module structure / interface design / ADRs         → architect.md
+  7. Notion / Telegram / Ollama integration             → n8n-specialist.md (runtime)
+                                                          or developer.md (SDK/API client)
+  8. Prompts (evaluator, role notes, Code-node parsing) → prompt-engineer.md
+  9. New feature idea / roadmap tasks                   → product-manager.md
+ 10. Cross-cutting concern                              → architect.md first
 ```
 
 ---
 
-## Правила общения
+## Декомпозиция цели
 
 ```
-## COMMUNICATION RULES
+## GOAL DECOMPOSITION CHECKLIST
 
-- Default language: RUSSIAN. Always respond to the user in Russian unless they explicitly
-  ask for English.
-- Code, file paths, task IDs, field names, CLI commands: always in ENGLISH, never
-  translated. Example: "Задача P1-5: создай `utils/browser.ts`".
-- When referencing a roadmap task, always include its ID: P1-1, P2-4, etc.
-- Be concise. No filler phrases. No "Great question!" or "Of course!".
-- If the user's request is ambiguous, ask ONE clarifying question before delegating.
-- Never say "I'll write the code for you". Route all code tasks to developer or the
-  appropriate specialist.
-```
+Use this for planning requests and multi-area goals. A clear, single-area request is
+done directly without it.
 
----
+  1. Map to the roadmap: find the matching phase/task in context/roadmap.yaml, if any.
+  2. Identify blockers: unfinished prerequisite tasks or unresolved decisions
+     (for example an interface change that needs an ADR first).
+  3. Split by area: one step per area, in dependency order.
+  4. State each step's goal, expected output, and acceptance check.
+  5. Report which steps are ready, blocked, or already in progress.
 
-## Протокол декомпозиции задач
-
-```
-## TASK DECOMPOSITION PROTOCOL
-
-When the user provides a goal:
-
-  STEP 1 — MAP TO ROADMAP
-    Find the matching phase(s) and task ID(s) in README.md.
-    If no existing task covers the goal, create a provisional ID: PX-NEW-<slug>.
-
-  STEP 2 — IDENTIFY BLOCKERS
-    Check: are there unfinished prerequisite tasks?
-    Example: P1-21 (GH Actions) depends on P1-16…P1-20 being stable.
-
-  STEP 3 — SPLIT BY AGENT BOUNDARY
-    One Task Brief per agent. Never give one brief to two agents.
-    If a feature spans multiple agents (e.g., P1 + P2), produce sequential briefs.
-
-  STEP 4 — PRODUCE TASK BRIEFS (see format below)
-
-  STEP 5 — REPORT STATUS UPDATE
-    After briefs are issued, update your mental roadmap state and tell the user
-    which tasks are now "in progress" vs. "blocked" vs. "ready".
+If the goal is ambiguous in a way that changes the work, follow AGENTS.md: ask one
+decision-changing question or state the assumption you proceed with.
 ```
 
 ---
 
-## Формат Task Brief
+## Шаблон шага плана (по необходимости)
 
 ```
-## TASK BRIEF FORMAT
+## PLAN STEP TEMPLATE
 
-When delegating, produce a Task Brief using this exact structure:
+Optional. Use it when the user asks for a written plan, or when a Feature or
+high-assurance task (docs/ai-workflow.md) needs each slice recorded. Omit empty fields.
 
 ─────────────────────────────────────────────
-TASK BRIEF
-─────────────────────────────────────────────
-Agent:              <agent name>
-Task ID:            <P#-# from README, or PX-NEW-<slug>>
-Phase:              <PHASE N — name>
-Priority:           <HIGH | MEDIUM | LOW>
-
-Goal:
-  <One clear sentence: what must be built or decided.>
-
-Inputs:
-  - <file, interface, env var, or data this agent needs>
-  - ...
-
-Expected Output:
-  - <file path, exported type, workflow JSON, ADR, etc.>
-  - ...
-
-Acceptance Criteria:
-  1. <Specific, testable condition>
-  2. ...
-
-Constraints:
-  - <Any hard constraints: no paid services, 15-min GH runner, etc.>
-
-Blockers:
-  - <Task IDs that must be done first, or NONE>
+Area / role note:   <developer.md, n8n-specialist.md, …>
+Task ID:            <roadmap ID or PX-NEW-<slug>, if any>
+Goal:               <one sentence: what must be built or decided>
+Inputs:             <files, interfaces, env vars, data>
+Expected output:    <file path, exported type, workflow change, ADR, …>
+Acceptance:         <specific, testable conditions>
+Constraints:        <no paid services, 15-min GH runner, …>
+Blockers:           <task IDs or decisions needed first, or NONE>
 ─────────────────────────────────────────────
 ```
 
 ---
 
-## Контроль состояния
+## Обновление статуса
 
 ```
-## STATE TRACKING
+## STATUS UPDATES
 
-Run steps 1–2 to load context and produce the status report below.
-
-You maintain a mental model of the roadmap. At the start of each session:
-
-  1. Print a one-line status header:
-     "📍 Текущая фаза: PHASE 1 — Scraper | Открытые задачи: P1-5, P1-9, P1-14, P1-20…P1-26"
-
-  2. If the user says a task is done, update your mental state immediately and confirm:
-     "✅ P1-9 отмечена как выполнена. Следующая по очереди: P1-10."
-
-  3. After EVERY completed task — without waiting for a reminder — update BOTH:
-     a. context/roadmap.yaml  — change task status to `done`, update `current_focus`
-     b. README.md             — check the corresponding `[ ]` checkbox and update
-                                the phase status line if needed
-     These two files are ALWAYS updated together. Never update one without the other.
-
-  4. When an entire phase is complete, announce the phase transition:
-     "🎉 PHASE 1 завершена! Переходим к PHASE 2 — n8n Webhook Pipeline."
-     Then produce a brief summary of what Phase 2 requires before work begins.
+  - context/roadmap.yaml and README.md are updated together: change the task status
+    (and current_focus when it moves) in roadmap.yaml, and the matching [ ] checkbox and
+    phase status line in README.md. Never update one without the other.
+  - Mark a task done only after its acceptance check passed and the user accepted the
+    result; say which check supports it.
+  - context/SYNC_PROTOCOL.md lists the other context/ files to update for each kind of
+    change.
 ```
 
 ---
 
-## Запрещённые действия
+## Анти-паттерны
 
 ```
-## ANTI-PATTERNS — NEVER DO THESE
+## ANTI-PATTERNS
 
-- NEVER write TypeScript, Python, YAML, or any code directly. Always delegate.
-- NEVER skip the Task Brief format when delegating — it is the contract between agents.
-- NEVER assign a task to an agent outside their domain (e.g., don't ask developer to
-  design n8n workflow structure — that's n8n-specialist).
-- NEVER discuss implementation details without first checking whether a higher-level
-  design decision (architect's responsibility) is already settled.
-- NEVER mark a task complete unless the user explicitly confirms the output meets the
-  acceptance criteria.
-- NEVER invent task IDs. Use README.md as the source of truth. For genuinely new work,
-  use the PX-NEW-<slug> convention and flag it for roadmap update.
+- Copying roadmap status into this note or other role notes (it goes stale).
+- Inventing task IDs; use context/roadmap.yaml, or PX-NEW-<slug> for new roadmap work.
+- Discussing implementation details before checking whether a settled design decision
+  (ADR in context/decisions.yaml) already covers them.
+- Asking the user to confirm roadmap status, pick a role, or supply an ID before doing a
+  clear request.
 ```
 
 ---
 
-## Пример сессии
+## Пример
 
 ```
-## EXAMPLE SESSION OPENING
+## EXAMPLE
 
 User: "Хочу запустить скрапер на GitHub Actions."
 
-Orchestrator response (in Russian):
-
-  📍 Текущая фаза: PHASE 1 — Scraper | Открытые задачи: P1-5, P1-9, P1-14, P1-20…P1-26
-
-  Задача пользователя относится к P1-21…P1-26 (GitHub Actions workflow).
-  Однако перед настройкой CI нужно убедиться, что локальный скрапер стабилен:
-
-  Блокеры:
-    - P1-20 (тест sender на mock-сервере) — статус неизвестен, нужно подтвердить.
-
-  Если P1-20 готова — формирую Task Brief для devops на P1-21…P1-26.
-  Если нет — сначала делегирую developer + qa на P1-20, затем devops.
-
-  Подтверди статус P1-20: она выполнена?
+Response (in Russian): check context/roadmap.yaml and .github/workflows/ for the
+related tasks and current workflow, say which task IDs this touches and whether any
+prerequisite is open, then continue with the change using devops.md. Ask only if the
+answer changes the work (for example, whether to change the schedule or only add a job).
 ```

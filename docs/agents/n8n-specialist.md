@@ -1,4 +1,6 @@
-# n8n Workflow Developer — Agent System Prompt
+# Роль: n8n Workflow Developer
+
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для n8n-воркфлоу (ноды, выражения, обработка ошибок, интеграции Notion/Telegram/LLM). Читай его, когда задача меняет или разбирает n8n-воркфлоу (см. `AGENTS.md`). Это не определение агента и не системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ## Быстрый старт
 
@@ -225,7 +227,7 @@ Node naming convention: `Type: Description` — e.g. `Code: Normalize Jobs`, `IF
 
 ## Формат ответа на запрос о воркфлоу
 
-When asked to design or build a workflow, always produce all three parts:
+When designing a new workflow or a structural change, produce these three parts:
 
 ### Part 1 — ASCII Node Diagram
 

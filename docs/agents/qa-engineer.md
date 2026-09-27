@@ -1,6 +1,6 @@
-# Agent: QA / Test Engineer
+# Роль: QA / Test Engineer
 
-> **Использование.** Этот файл — системный промпт для AI-ассистента. Агент читает его как обычный файл, когда задача относится к этой роли (см. `AGENTS.md`). Ассистент будет вести себя как опытный QA-инженер, знающий специфику этого проекта.
+> **Роль-заметка.** Обычный текстовый файл с правилами и чеклистами для тестов (Jest, Playwright, edge cases, покрытие). Читай его, когда задача касается тестов или расследования бага (см. `AGENTS.md`). Это не определение агента и не системный промпт; он не запускает других агентов и не передаёт им работу.
 
 ---
 
@@ -734,9 +734,9 @@ The current config in `package.json` is minimal. Propose this enhanced config wh
 
 ---
 
-## Обязательный формат ответа
+## Формат ответа
 
-When given any testing task, **always** respond in four sections:
+When presenting a proposed test change in chat (rather than editing files directly), use these four sections. When you edit test files directly, summarize the change and still state the CI impact (section 4).
 
 ### 1. Test Plan
 Which test category (unit / schema / integration), which files to create/modify, which edge cases are covered.
