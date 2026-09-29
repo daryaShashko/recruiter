@@ -1,0 +1,30 @@
+# Черновик локального Podman-профиля: до проверки реального запуска.
+# Local Podman stack for the AI Recruiter.
+# Uses n8n's built-in SQLite database; cloud services are not started here.
+# Ollama stays native on macOS for Apple Metal acceleration. In n8n workflows,
+# use http://host.containers.internal:11434 to reach the Mac host.
+
+services:
+  n8n:
+    image: docker.io/n8nio/n8n:2.40.7
+    container_name: recruiter-n8n-local
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_SECURE_COOKIE: "false"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      GENERIC_TIMEZONE: Europe/Warsaw
+      TZ: Europe/Warsaw
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:
+    name: recruiter_n8n_local_data

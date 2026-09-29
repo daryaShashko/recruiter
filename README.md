@@ -16,11 +16,17 @@ GitHub Actions (Playwright) → POST /webhook → n8n → LLM (Ollama / Groq / G
 Telegram (ручная ссылка)  ──────────────────→ n8n → Notion (Kanban) + Telegram Alert (👍/👎)
 ```
 
-> **Текущий режим:** n8n локально + Ollama локально + tunnel
+> **Локальная проверка:** n8n в Podman + Ollama на macOS. Текущий статус облачных запусков отдельно не подтверждён.
 >
 > **Планируется (P7):** Oracle Cloud Always Free (ARM, 24 GB RAM) + Cloud LLM (Groq/Gemini)
 >
 > Подробности: [docs/architecture.md](docs/architecture.md) | [ADR-010](docs/adr/ADR-010-cloud-migration-oracle.md) | [ADR-011](docs/adr/ADR-011-cloud-llm-migration.md)
+
+## Локальная разработка (черновик)
+
+Черновая инструкция локального Podman-профиля (n8n + SQLite; Ollama остаётся на macOS):
+[docs/local-development.md](docs/local-development.md). Запуск контейнера:
+`./scripts/start-local.sh`. Профиль ещё не проверен фактическим запуском на macOS.
 
 ---
 
