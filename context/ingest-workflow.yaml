@@ -125,7 +125,8 @@ key_logic:
       Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: Ingest Jobs is active, 27 nodes; the router uses
       this.helpers.httpRequest, no $env, no explicit timeout, and no `const provider = '...'`
       literal, so it matches neither generator exactly. Models in the workflow:
-      gemini-2.0-flash, gemini-2.5-flash. How the provider is selected is not yet checked.
+      gemini-2.0-flash, gemini-2.5-flash. How the provider and key are selected is deliberately not checked (personal
+      project, no other n8n users); see the sharing checklist in TODO.md.
     env_var: "$env.LLM_PROVIDER (+ $env.LLM_MODEL, $env.LLM_BASE_URL, $env.LLM_API_KEY) — p12_6 version only"
     # The per-provider lines below describe the p12_6 version (timeouts); see deployed above.
     ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
