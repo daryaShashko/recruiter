@@ -1,7 +1,9 @@
 name: TEMP Cloudflare Direct HTTP Check
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - experiment/cf-direct-http-check
 
 jobs:
   check:
