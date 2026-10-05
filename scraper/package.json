@@ -35,6 +35,7 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testTimeout": 60000
+    "testTimeout": 60000,
+    "roots": ["<rootDir>", "<rootDir>/../n8n"]
   }
 }

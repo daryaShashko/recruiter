@@ -102,10 +102,23 @@ key_logic:
     review: "overall_score 50-79  → Notion Board (Review, silent)"
     discard: "overall_score < 50   → Eval Log only"
     force_zero: >
-      Hard rejection → sets overall_score=0 programmatically (Code: Parse Ollama Response):
-      Crypto/Web3, Gambling/Betting, Agency/Outsourcing,
-      Wrong location (not remote AND not Gdańsk/Tricity),
-      Salary below 18 000 PLN net hard floor.
+      Read directly from the live "Code: Parse Ollama Response" node via the n8n API on
+      2026-10-05 (not from a doc assumption — see ADR-019). Programmatic (score forced to
+      0 by code, independent of what the LLM says): Crypto/Web3 (title/body keyword match),
+      Gambling/Betting (title/body keyword match), Agency/Outsourcing (company name or
+      body keyword match — epam/luxoft/capgemini/accenture/sii/infosys/cognizant/wipro/
+      tcs/outstaffing/etc.), and any red flag (LLM-reported or programmatic) that maps to
+      one of 6 CRITICAL_FLAGS tags (Crypto/Web3, Gambling/Betting, Agency/Outsourcing,
+      "Salary: Below Hard Floor", "Stack: Legacy/Non-JS", "Stack: Pure Backend").
+      NOT a hard reject (contrary to what this file said before): location. Missing a
+      Gdańsk/Tricity mention only costs a 10-point penalty (if remote/hybrid) or 20-point
+      penalty (otherwise) — "no city is a hard reject" per the live code's own comment.
+      NOT a programmatic check: the 18 000 PLN salary floor. There is no numeric salary
+      comparison in code — it is enforced only if the LLM itself emits a red flag that
+      textually matches "hard floor" (mapped to the "Salary: Below Hard Floor" CRITICAL
+      tag), i.e. it's LLM-judgment-dependent, not a guaranteed hard floor.
+      Ported verbatim (including these specifics) to n8n/evaluator/scoring.ts
+      (Jest-tested); not yet wired into the live n8n workflow.
 
   dedup_strategy:
     level_1_fingerprint: "FNV1a64( normalizeCompany(company) + '::' + normalizeTitle(title) )"
@@ -116,22 +129,29 @@ key_logic:
 
   llm_providers:
     source: >
-      Inline code of Code: LLM Router in the local export. n8n/providers/*.ts adapters are
-      NOT used by the node (P15-5). Two generator versions:
-      scripts/p12_6_llm_router.py — $env.LLM_PROVIDER, fetch, timeouts below;
-      scripts/patch_llm_router.py (CLOUD-11-A, later) — provider/model/key hardcoded
-      (gemini, gemini-2.0-flash), no $env, this.helpers.httpRequest, no explicit timeout.
+      Inline code of Code: LLM Router, read directly from the live n8n API on 2026-10-05
+      (ADR-019) — not either historical generator script, and not what P15's roadmap
+      entry assumed. Fallback order is PROVIDER_ORDER = ['openrouter', 'gemini']
+      (OpenRouter PRIMARY, Gemini FALLBACK — inverted from P15's stated goal of
+      "Gemini primary, OpenRouter fallback"; someone edited this by hand in the n8n UI
+      after P15 was written and never updated the roadmap). Models: OpenRouter
+      deepseek/deepseek-chat-v3-0324 (no :free suffix), Gemini gemini-2.5-flash (not
+      2.0-flash). Both API keys are hardcoded as plaintext string literals directly in
+      the Code node — NOT stored in n8n's credential vault. No explicit timeout on
+      either call. Anthropic/Ollama branches exist in the code but are unreachable
+      (not in PROVIDER_ORDER).
+      Two old generator scripts exist and are both stale: scripts/p12_6_llm_router.py
+      ($env.LLM_PROVIDER, fetch) and scripts/patch_llm_router.py (CLOUD-11-A, hardcoded
+      single provider, this.helpers.httpRequest) — neither reflects the live fallback-chain
+      code described above.
+    ported_to_ts: >
+      n8n/evaluator/router.ts (Jest-tested) ports this fallback logic verbatim, reusing
+      the already-existing n8n/providers/*.ts adapters (ADR-016) instead of a third
+      reimplementation. Not yet wired into the live n8n workflow — see ADR-019.
     deployed: >
-      Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: Ingest Jobs is active, 27 nodes; the router uses
-      this.helpers.httpRequest, no $env, no explicit timeout, and no `const provider = '...'`
-      literal, so it matches neither generator exactly. Models in the workflow:
-      gemini-2.0-flash, gemini-2.5-flash. How the provider and key are selected is deliberately not checked (personal
-      project, no other n8n users); see the sharing checklist in TODO.md.
-    env_var: "$env.LLM_PROVIDER (+ $env.LLM_MODEL, $env.LLM_BASE_URL, $env.LLM_API_KEY) — p12_6 version only"
-    # The per-provider lines below describe the p12_6 version (timeouts); see deployed above.
-    ollama: "POST {LLM_BASE_URL}/api/chat; model={LLM_MODEL}; format=JSON Schema; keep_alive=0; timeout=300s"
-    gemini: "POST generativelanguage.googleapis.com; model=gemini-2.0-flash (deployed workflow also has gemini-2.5-flash); responseMimeType=application/json; timeout=60s"
-    anthropic: "POST api.anthropic.com; tool_use structured output; timeout=60s"
+      Checked 2026-09-27 (and re-confirmed 2026-10-05) with scripts/inspect-n8n.py against
+      the cloud n8n: Ingest Jobs is active, 27 nodes; scripts/check-n8n-drift.py now runs
+      this check automatically (daily GH Action) instead of only on manual request.
     output_schema: "{ overall_score, tech_stack_match, seniority_match, red_flags[], reason, url }"
 
   telegram_alert:
