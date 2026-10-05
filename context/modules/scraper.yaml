@@ -75,9 +75,10 @@ files:
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://justjoin.it"
     api_endpoint: "https://justjoin.it/api/candidate-api/offers" # verified via DevTools 2025-05
-    method: "GET via interception, with direct-API fallback if click flow yields 0 offers"
-    navigation_url: "https://justjoin.it/job-offers/all-locations/javascript?orderBy=descending&sortBy=publishedAt"
-    response_path: "json.data"
+    method: >
+      Direct axios GET — no browser (ADR-019, 2026-10). Re-verified reachable
+      from a GitHub Actions runner (no Cloudflare 403 for this endpoint anymore).
+    response_path: "response.data.data"
     id_format: "justjoin_{raw.slug}"
     status: implemented
     salary_source: "employmentTypes[] — prefer currency=PLN + currencySource=original + type=b2b + unit=Month"
@@ -85,39 +86,53 @@ files:
     body_strategy: "buildBody() — synthetic from title + experienceLevel + requiredSkills + niceToHaveSkills + locations"
     pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
     pagination:
-      mechanism: "Capture totalItems from first page and fetch from offsets 100, 200, ... via browser-context fetch"
+      mechanism: "fetchOffersPage(from) via axios; from=0,100,200,... with a 300ms delay between requests"
       page_size: 100
       safety_cap: 30
     known_gaps:
       - "No body text in list API — Ollama evaluates from structured fields only"
-      - "Fallback query params may require refresh if JustJoin API contract changes"
+      - "Direct API query params may require refresh if JustJoin API contract changes"
     never_throws: true # catches internally, returns [] on failure
 
   src/scrapers/nofluffjobs.ts:
     exports: [scrapeNoFluffJobs]
     signature: "() => Promise<JobOffer[]>"
     base_url: "https://nofluffjobs.com"
-    method: "SSR extraction — reads Angular serverApp-state from <script id='serverApp-state'> embedded in page HTML"
-    note: "2026-05: NFJ switched from POST XHR /api/search/posting to Angular SSR. No XHR interception needed."
-    navigation_url: "https://nofluffjobs.com/pl/praca/javascript"
-    ssr_state_key: "STORE_KEY"
-    response_path: "STORE_KEY.searchResponse.postings"
+    method: >
+      Direct axios POST — no browser (ADR-019, 2026-10). Calls the same
+      /api/search/posting endpoint the site's own "Pokaż kolejne oferty"
+      (load more) button uses, captured via DevTools.
+      SUPERSEDED: the 2026-05 "Angular SSR, cumulative ?page=N" approach
+      documented below no longer works — ?page=N echoes back in the response
+      but the embedded postings never change, and the real last page returns
+      a null searchResponse. Re-verified with an actual browser, not just HTTP —
+      this was a site-side contract change, not a Playwright-vs-HTTP issue.
+    api_endpoint: "https://nofluffjobs.com/api/search/posting"
+    request_shape:
+      method: POST
+      query_params: "withSalaryMatch=true, pageTo=N (1-based), pageSize=20, salaryCurrency=original, salaryPeriod=original, region=pl, language=pl-PL"
+      body: '{ criteria: "", url: { searchParam: "praca", searchParam2: "javascript" }, rawSearch: "praca javascript", pageSize: 20, withSalaryMatch: true }'
+      critical_header: >
+        Content-Type: application/infiniteSearch+json — load-bearing. A plain
+        "application/json" on the identical request makes the server silently
+        re-send the full first-page snapshot (duplicated) on every pageTo
+        instead of the next batch. No cookies/session/nfj-global-context
+        header required.
+    response_path: >
+      response.data.postings when non-empty, else
+      response.data.additionalSearch[0].postings (used when the site segments
+      results by its "Salary Match" feature). See extractPostingsBatch().
     id_format: "nofluffjobs_{raw.reference}" # reference is stable across location variants
     status: implemented
     pagination:
       mechanism: >
-        SSR is cumulative: page N contains items 1..N*pageSize.
-        Step 1: load page 1 → read totalPages.
-        Step 2: if totalPages > 1, navigate to page=totalPages → get ALL postings in one HTML response.
-        Result: max 2 HTTP requests regardless of total page count.
-      page_param: "URL query: ?page=N (1-based)"
-      total_pages_field: "STORE_KEY.searchResponse.totalPages"
+        Loop pageTo=1..totalPages (from the pageTo=1 response), one POST per
+        page, with a 500ms delay between calls — removing the delay was
+        observed to make the server fall back to the full-snapshot behavior
+        above instead of real pagination.
+      page_size: 20
       safety_cap: 20
-    ssr_response_shape: # confirmed via dry-run 2026-05-22
-      STORE_KEY.searchResponse.postings: RawNoFluffPosting[]
-      STORE_KEY.searchResponse.totalPages: number
-      STORE_KEY.searchResponse.totalCount: number
-      STORE_KEY.params.page: number
+      coverage: "~104/108 (~96%) unique postings per run as of 2026-10-05; not 100% (not investigated further)"
     salary_logic: "extractSalary() — requires disclosedAt=VISIBLE; returns 'from–to CURRENCY TYPE/mo'"
     location_logic: "location.fullyRemote → 'Remote'; places[].city contains Gdańsk → 'Gdańsk'; else first non-provinceOnly city"
     body_strategy: "buildBody() — synthetic from title + company + category + seniority + technology + tags + locations"
@@ -125,7 +140,8 @@ files:
     dedup: "deduplicateByReference() — same job appears once per location; keeps remote > Gdańsk > first seen"
     known_gaps:
       - "No full job description in list API — LLM evaluates from structured fields only"
-      - "SSR schema is not public — may break on NFJ frontend changes (use debug-urls.ts to re-check)"
+      - "/api/search/posting is undocumented/unversioned — may break again on NFJ frontend changes"
+      - "robots.txt disallows /api/ on nofluffjobs.com — already effectively hit via Playwright XHR interception pre-2026-05, not a new policy stance, but worth tracking (see ADR-019)"
     never_throws: true # catches internally, returns [] on failure
 
   src/debug-urls.ts:
@@ -144,6 +160,11 @@ files:
     note: "Always close context in finally block after scraping"
 
 playwright_contract:
+  scope: >
+    No longer used by justjoin.ts or nofluffjobs.ts (ADR-019, 2026-10 — both call
+    their APIs directly via axios). Still used by src/check-manual.ts (manual job
+    submission from an arbitrary URL — genuinely needs a real browser) and the
+    debug scripts src/debug-urls.ts / src/scrape-one.ts.
   method: "XHR interception — page.on('response', handler)"
   never_use: "DOM selectors (page.$, page.locator)"
   never_use_reason: "Cloudflare blocks headless patterns; DOM breaks on UI changes"

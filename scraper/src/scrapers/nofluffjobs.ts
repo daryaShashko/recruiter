@@ -1,15 +1,27 @@
+import axios from "axios";
 import { JobOffer } from "../types";
-import { openPage } from "../utils/browser";
 import { config } from "../config";
 
 const NOFLUFFJOBS_BASE_URL = "https://nofluffjobs.com";
-// 2025-05: was POST /api/search/posting (XHR-intercepted)
-// 2026-05: NFJ switched to Angular SSR — job data is embedded in
-//          <script id="serverApp-state"> on every page load.
-//          Pagination uses cumulative SSR: page N contains items 1..N*PAGE_SIZE.
-//          We navigate to the last page to get all postings in one shot.
-const NOFLUFFJOBS_SEARCH_URL = `${NOFLUFFJOBS_BASE_URL}/pl/praca/javascript`;
-const NOFLUFFJOBS_SSR_STATE_SELECTOR = "#serverApp-state";
+// 2025-05: POST /api/search/posting (XHR-intercepted) — same endpoint as today.
+// 2026-05: NFJ briefly appeared to move pagination to Angular SSR
+//          (<script id="serverApp-state">, ?page=N). That no longer returns
+//          real data: ?page=N echoes the page number back but the embedded
+//          postings never change, and the true last page returns a null
+//          searchResponse. A real browser hits the same wall — this was a
+//          site-side change, not a Playwright-vs-HTTP issue.
+// 2026-10: switched to calling /api/search/posting directly — this is the
+//          exact endpoint the site's own "Pokaż kolejne oferty" (load more)
+//          button calls, captured via DevTools. Paginated with the `pageTo`
+//          query param; each call is a plain POST, no session/cookies
+//          required. Verified reachable without a browser (see ADR-019).
+const NOFLUFFJOBS_SEARCH_API_URL = `${NOFLUFFJOBS_BASE_URL}/api/search/posting`;
+const NOFLUFFJOBS_CATEGORY_URL = `${NOFLUFFJOBS_BASE_URL}/pl/praca/javascript`;
+const NOFLUFFJOBS_PAGE_SIZE = 20;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ─── Raw API types (confirmed from actual response) ──────────────────────────
 
@@ -219,111 +231,110 @@ export function deduplicateByReference(
   return Array.from(best.values());
 }
 
-// ─── SSR state extractor ──────────────────────────────────────────────────────
+// ─── Search API client ────────────────────────────────────────────────────────
+
+export interface NfjSearchResponse {
+  postings: RawNoFluffPosting[];
+  totalPages?: number;
+  // Present when results are split by the site's "Salary Match" feature —
+  // the actual next batch of postings lives here instead of in `postings`.
+  additionalSearch?: { postings: RawNoFluffPosting[] }[];
+}
 
 /**
- * Read job postings from the Angular SSR transfer state embedded in the page.
- * NFJ embeds the first-page (and cumulative for subsequent pages) search results
- * in <script id="serverApp-state"> so the browser can hydrate without an extra
- * API round-trip.
- *
- * Response shape (confirmed 2026-05):
- *   STORE_KEY.searchResponse.postings   → RawNoFluffPosting[]
- *   STORE_KEY.searchResponse.totalPages → number
- *   STORE_KEY.params.page               → number (current page)
+ * Pick the real postings batch out of a search response. The top-level
+ * `postings` field is used for a plain result set; when the site segments
+ * results by salary match, the batch instead shows up in
+ * `additionalSearch[0].postings`.
  */
-export function extractSsrPostings(html: string): {
-  postings: RawNoFluffPosting[];
-  totalPages: number;
-  currentPage: number;
-} {
-  // Extract the JSON from <script id="serverApp-state">…</script>
-  const match = html.match(
-    /<script[^>]+id=["']serverApp-state["'][^>]*>([\s\S]*?)<\/script>/,
+export function extractPostingsBatch(
+  data: NfjSearchResponse,
+): RawNoFluffPosting[] {
+  if (data.postings.length > 0) return data.postings;
+  return data.additionalSearch?.[0]?.postings ?? [];
+}
+
+async function fetchPostingsPage(
+  pageTo: number,
+): Promise<{ postings: RawNoFluffPosting[]; totalPages: number }> {
+  const response = await axios.post<NfjSearchResponse>(
+    NOFLUFFJOBS_SEARCH_API_URL,
+    {
+      criteria: "",
+      url: { searchParam: "praca", searchParam2: "javascript" },
+      rawSearch: "praca javascript",
+      pageSize: NOFLUFFJOBS_PAGE_SIZE,
+      withSalaryMatch: true,
+    },
+    {
+      params: {
+        withSalaryMatch: true,
+        pageTo,
+        pageSize: NOFLUFFJOBS_PAGE_SIZE,
+        salaryCurrency: "original",
+        salaryPeriod: "original",
+        region: "pl",
+        language: "pl-PL",
+      },
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        // The server distinguishes a fresh search (full snapshot in the
+        // top-level `postings`) from a "load more" continuation (the real
+        // next batch in `additionalSearch[0].postings`) by this content
+        // type — it's what the site's own infinite-scroll button sends.
+        // A plain "application/json" silently falls back to re-sending the
+        // full (duplicated) first-page snapshot on every page.
+        "Content-Type": "application/infiniteSearch+json",
+        Referer: NOFLUFFJOBS_CATEGORY_URL,
+        "User-Agent": config.playwright.userAgent,
+      },
+      timeout: config.playwright.requestTimeout,
+    },
   );
-  if (!match) return { postings: [], totalPages: 1, currentPage: 1 };
 
-  try {
-    const state = JSON.parse(match[1]) as Record<string, unknown>;
-    const store = state["STORE_KEY"] as Record<string, unknown> | undefined;
-    const searchResponse = store?.["searchResponse"] as
-      | Record<string, unknown>
-      | undefined;
-    const params = store?.["params"] as Record<string, unknown> | undefined;
-
-    const postings = (searchResponse?.["postings"] ??
-      []) as RawNoFluffPosting[];
-    const totalPages =
-      typeof searchResponse?.["totalPages"] === "number"
-        ? (searchResponse["totalPages"] as number)
-        : 1;
-    const currentPage =
-      typeof params?.["page"] === "number" ? (params["page"] as number) : 1;
-
-    return { postings, totalPages, currentPage };
-  } catch {
-    return { postings: [], totalPages: 1, currentPage: 1 };
-  }
+  return {
+    postings: extractPostingsBatch(response.data),
+    totalPages: response.data.totalPages ?? 1,
+  };
 }
 
 // ─── Main scraper ─────────────────────────────────────────────────────────────
 
-// Safety cap on pages (each SSR page is cumulative, so last page = all results)
+// Safety cap on pages (each page is a distinct ~20-item batch)
 const MAX_PAGES = 20;
 
 export async function scrapeNoFluffJobs(): Promise<JobOffer[]> {
-  const { page, context } = await openPage();
-
   try {
-    // ── Page 1: discover totalPages and collect first batch ──────────────────
-    console.log("[NoFluffJobs] Navigating to JavaScript job listings...");
-    const resp1 = await page.goto(NOFLUFFJOBS_SEARCH_URL, {
-      waitUntil: "domcontentloaded",
-      timeout: 60_000,
-    });
-
-    const html1 = await resp1!.text();
-    const { postings: batch1, totalPages } = extractSsrPostings(html1);
+    console.log("[NoFluffJobs] Fetching JavaScript job listings...");
+    const first = await fetchPostingsPage(1);
 
     console.log(
-      `[NoFluffJobs] Page 1: ${batch1.length} postings (totalPages: ${totalPages})`,
+      `[NoFluffJobs] Page 1: ${first.postings.length} postings (totalPages: ${first.totalPages})`,
     );
 
-    if (batch1.length === 0) {
+    if (first.postings.length === 0) {
       console.warn("[NoFluffJobs] WARNING: 0 postings on page 1.");
       console.warn(
-        "[NoFluffJobs] SSR state not found — site structure may have changed.",
-      );
-      console.warn(
-        `[NoFluffJobs] Expected: <script id="${NOFLUFFJOBS_SSR_STATE_SELECTOR.slice(1)}"> with STORE_KEY`,
+        "[NoFluffJobs] /api/search/posting contract may have changed — " +
+          "re-check via DevTools (watch the 'Pokaż kolejne oferty' button's request).",
       );
       return [];
     }
 
-    const cappedTotalPages = Math.min(totalPages, MAX_PAGES);
+    const cappedTotalPages = Math.min(first.totalPages, MAX_PAGES);
+    const allPostings: RawNoFluffPosting[] = [...first.postings];
 
-    // ── NFJ SSR pagination is CUMULATIVE: page N contains items 1..N*pageSize.
-    //    Navigating to the last page gives all postings in one shot.
-    //    If there is only 1 page, we already have everything.
-    let allPostings: RawNoFluffPosting[];
+    for (let pageTo = 2; pageTo <= cappedTotalPages; pageTo++) {
+      // Polite inter-request delay — rapid back-to-back calls were observed
+      // to make the server fall back to repeating page 1's data instead of
+      // returning the next batch (see ADR-019).
+      await sleep(500);
 
-    if (cappedTotalPages <= 1) {
-      allPostings = batch1;
-    } else {
+      const { postings } = await fetchPostingsPage(pageTo);
+      allPostings.push(...postings);
       console.log(
-        `[NoFluffJobs] Fetching last page (${cappedTotalPages}) to get all ${cappedTotalPages} pages cumulatively...`,
+        `[NoFluffJobs] Page ${pageTo}/${cappedTotalPages}: ${postings.length} postings (running total: ${allPostings.length})`,
       );
-      const respLast = await page.goto(
-        `${NOFLUFFJOBS_SEARCH_URL}?page=${cappedTotalPages}`,
-        { waitUntil: "domcontentloaded", timeout: 60_000 },
-      );
-      const htmlLast = await respLast!.text();
-      const { postings: batchLast } = extractSsrPostings(htmlLast);
-
-      console.log(
-        `[NoFluffJobs] Last page: ${batchLast.length} postings (cumulative)`,
-      );
-      allPostings = batchLast;
     }
 
     console.log(
@@ -344,7 +355,8 @@ export async function scrapeNoFluffJobs(): Promise<JobOffer[]> {
     );
 
     return filtered.map(normalizePosting);
-  } finally {
-    await context.close();
+  } catch (err) {
+    console.error("[NoFluffJobs] Scraper failed:", err);
+    return [];
   }
 }

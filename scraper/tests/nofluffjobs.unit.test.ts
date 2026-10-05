@@ -1,5 +1,5 @@
 import {
-  extractSsrPostings,
+  extractPostingsBatch,
   deduplicateByReference,
   RawNoFluffPosting,
 } from '../src/scrapers/nofluffjobs';
@@ -27,51 +27,27 @@ function makePosting(overrides: Partial<RawNoFluffPosting> = {}): RawNoFluffPost
   };
 }
 
-function makeHtml(state: unknown): string {
-  return `<html><body><script id="serverApp-state">${JSON.stringify(state)}</script></body></html>`;
-}
+// ─── extractPostingsBatch ──────────────────────────────────────────────────────
 
-// ─── extractSsrPostings ───────────────────────────────────────────────────────
-
-describe('extractSsrPostings', () => {
-  it('extracts postings, totalPages and currentPage from valid HTML', () => {
+describe('extractPostingsBatch', () => {
+  it('returns the top-level postings when present', () => {
     const posting = makePosting();
-    const html = makeHtml({
-      STORE_KEY: {
-        searchResponse: { postings: [posting], totalPages: 3 },
-        params: { page: 2 },
-      },
+    const result = extractPostingsBatch({ postings: [posting], totalPages: 3 });
+    expect(result).toEqual([posting]);
+  });
+
+  it('falls back to additionalSearch[0].postings when top-level postings is empty', () => {
+    const posting = makePosting({ id: 'from-additional-search' });
+    const result = extractPostingsBatch({
+      postings: [],
+      additionalSearch: [{ postings: [posting] }],
     });
-
-    const result = extractSsrPostings(html);
-    expect(result.postings).toHaveLength(1);
-    expect(result.totalPages).toBe(3);
-    expect(result.currentPage).toBe(2);
+    expect(result).toEqual([posting]);
   });
 
-  it('returns empty defaults when <script id="serverApp-state"> is absent', () => {
-    const html = '<html><body><p>No state here</p></body></html>';
-    const result = extractSsrPostings(html);
-    expect(result).toEqual({ postings: [], totalPages: 1, currentPage: 1 });
-  });
-
-  it('returns empty defaults when JSON inside the script tag is invalid', () => {
-    const html = '<html><body><script id="serverApp-state">NOT_VALID_JSON</script></body></html>';
-    const result = extractSsrPostings(html);
-    expect(result).toEqual({ postings: [], totalPages: 1, currentPage: 1 });
-  });
-
-  it('returns empty postings when the postings array is empty', () => {
-    const html = makeHtml({
-      STORE_KEY: {
-        searchResponse: { postings: [], totalPages: 1 },
-        params: { page: 1 },
-      },
-    });
-
-    const result = extractSsrPostings(html);
-    expect(result.postings).toEqual([]);
-    expect(result.totalPages).toBe(1);
+  it('returns an empty array when both postings and additionalSearch are empty/absent', () => {
+    expect(extractPostingsBatch({ postings: [] })).toEqual([]);
+    expect(extractPostingsBatch({ postings: [], additionalSearch: [] })).toEqual([]);
   });
 });
 

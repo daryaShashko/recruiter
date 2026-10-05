@@ -8,7 +8,10 @@
 decisions:
   ADR-001:
     title: "XHR interception instead of DOM parsing"
-    status: accepted
+    status: "accepted; partially superseded by ADR-019 (2026-10) for justjoin.ts and
+      nofluffjobs.ts — the Cloudflare block this ADR worked around no longer reproduces
+      for those two endpoints. Still in effect for check-manual.ts, debug-urls.ts, and
+      scrape-one.ts, which still launch a real browser."
     date: "2024-07"
     context: >
       Job boards (JustJoin.it, NoFluffJobs) use Cloudflare WAF.
@@ -648,6 +651,75 @@ decisions:
       New files: n8n/workflows/telegram-trigger.json, n8n/prompts/extract-job-fields.md,
                  n8n/prompts/extract-job-fields-template.json
       Updated: context/modules/n8n.yaml (telegram_trigger status → created, phase → P14)
+
+  ADR-019:
+    title: "Drop Playwright from the two automated scrapers — direct HTTP against the real APIs"
+    status: accepted
+    date: "2026-10-05"
+    context: >
+      ADR-001 (2024-07) adopted Playwright because direct HTTP to both job boards
+      returned 403 under Cloudflare WAF. A throwaway CI workflow
+      (.github/workflows/temp-cf-check.yml, branch experiment/cf-direct-http-check)
+      re-tested this from a GitHub Actions runner: plain curl GETs to JustJoin's
+      candidate-api and to the NoFluffJobs category page both returned 200 with real
+      data, with or without a browser-like User-Agent. The Cloudflare block from 2024
+      no longer reproduces for either endpoint.
+      Separately, the nofluffjobs.ts comment claiming "page=N is cumulative SSR"
+      (dated 2026-05) was found to be wrong when actually re-verified live, in both
+      Playwright and plain HTTP: ?page=N echoes the page number back in the response's
+      params but the embedded postings never change, and the true last page returns a
+      null searchResponse. This made the production scraper return 0 jobs regardless of
+      fetch method — a site-side contract change, not a consequence of this refactor.
+      DevTools-style capture of the live site's own "Pokaż kolejne oferty" (load more)
+      button revealed the real mechanism: it POSTs to /api/search/posting (the same
+      endpoint ADR-001's predecessor used pre-2026-05) with
+      Content-Type: application/infiniteSearch+json and a pageTo query param. That
+      content type is load-bearing — application/json on the same request silently
+      makes the server re-send the full first-page snapshot on every page instead of
+      the next batch.
+    decision: >
+      scraper/src/scrapers/justjoin.ts and scraper/src/scrapers/nofluffjobs.ts now call
+      their respective APIs directly via axios — no browser launch. justjoin.ts calls
+      /api/candidate-api/offers (unchanged endpoint, just no XHR interception).
+      nofluffjobs.ts POSTs /api/search/posting with pageTo=1..totalPages (capped at
+      MAX_PAGES=20) and Content-Type: application/infiniteSearch+json; postings come
+      from the top-level `postings` field or, when the site segments by its "Salary
+      Match" feature, from `additionalSearch[0].postings`. A 300-500ms delay between
+      paginated calls is kept — removing it was observed to make NFJ's server fall back
+      to the full-snapshot behavior described above.
+      scraper/src/utils/browser.ts and the `playwright` dependency are KEPT: they are
+      still used by check-manual.ts (manual job submission from an arbitrary URL) and
+      the debug scripts debug-urls.ts / scrape-one.ts. This ADR only covers the two
+      automated scrapers.
+    rationale:
+      - "Direct HTTP re-verified reachable from a GitHub Actions runner — no bypass needed"
+      - "No browser launch = faster CI runs, no Playwright install step for these two scrapers"
+      - "The /api/search/posting fix was found by capturing the site's own real request, not by guessing"
+      - "check-manual.ts genuinely needs a real browser (arbitrary third-party job pages) — not touched"
+    consequences:
+      positive:
+        - "nofluffjobs.ts goes from a silent 0-jobs production bug to ~104/108 (~96%) unique postings per run"
+        - "justjoin.ts scraper no longer needs a browser context at all"
+        - "CI can run these two scrapers without `npx playwright install`"
+      negative:
+        - "nofluffjobs.ts now depends on an undocumented, unversioned internal API
+           (/api/search/posting) discovered via DevTools, not a stable public contract —
+           same fragility class as the pre-2026-05 approach it reverts to"
+        - "robots.txt disallows /api/ on nofluffjobs.com. This was already effectively
+           being hit via Playwright XHR interception pre-2026-05, so it is not a new
+           policy stance, but it's now a direct, named request path worth tracking if
+           access is ever challenged"
+        - "~4 of 108 postings are still not retrieved per run (totalPages caps at 6 batches
+           of ~20; minor, acceptable loss, not investigated further)"
+        - ".github/workflows/temp-cf-check.yml (and its branch) deleted — the reachability
+           question it existed to answer is now closed"
+    implementation: >
+      Updated: scraper/src/scrapers/justjoin.ts, scraper/src/scrapers/nofluffjobs.ts,
+               scraper/tests/nofluffjobs.unit.test.ts (extractSsrPostings tests replaced
+               with extractPostingsBatch tests)
+      Removed: .github/workflows/temp-cf-check.yml
+      Unchanged: scraper/src/utils/browser.ts, scraper/src/check-manual.ts,
+                 scraper/src/debug-urls.ts, scraper/src/scrape-one.ts, playwright dependency
       No changes to: ingest.json, interfaces.yaml, types.ts (source='manual' already present)
 
 # ============================================================

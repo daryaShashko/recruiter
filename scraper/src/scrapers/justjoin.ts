@@ -1,14 +1,15 @@
+import axios from "axios";
 import { JobOffer } from "../types";
-import { openPage } from "../utils/browser";
 import { config } from "../config";
-import type { Page } from "playwright";
 
 const JUSTJOIN_BASE_URL = "https://justjoin.it";
-// Verified via DevTools — 2025-05
-// NOTE: Direct navigation to /job-offers/all-locations/javascript uses SSR and
-// does NOT fire this endpoint. Must navigate to homepage first, then click the
-// JavaScript category link. See scrapeJustJoin() for details.
+// Verified via DevTools — 2025-05; verified reachable via plain HTTP (no
+// browser) from a GitHub Actions runner — 2026-10 (see ADR-019).
 const JUSTJOIN_API_PATH = "/api/candidate-api/offers";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ─── Raw API types (confirmed from actual response) ──────────────────────────
 
@@ -168,266 +169,88 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
 }
 
 // ─── Main scraper ─────────────────────────────────────────────────────────────
+// ADR-019 (2026-10): switched from Playwright XHR interception to a direct
+// HTTP GET. The Cloudflare WAF blocking that justified Playwright in ADR-001
+// (2024-07) no longer reproduces for this endpoint — verified from both a
+// residential network and a GitHub Actions runner (datacenter IP), with and
+// without a browser-like User-Agent.
 
 // Safety cap — prevents runaway loops on unexpected totalItems values.
 const JUSTJOIN_MAX_PAGES = 30;
 const JUSTJOIN_PAGE_SIZE = 100;
 
-interface FallbackFetchResult {
-  offers: RawJustJoinOffer[];
-  totalItems: number;
-  requestUrl: string;
+interface JustJoinApiResponse {
+  data?: RawJustJoinOffer[];
+  meta?: { totalItems?: number };
 }
 
-async function fetchOffersViaDirectApiFallback(
-  page: Page,
-): Promise<FallbackFetchResult | null> {
-  const candidates = [
-    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript&orderBy=descending&sortBy=publishedAt&from=0&perPage=${JUSTJOIN_PAGE_SIZE}`,
-    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript&from=0&perPage=${JUSTJOIN_PAGE_SIZE}`,
-    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}?categories=javascript`,
-  ];
+async function fetchOffersPage(
+  from: number,
+): Promise<{ offers: RawJustJoinOffer[]; totalItems: number }> {
+  const response = await axios.get<JustJoinApiResponse>(
+    `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}`,
+    {
+      params: {
+        categories: "javascript",
+        orderBy: "descending",
+        sortBy: "publishedAt",
+        from,
+        perPage: JUSTJOIN_PAGE_SIZE,
+      },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": config.playwright.userAgent,
+      },
+      timeout: config.playwright.requestTimeout,
+    },
+  );
 
-  for (const requestUrl of candidates) {
-    const result = await page.evaluate(async (url) => {
-      try {
-        const res = await fetch(url, {
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-        if (!res.ok) {
-          return { ok: false, offers: [], totalItems: 0 };
-        }
+  const offers = Array.isArray(response.data?.data) ? response.data.data : [];
+  const totalItems =
+    typeof response.data?.meta?.totalItems === "number"
+      ? response.data.meta.totalItems
+      : 0;
 
-        const json = (await res.json()) as {
-          data?: unknown[];
-          offers?: unknown[];
-          meta?: { totalItems?: number; total?: number };
-        };
-
-        const offers =
-          (Array.isArray(json.data) && json.data) ||
-          (Array.isArray(json.offers) && json.offers) ||
-          [];
-
-        const totalItems =
-          (typeof json.meta?.totalItems === "number" && json.meta.totalItems) ||
-          (typeof json.meta?.total === "number" && json.meta.total) ||
-          0;
-
-        return { ok: true, offers, totalItems };
-      } catch {
-        return { ok: false, offers: [], totalItems: 0 };
-      }
-    }, requestUrl);
-
-    if (result.ok && result.offers.length > 0) {
-      return {
-        offers: result.offers as RawJustJoinOffer[],
-        totalItems: result.totalItems,
-        requestUrl,
-      };
-    }
-  }
-
-  return null;
+  return { offers, totalItems };
 }
 
 export async function scrapeJustJoin(): Promise<JobOffer[]> {
-  const { page, context } = await openPage();
   const rawOffers: RawJustJoinOffer[] = [];
 
-  // Captured from the first intercepted GET — reused for pages 2+
-  let capturedRequestUrl: string | null = null;
-  let capturedTotalItems = 0;
-  // Guard: response listener must only push page-1 data once.
-  // page.evaluate() fetch calls also trigger page.on("response"),
-  // which would double-count pages 2–N without this flag.
-  let page1Captured = false;
-
   try {
-    console.log("[JustJoin] Setting up XHR interceptor...");
+    console.log("[JustJoin] Fetching page 1...");
+    const first = await fetchOffersPage(0);
+    rawOffers.push(...first.offers);
+    console.log(
+      `[JustJoin] Page 1: ${first.offers.length} offers (totalItems: ${first.totalItems})`,
+    );
 
-    // Capture the outgoing request URL so we can replay it with different `from=` values
-    page.on("request", (request) => {
-      const u = request.url();
-      if (
-        u.includes(JUSTJOIN_API_PATH) &&
-        u.includes("categories=javascript") &&
-        !u.includes("/clusters") &&
-        !u.includes("/count") &&
-        !capturedRequestUrl
-      ) {
-        capturedRequestUrl = u;
-      }
-    });
-
-    page.on("response", async (response) => {
-      // Skip once page 1 is already captured — subsequent API hits come from
-      // page.evaluate() fetches (pages 2–N) and must NOT be double-counted here.
-      if (page1Captured) return;
-
-      const u = response.url();
-      // Only capture the offers list endpoint (not /clusters, /facets/count, etc.)
-      if (!u.includes(JUSTJOIN_API_PATH)) return;
-      if (u.includes("/clusters") || u.includes("/count")) return;
-      if (!u.includes("categories=javascript")) return;
-
-      try {
-        const json = await response.json();
-        const batch: RawJustJoinOffer[] = json.data ?? [];
-        if (Array.isArray(batch) && batch.length > 0) {
-          rawOffers.push(...batch);
-          page1Captured = true;
-          console.log(`[JustJoin] Page 1: ${batch.length} offers intercepted`);
-        }
-        // Capture total from first response's meta
-        if (capturedTotalItems === 0 && json.meta?.totalItems) {
-          capturedTotalItems = json.meta.totalItems as number;
-          console.log(
-            `[JustJoin] Total items reported by API: ${capturedTotalItems}`,
-          );
-        }
-      } catch {
-        // Non-JSON, ignore
-      }
-    });
-
-    // Navigate to main page first.
-    // IMPORTANT: Direct navigation to /job-offers/all-locations/javascript uses SSR
-    // and does NOT trigger the offers API call. The API only fires when the JS
-    // category is clicked from within the SPA — verified via DevTools 2025-05.
-    console.log("[JustJoin] Navigating to main page...");
-    await page.goto(JUSTJOIN_BASE_URL, {
-      waitUntil: "domcontentloaded",
-      timeout: 60_000,
-    });
-
-    // Accept cookie consent (standard HTML dialog — not Shadow DOM like NFJ)
-    console.log("[JustJoin] Handling cookie consent...");
-    await page.waitForTimeout(2_000);
-    try {
-      await page.click('button:has-text("Accept all")', { timeout: 5_000 });
-      console.log("[JustJoin] Cookie consent accepted");
-    } catch {
-      console.log(
-        "[JustJoin] No consent dialog found (may already be accepted)",
-      );
-    }
-
-    // Click the JavaScript category — this triggers the offers API call
-    console.log("[JustJoin] Clicking JavaScript category...");
-    try {
-      await page.click('a[href*="/job-offers/all-locations/javascript"]', {
-        timeout: 10_000,
-      });
-    } catch {
-      // Fallback: navigate directly if the link isn't found
-      console.warn(
-        "[JustJoin] Could not find JavaScript link, navigating directly...",
-      );
-      await page.goto(
-        `${JUSTJOIN_BASE_URL}/job-offers/all-locations/javascript`,
-        { waitUntil: "domcontentloaded", timeout: 60_000 },
-      );
-    }
-
-    // Wait for the offers API response (up to 20s)
-    console.log("[JustJoin] Waiting for API response...");
-    try {
-      await page.waitForResponse(
-        (resp) => {
-          const u = resp.url();
-          return (
-            u.includes(JUSTJOIN_API_PATH) &&
-            u.includes("categories=javascript") &&
-            !u.includes("/clusters") &&
-            !u.includes("/count") &&
-            resp.status() === 200
-          );
-        },
-        { timeout: 20_000 },
-      );
-    } catch {
-      console.warn(
-        "[JustJoin] API response not received within 20s — proceeding with whatever was collected",
-      );
-    }
-    await page.waitForTimeout(1_000);
-
-    if (rawOffers.length === 0) {
-      console.warn(
-        "[JustJoin] Intercept flow returned 0 offers — trying direct API fallback...",
-      );
-      const fallback = await fetchOffersViaDirectApiFallback(page);
-      if (fallback) {
-        rawOffers.push(...fallback.offers);
-        if (!capturedRequestUrl) capturedRequestUrl = fallback.requestUrl;
-        if (!capturedTotalItems && fallback.totalItems > 0) {
-          capturedTotalItems = fallback.totalItems;
-        }
-        console.log(
-          `[JustJoin] Fallback page 1: ${fallback.offers.length} offers${fallback.totalItems ? ` (totalItems: ${fallback.totalItems})` : ""}`,
-        );
-      } else {
-        console.warn("[JustJoin] Direct API fallback also returned 0 offers.");
-      }
-    }
-
-    // ── Pagination: pages 2..N via browser-context fetch ─────────────────────
-    // Response meta: { from: 0, totalItems: N, next: { cursor: 100 } }
-    // We fetch subsequent pages by setting from=100, 200, 300... in the URL.
-    if (capturedRequestUrl && capturedTotalItems > JUSTJOIN_PAGE_SIZE) {
+    if (first.totalItems > JUSTJOIN_PAGE_SIZE) {
       const totalPages = Math.min(
-        Math.ceil(capturedTotalItems / JUSTJOIN_PAGE_SIZE),
+        Math.ceil(first.totalItems / JUSTJOIN_PAGE_SIZE),
         JUSTJOIN_MAX_PAGES,
       );
-      console.log(
-        `[JustJoin] Fetching pages 2..${totalPages} (${capturedTotalItems} total items)`,
-      );
+      console.log(`[JustJoin] Fetching pages 2..${totalPages}...`);
 
       for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
-        const fromOffset = (pageNum - 1) * JUSTJOIN_PAGE_SIZE;
-        console.log(
-          `[JustJoin] Fetching page ${pageNum}/${totalPages} (from=${fromOffset})...`,
-        );
-
-        const batch = await page.evaluate(
-          async (args: { url: string; from: number }) => {
-            // Modify the captured URL's `from` parameter and fetch from browser context
-            // (reuses session cookies automatically)
-            const u = new URL(args.url);
-            u.searchParams.set("from", String(args.from));
-
-            const res = await fetch(u.toString(), {
-              headers: { Accept: "application/json" },
-            });
-            if (!res.ok) return [];
-            const json = (await res.json()) as { data?: unknown[] };
-            return json.data ?? [];
-          },
-          { url: capturedRequestUrl, from: fromOffset },
-        );
-
-        rawOffers.push(...(batch as RawJustJoinOffer[]));
-        console.log(
-          `[JustJoin] Page ${pageNum}: ${batch.length} offers (running total: ${rawOffers.length})`,
-        );
-
         // Polite inter-request delay
-        await page.waitForTimeout(300);
+        await sleep(300);
+
+        const fromOffset = (pageNum - 1) * JUSTJOIN_PAGE_SIZE;
+        const { offers } = await fetchOffersPage(fromOffset);
+        rawOffers.push(...offers);
+        console.log(
+          `[JustJoin] Page ${pageNum}/${totalPages}: ${offers.length} offers (running total: ${rawOffers.length})`,
+        );
       }
     }
 
     console.log(`[JustJoin] Total raw offers collected: ${rawOffers.length}`);
 
     if (rawOffers.length === 0) {
-      console.warn("[JustJoin] WARNING: 0 offers collected.");
       console.warn(
-        "[JustJoin] The offers API was not captured via click flow and fallback did not return data.",
-      );
-      console.warn(
-        "[JustJoin] Re-verify the navigation flow via DevTools if this persists.",
+        "[JustJoin] WARNING: 0 offers collected — API contract may have changed. " +
+          "Re-check via DevTools or scraper/src/debug-urls.ts.",
       );
       return [];
     }
@@ -439,7 +262,8 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
     );
 
     return filtered.map(normalizeOffer);
-  } finally {
-    await context.close();
+  } catch (err) {
+    console.error("[JustJoin] Scraper failed:", err);
+    return [];
   }
 }
