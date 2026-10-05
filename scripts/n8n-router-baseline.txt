@@ -1,0 +1,1 @@
+version=neither generator (no $env, no provider literal), http=httpRequest, timeouts_ms=none

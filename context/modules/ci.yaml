@@ -103,6 +103,43 @@ workflows:
           .github/workflows → modules/ci.yaml, .env.example → env.yaml.
           n8n/workflows/*.json is gitignored and not checked.
 
+  n8n-drift-check.yml:
+    path: .github/workflows/n8n-drift-check.yml
+    status: exists
+    purpose: >
+      Fail + Telegram-alert when the live "Code: LLM Router" node (in the deployed
+      n8n "Ingest Jobs" workflow) no longer matches scripts/n8n-router-baseline.txt.
+      Added because the Router node's code only ever lived inline in n8n's UI and had
+      already drifted from both historical patch scripts by 2026-09-27 (see ADR-019 /
+      context/decisions.yaml). Runs scripts/check-n8n-drift.py, which reuses
+      scripts/inspect-n8n.py's own fetch/summary functions (loaded via importlib, not
+      duplicated) against the live n8n API.
+    triggers:
+      schedule: "cron: '0 10 * * *' (daily, after the main scrape)"
+      manual: "workflow_dispatch"
+    job:
+      name: "Compare live Router node to committed baseline"
+      runner: ubuntu-latest
+      timeout: 2 minutes
+    steps:
+      - { name: "Checkout", action: "actions/checkout@v4" }
+      - {
+          name: "Run drift check",
+          run: "python3 scripts/check-n8n-drift.py",
+          env: { N8N_API_KEY: "${{ secrets.N8N_API_KEY }}" },
+        }
+      - {
+          name: "Notify Telegram on failure",
+          run: "curl Telegram API",
+          if: failure,
+        }
+    note: >
+      If this check ever fails for an INTENTIONAL change to the Router node, update
+      scripts/n8n-router-baseline.txt (and context/decisions.yaml / ingest-workflow.yaml)
+      to match the new live state — don't just re-run and ignore.
+    known_gaps:
+      - "Only checks the Router node's summary signature (provider/http-client/timeouts), not its full behavior — see ADR-019 for the broader plan to extract this node into tested TypeScript."
+
   prompt-eval.yml:
     path: .github/workflows/prompt-eval.yml
     status: exists
@@ -183,6 +220,7 @@ secrets_management:
     - GOOGLE_API_KEY # prompt-eval.yml grading
     - TELEGRAM_BOT_TOKEN # failure notifications
     - TELEGRAM_CHAT_ID # failure notifications
+    - N8N_API_KEY # n8n-drift-check.yml — read-only n8n public API key
   not_needed_in_ci:
     - NOTION_TOKEN
     - NOTION_DB_ID
