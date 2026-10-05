@@ -1,0 +1,19 @@
+{
+  "name": "ai-recruiter-evaluator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LLM evaluation service for the n8n Ingest Jobs workflow (ADR-019) — fallback-chain LLM call + hard-reject scoring, called over HTTP from a single n8n node instead of living inline in n8n's UI.",
+  "main": "dist/evaluator/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/evaluator/server.js",
+    "dev": "ts-node evaluator/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}

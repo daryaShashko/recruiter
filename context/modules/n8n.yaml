@@ -7,13 +7,13 @@
 
 module: n8n
 path: n8n/
-type: local_workflow_engine  # → migrating to cloud (P7 in_progress)
-run_command: "npx n8n start --tunnel"  # local; cloud: docker compose up -d
-api_base: "http://localhost:5678"      # local; cloud: https://n8n-recruiter.duckdns.org
-webhook_base: "https://{hash}.hooks.n8n.cloud"  # local tunnel; cloud: https://n8n-recruiter.duckdns.org
+type: cloud_workflow_engine  # migration done — confirmed live via scripts/inspect-n8n.py on 2026-10-05
+run_command: "docker compose up -d (on the Oracle VM)"
+api_base: "https://n8n-recruiter.duckdns.org"
+webhook_base: "https://n8n-recruiter.duckdns.org"
 
-cloud_deployment:  # P7 — in_progress (2026-05-29)
-  status: in_progress
+cloud_deployment:  # P7 — confirmed live 2026-10-05 (status below was stale: said in_progress)
+  status: done
   domain: "n8n-recruiter.duckdns.org"
   webhook_url: "https://n8n-recruiter.duckdns.org/webhook/jobs/ingest"
   files:
@@ -239,6 +239,41 @@ workflows:
       - name: Telegram Reply
         type: n8n-nodes-base.telegram
         note: "Confirm result or report error to user in same chat"
+
+evaluator_service: # ADR-019 (2026-10) — not yet wired into the live n8n workflow
+  path: n8n/evaluator/
+  purpose: >
+    Tested TypeScript port of the live "Code: LLM Router" + "Code: Parse Ollama Response"
+    nodes, called over HTTP from n8n instead of living inline in its UI. Decided over a
+    direct Code-node import because the deployed n8n is the stock
+    docker.n8n.io/n8nio/n8n image (n8n/docker-compose.yml) with no
+    NODE_FUNCTION_ALLOW_EXTERNAL — a direct import would require a custom Docker image
+    rebuilt on every change, which is more infra and more ongoing cost than one more
+    small Node process on the same free VM.
+  files:
+    router.ts: "Fallback-chain LLM call — reuses n8n/providers/*.ts (ADR-016)"
+    scoring.ts: "JSON parse + hard-reject heuristics — see key_logic.scoring note below"
+    server.ts: "Zero-dependency http.createServer wrapper — POST /evaluate, GET /healthz"
+  build_run:
+    install: "cd n8n && npm install"
+    build: "npm run build  # tsc → n8n/dist/"
+    start: "npm start  # node dist/evaluator/server.js (EVALUATOR_PORT, default 3100)"
+    dev: "npm run dev  # ts-node evaluator/server.ts"
+  tests: "n8n/evaluator/*.test.ts — run via scraper's jest (roots config in scraper/package.json), 20 tests"
+  status: >
+    Built, unit-tested, and smoke-tested locally (real HTTP round-trip against the real
+    OpenRouter/Gemini APIs, no keys → correctly aggregates both 401/403 into a 502).
+    NOT deployed to the Oracle VM and NOT wired into the live workflow yet — that step
+    (deploy the service + repoint one HTTP Request node, delete the old two Code nodes)
+    is a separate, deliberately-not-yet-taken action since it touches the production
+    pipeline.
+  known_facts_captured: >
+    Pulled directly from the live node via the n8n API on 2026-10-05, correcting stale
+    assumptions in both historical patch scripts and this file's own older notes below:
+    PROVIDER_ORDER=['openrouter','gemini'] (OpenRouter primary — inverted from what P15's
+    roadmap entry describes), model gemini-2.5-flash, both API keys hardcoded as plaintext
+    in the Code node (not n8n's credential vault). See context/ingest-workflow.yaml
+    key_logic.force_zero for the corrected hard-reject rules.
 
 ollama:
   endpoint: "http://localhost:11434/api/chat"
