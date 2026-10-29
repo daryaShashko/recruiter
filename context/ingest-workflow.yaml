@@ -129,17 +129,14 @@ key_logic:
 
   llm_providers:
     source: >
-      Inline code of Code: LLM Router, read directly from the live n8n API on 2026-10-05
-      (ADR-019) — not either historical generator script, and not what P15's roadmap
-      entry assumed. Fallback order is PROVIDER_ORDER = ['openrouter', 'gemini']
-      (OpenRouter PRIMARY, Gemini FALLBACK — inverted from P15's stated goal of
-      "Gemini primary, OpenRouter fallback"; someone edited this by hand in the n8n UI
-      after P15 was written and never updated the roadmap). Models: OpenRouter
-      deepseek/deepseek-chat-v3-0324 (no :free suffix), Gemini gemini-2.5-flash (not
-      2.0-flash). Both API keys are hardcoded as plaintext string literals directly in
-      the Code node — NOT stored in n8n's credential vault. No explicit timeout on
-      either call. Anthropic/Ollama branches exist in the code but are unreachable
-      (not in PROVIDER_ORDER).
+      Inline code of Code: LLM Router, updated and verified against the live n8n API on
+      2026-10-29. Fallback order is PROVIDER_ORDER = ['gemini:gemini-2.5-flash-lite',
+      'gemini:gemini-3.1-flash-lite', 'gemini:gemini-2.5-flash', 'gemini:gemini-3.5-flash',
+      'openrouter:openrouter/free'] with up to 2 attempts per Gemini model on 429/5xx and
+      safe fallback object return (instead of throwing and aborting Split In Batches).
+      GEMINI_API_KEY is read from $env.GEMINI_API_KEY; OpenRouter uses the openrouter/free
+      auto-router (hardcoded 2025 :free model slugs and gemini-2.0-flash were retired
+      upstream and returned HTTP 404).
       Two old generator scripts exist and are both stale: scripts/p12_6_llm_router.py
       ($env.LLM_PROVIDER, fetch) and scripts/patch_llm_router.py (CLOUD-11-A, hardcoded
       single provider, this.helpers.httpRequest) — neither reflects the live fallback-chain

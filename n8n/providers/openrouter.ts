@@ -1,7 +1,7 @@
 import type { LLMProvider, LLMRequest, LLMResponse } from './_interface';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'deepseek/deepseek-chat-v3-0324:free';
+const DEFAULT_MODEL = 'openrouter/free';
 
 /** Expected shape of a successful OpenRouter (OpenAI-compatible) chat completions response. */
 interface OpenRouterResponseBody {
@@ -32,7 +32,7 @@ function isOpenRouterResponseBody(value: unknown): value is OpenRouterResponseBo
  *
  * Reads from process.env at construction time:
  *   OPENROUTER_API_KEY — Bearer token for Authorization header (required)
- *   OPENROUTER_MODEL   — model name to use (default: deepseek/deepseek-chat-v3-0324:free)
+ *   OPENROUTER_MODEL   — model name to use (default: openrouter/free)
  */
 export class OpenRouterAdapter implements LLMProvider {
   private readonly apiKey: string;

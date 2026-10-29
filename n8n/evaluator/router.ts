@@ -17,8 +17,8 @@ export interface RouterResult {
   readonly provider: string;
 }
 
-/** Matches the live node's PROVIDER_ORDER as of 2026-10-05: OpenRouter primary, Gemini fallback. */
-export const DEFAULT_PROVIDER_ORDER = ["openrouter", "gemini"] as const;
+/** Matches the live node's PROVIDER_ORDER as of 2026-10-29: Gemini primary, OpenRouter fallback. */
+export const DEFAULT_PROVIDER_ORDER = ["gemini", "openrouter"] as const;
 
 function stripCodeFence(content: string): string {
   const trimmed = content.trim();

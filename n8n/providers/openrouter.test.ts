@@ -111,8 +111,8 @@ describe('OpenRouterAdapter', () => {
 
       const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
       const body = JSON.parse(init.body as string) as Record<string, unknown>;
-      expect(body['model']).toBe('deepseek/deepseek-chat-v3-0324:free');
-      expect(adapter).toMatchObject({ model: 'deepseek/deepseek-chat-v3-0324:free' });
+      expect(body['model']).toBe('openrouter/free');
+      expect(adapter).toMatchObject({ model: 'openrouter/free' });
     });
   });
 

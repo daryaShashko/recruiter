@@ -98,14 +98,14 @@ describe('GeminiAdapter', () => {
       expect(genConfig['responseSchema']).toEqual(BASE_REQUEST.outputSchema);
     });
 
-    it('uses LLM_MODEL default gemini-2.0-flash when env var is absent', async () => {
+    it('uses LLM_MODEL default gemini-2.5-flash-lite when env var is absent', async () => {
       delete process.env['LLM_MODEL'];
       const adapter = new GeminiAdapter();
       await adapter.complete(BASE_REQUEST);
 
       const [url] = fetchSpy.mock.calls[0] as [string, RequestInit];
-      expect(url).toContain('gemini-2.0-flash:generateContent');
-      expect(adapter['model']).toBe('gemini-2.0-flash');
+      expect(url).toContain('gemini-2.5-flash-lite:generateContent');
+      expect(adapter['model']).toBe('gemini-2.5-flash-lite');
     });
   });
 

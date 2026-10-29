@@ -28,7 +28,7 @@ function isGeminiResponseBody(value: unknown): value is GeminiResponseBody {
  *
  * Reads from process.env at construction time:
  *   LLM_API_KEY — Gemini API key (appended as ?key= query param)
- *   LLM_MODEL   — model name to use (default: gemini-2.0-flash)
+ *   LLM_MODEL   — model name to use (default: gemini-2.5-flash-lite)
  */
 export class GeminiAdapter implements LLMProvider {
   private readonly apiKey: string;
@@ -36,7 +36,7 @@ export class GeminiAdapter implements LLMProvider {
 
   constructor() {
     this.apiKey = process.env['LLM_API_KEY'] ?? '';
-    this.model = process.env['LLM_MODEL'] ?? 'gemini-2.0-flash';
+    this.model = process.env['LLM_MODEL'] ?? 'gemini-2.5-flash-lite';
   }
 
   /**

@@ -14,8 +14,8 @@ const BASE_REQUEST = {
 };
 
 describe("DEFAULT_PROVIDER_ORDER", () => {
-  it("matches the live node's order as of 2026-10-05: openrouter primary, gemini fallback", () => {
-    expect(DEFAULT_PROVIDER_ORDER).toEqual(["openrouter", "gemini"]);
+  it("matches the live node's order as of 2026-10-29: gemini primary, openrouter fallback", () => {
+    expect(DEFAULT_PROVIDER_ORDER).toEqual(["gemini", "openrouter"]);
   });
 });
 
@@ -26,24 +26,24 @@ describe("routeCompletion", () => {
 
   it("returns the first provider's result on success", async () => {
     mockedGetProvider.mockReturnValue({
-      complete: jest.fn().mockResolvedValue({ content: '{"overall_score":80}', provider: "openrouter", model: "x" }),
+      complete: jest.fn().mockResolvedValue({ content: '{"overall_score":80}', provider: "gemini", model: "x" }),
     });
 
     const result = await routeCompletion(BASE_REQUEST);
 
-    expect(result).toEqual({ content: '{"overall_score":80}', provider: "openrouter" });
+    expect(result).toEqual({ content: '{"overall_score":80}', provider: "gemini" });
     expect(mockedGetProvider).toHaveBeenCalledTimes(1);
-    expect(mockedGetProvider).toHaveBeenCalledWith("openrouter");
+    expect(mockedGetProvider).toHaveBeenCalledWith("gemini");
   });
 
   it("falls back to the next provider when the first fails", async () => {
     const failing = { complete: jest.fn().mockRejectedValue(new Error("rate limited")) };
-    const succeeding = { complete: jest.fn().mockResolvedValue({ content: "{}", provider: "gemini", model: "x" }) };
-    mockedGetProvider.mockImplementation((name: string) => (name === "openrouter" ? failing : succeeding));
+    const succeeding = { complete: jest.fn().mockResolvedValue({ content: "{}", provider: "openrouter", model: "x" }) };
+    mockedGetProvider.mockImplementation((name: string) => (name === "gemini" ? failing : succeeding));
 
     const result = await routeCompletion(BASE_REQUEST);
 
-    expect(result).toEqual({ content: "{}", provider: "gemini" });
+    expect(result).toEqual({ content: "{}", provider: "openrouter" });
     expect(mockedGetProvider).toHaveBeenCalledTimes(2);
   });
 
@@ -53,7 +53,7 @@ describe("routeCompletion", () => {
     }));
 
     await expect(routeCompletion(BASE_REQUEST)).rejects.toThrow(
-      /All providers failed:\nopenrouter: openrouter down\ngemini: gemini down/,
+      /All providers failed:\ngemini: gemini down\nopenrouter: openrouter down/,
     );
   });
 
