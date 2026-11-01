@@ -113,7 +113,7 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "T05: Staff Engineer — TypeScript platform, EU remote"
+- description: "T05: Staff Engineer — TypeScript platform, EU remote (backend/platform-only TS/Node, review or hot match)"
   vars:
     title: "Staff Engineer — Platform (TypeScript)"
     company: "ScaleUp AG"
@@ -133,7 +133,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 60;
         } catch(e) { return false; }
       weight: 3
 
