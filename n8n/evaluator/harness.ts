@@ -25,7 +25,7 @@ const GENERIC_BOILERPLATE_PHRASES = [
 ] as const;
 
 const CONCRETE_DOMAIN_TOKEN_REGEX =
-  /(node|react|typescript|javascript|nest|next|postgres|java|php|\.net|c#|python|go|ruby|angular|vue|aws|docker|remote|gdańsk|gdansk|tricity|warsaw|kraków|krakow|wrocław|wroclaw|poland|eu|hybrid|on-site|onsite|pln|eur|usd|b2b|uop|gross|net|salary|floor|\d+k|senior|lead|principal|staff|architect|junior|mid|regular|intern|crypto|web3|blockchain|solana|gambling|betting|casino|outsourc|outstaff|agency|epam|luxoft|netguru|legacy|migration|spam|invalid|stack)/i;
+  /(node|react|typescript|javascript|nest|next|postgres|java|php|\.net|c#|python|go|ruby|angular|vue|aws|docker|remote|gdańsk|gdansk|tricity|warsaw|kraków|krakow|wrocław|wroclaw|poland|eu|hybrid|on-site|onsite|pln|eur|usd|b2b|uop|gross|net|salary|floor|\d+k|senior|lead|principal|staff|architect|junior|mid|regular|intern|crypto|web3|blockchain|solana|gambling|betting|casino|outsourc|outstaff|agency|epam|luxoft|netguru|legacy|migration|spam|invalid|newsletter|confirmation|vacancy|posting|community|stack)/i;
 
 /**
  * Deterministically validate that the evaluation `reason` is concise, non-boilerplate,
