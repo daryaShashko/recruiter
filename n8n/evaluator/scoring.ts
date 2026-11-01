@@ -12,6 +12,8 @@
  * programmatic numeric salary check here.
  */
 
+import type { DynamicScoringConfig } from "./notion-profile";
+
 export interface JobForScoring {
   readonly id: string;
   readonly title?: string;
@@ -74,6 +76,26 @@ const OUTSOURCING_KEYWORDS = [
   "outstaffing",
   "outsourcing agency",
   "outsourcing company",
+  "netguru",
+  "stx next",
+  "future processing",
+  "britenet",
+  "sollers",
+  "scalo",
+  "euvic",
+  "jit team",
+  "speednet",
+  "andersen",
+  "boldare",
+  "objectivity",
+  "globallogic",
+  "intellias",
+  "softserve",
+  "billennium",
+  "intive",
+  "avenga",
+  "n-ix",
+  "ciklum",
 ];
 
 const CRYPTO_KEYWORDS = [
@@ -242,12 +264,125 @@ function fallbackResult(job: JobForScoring, reason: string): EvaluationResult {
 }
 
 /**
+ * Returns true when the salary field is missing, empty, zero ("0", "0 PLN"),
+ * or a non-numeric placeholder ("Undisclosed", "N/A", "Competitive", "No salary").
+ */
+export function isSalaryUnspecified(salary?: string): boolean {
+  if (!salary) return true;
+  const trimmed = salary.trim().toLowerCase();
+  if (
+    trimmed === "" ||
+    trimmed === "0" ||
+    trimmed === "n/a" ||
+    trimmed === "na" ||
+    trimmed === "none" ||
+    trimmed === "null" ||
+    trimmed === "undefined" ||
+    trimmed === "undisclosed" ||
+    trimmed === "no salary" ||
+    trimmed === "no salary info" ||
+    trimmed === "competitive"
+  ) {
+    return true;
+  }
+  const withoutB2b = trimmed.replace(/\bb2b\b/g, " ");
+  const numbers = withoutB2b.match(/\d+/g);
+  if (!numbers) return true;
+  return numbers.every((n) => Number(n) === 0);
+}
+
+/**
+ * Deterministically extract the upper-bound monthly salary in PLN from a formatted
+ * salary string (supports PLN, EUR, USD, GBP, CHF, CAD, AUD, SEK, NOK, DKK, CZK
+ * and monthly/hourly/daily/annual rates).
+ * Returns `undefined` when missing, zero, unparseable, or in an unknown currency.
+ */
+export function extractMaxMonthlyPln(salary?: string): number | undefined {
+  if (isSalaryUnspecified(salary) || !salary) return undefined;
+
+  const lower = salary.toLowerCase();
+
+  let rateToPln: number | undefined;
+  if (lower.includes("pln") || lower.includes("zł") || lower.includes("zl")) {
+    rateToPln = 1;
+  } else if (lower.includes("eur") || lower.includes("€")) {
+    rateToPln = 4.25;
+  } else if (/\bcad\b|c\$/i.test(salary)) {
+    rateToPln = 2.85;
+  } else if (/\baud\b|a\$/i.test(salary)) {
+    rateToPln = 2.6;
+  } else if (lower.includes("usd") || lower.includes("$")) {
+    rateToPln = 3.95;
+  } else if (lower.includes("gbp") || lower.includes("£")) {
+    rateToPln = 5.0;
+  } else if (/\bchf\b/i.test(salary)) {
+    rateToPln = 4.55;
+  } else if (/\bsek\b/i.test(salary)) {
+    rateToPln = 0.38;
+  } else if (/\bnok\b/i.test(salary)) {
+    rateToPln = 0.37;
+  } else if (/\bdkk\b/i.test(salary)) {
+    rateToPln = 0.57;
+  } else if (/\bczk\b|kč/i.test(salary)) {
+    rateToPln = 0.17;
+  } else {
+    // Reject other 3-letter currency codes we don't have a conversion rate for
+    if (/\b(?:jpy|uah|inr|brl|try|huf|ron|bgn|sgd|hkd|nzd)\b/i.test(salary)) {
+      return undefined;
+    }
+    rateToPln = 1;
+  }
+
+  const isHourly = /(?:\/\s*h(?:r|our)?\b|per\s+hour|\bgodz)/i.test(salary);
+  const isDaily = /(?:\/\s*d(?:ay)?\b|per\s+day|\bdziennie)/i.test(salary);
+  const isYearly = /(?:\/\s*y(?:r|ear)?\b|per\s+year|per\s+annum|\bp\.?a\.?\b|\brocznie|\bannual)/i.test(
+    salary,
+  );
+
+  // Strip "(via ...)" and "B2B" so embedded digits are never parsed as salary numbers
+  const cleanedForNumbers = salary
+    .replace(/\(via\s+[^)]+\)/gi, " ")
+    .replace(/\bb2b\b/gi, " ");
+
+  // Support "k" shorthand (e.g. "6k - 8k EUR" or "25k PLN")
+  const expandedK = cleanedForNumbers.replace(
+    /(\d+(?:[.,]\d+)?)\s*k\b/gi,
+    (_m, numStr: string) => String(Math.round( Number(numStr.replace(",", ".")) * 1000 )),
+  );
+
+  const rawTokens =
+    expandedK.match(/(?<!\d)(?:\d{1,3}(?:[\s\u00a0.,]\d{3})+|\d+)(?!\d)/g) ?? [];
+
+  const minThreshold = isHourly ? 15 : isDaily ? 100 : 30;
+  const parsedNumbers = rawTokens
+    .map((tok) => Number(tok.replace(/[\s\u00a0.,]/g, "")))
+    .filter((n) => Number.isFinite(n) && n >= minThreshold);
+
+  if (parsedNumbers.length === 0) return undefined;
+
+  const maxNumber = Math.max(...parsedNumbers);
+  const monthlyInOriginalCurrency = isHourly
+    ? maxNumber * 160
+    : isDaily
+      ? maxNumber * 20
+      : isYearly
+        ? maxNumber / 12
+        : maxNumber;
+
+  return Math.round(monthlyInOriginalCurrency * rateToPln);
+}
+
+/**
  * Parse the LLM's raw JSON content for `job` and apply the hard-reject heuristics.
  * `rawContent` is expected to already be fence-stripped (see routeCompletion in
  * router.ts) — a thrown/failed LLM call is the router's concern, not this function's;
  * this only handles "the call succeeded but the content is empty/invalid/rejectable."
  */
-export function evaluateJob(rawContent: string, job: JobForScoring): EvaluationResult {
+export function evaluateJob(
+  rawContent: string,
+  job: JobForScoring,
+  dynamicConfig?: DynamicScoringConfig,
+): EvaluationResult {
   if (!rawContent) {
     return fallbackResult(job, "Empty LLM response");
   }
@@ -268,6 +403,18 @@ export function evaluateJob(rawContent: string, job: JobForScoring): EvaluationR
   const jobLocationLower = (job.location ?? "").toLowerCase();
   const jobBodyLower = (job.body ?? "").toLowerCase();
 
+  const tricityKeywords = dynamicConfig?.tricityKeywords ?? [
+    "gdansk",
+    "gdańsk",
+    "gdynia",
+    "sopot",
+    "trojmiasto",
+    "trójmiasto",
+  ];
+  const outsourcingKeywords = dynamicConfig?.outsourcingKeywords ?? OUTSOURCING_KEYWORDS;
+  const cryptoKeywords = dynamicConfig?.cryptoKeywords ?? CRYPTO_KEYWORDS;
+  const gamblingKeywords = dynamicConfig?.gamblingKeywords ?? GAMBLING_KEYWORDS;
+
   const isRemote =
     jobLocationLower.includes("remote") ||
     jobLocationLower.includes("zdalna") ||
@@ -277,13 +424,7 @@ export function evaluateJob(rawContent: string, job: JobForScoring): EvaluationR
     jobBodyLower.includes("100% remote") ||
     jobBodyLower.includes("w 100% zdalnie");
 
-  const isTricity =
-    jobLocationLower.includes("gdansk") ||
-    jobLocationLower.includes("gdańsk") ||
-    jobLocationLower.includes("gdynia") ||
-    jobLocationLower.includes("sopot") ||
-    jobLocationLower.includes("trojmiasto") ||
-    jobLocationLower.includes("trójmiasto");
+  const isTricity = tricityKeywords.some((k) => jobLocationLower.includes(k));
 
   // Location: no city is a hard reject — a 10-20 point penalty only.
   const hasRemoteOption =
@@ -298,25 +439,84 @@ export function evaluateJob(rawContent: string, job: JobForScoring): EvaluationR
   }
 
   const isAgency =
-    OUTSOURCING_KEYWORDS.some((k) => jobCompanyLower.includes(k)) ||
+    outsourcingKeywords.some((k) => jobCompanyLower.includes(k)) ||
     jobBodyLower.includes("outsourcing agency") ||
     jobBodyLower.includes("outstaffing") ||
-    jobBodyLower.includes("outsourcing company");
+    jobBodyLower.includes("outsourcing company") ||
+    jobBodyLower.includes("body leasing") ||
+    jobBodyLower.includes("staff augmentation") ||
+    jobBodyLower.includes("for our client");
   if (isAgency) {
     if (!redFlags.includes("Industry: Agency/Outsourcing")) redFlags.push("Industry: Agency/Outsourcing");
     overallScore = 0;
   }
 
-  let techStackMatch = parsed.tech_stack_match ?? 0;
+  const salaryUnspecified = isSalaryUnspecified(job.salary);
+  const maxMonthlyPln = extractMaxMonthlyPln(job.salary);
+  const salaryLower = (job.salary ?? "").toLowerCase();
+  const salaryFloorPln =
+    dynamicConfig?.minB2bPlnFloor ??
+    (salaryLower.includes("uop") ? 28000 : salaryLower.includes("b2b") ? 22000 : 18000);
 
-  const isCrypto = CRYPTO_KEYWORDS.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
+  let falseSalaryHardFloorRemoved = false;
+
+  if (salaryUnspecified) {
+    // Missing or zero salary must NEVER trigger a hard-floor reject (score = 0).
+    // Downgrade any LLM-emitted "Salary: Below Hard Floor" to a non-critical red flag
+    // and ensure the offer carries the "Salary: Low/Unspecified" warning flag.
+    for (let i = 0; i < redFlags.length; i++) {
+      if (redFlags[i] === "Salary: Below Hard Floor") {
+        redFlags[i] = "Salary: Low/Unspecified";
+        falseSalaryHardFloorRemoved = true;
+      }
+    }
+    if (!redFlags.some((f) => f.startsWith("Salary:"))) {
+      redFlags.push("Salary: Low/Unspecified");
+    }
+  } else if (maxMonthlyPln !== undefined && maxMonthlyPln < salaryFloorPln) {
+    if (!redFlags.includes("Salary: Below Hard Floor")) {
+      redFlags.push("Salary: Below Hard Floor");
+    }
+    overallScore = 0;
+  } else if (
+    maxMonthlyPln !== undefined &&
+    maxMonthlyPln >= salaryFloorPln &&
+    !/pln|zł|zl/i.test(job.salary ?? "")
+  ) {
+    // Foreign currency (EUR/USD/GBP/CHF/etc.) verified above PLN hard floor in code:
+    // prevent LLM currency-conversion mistakes from triggering a false hard-floor reject.
+    for (let i = redFlags.length - 1; i >= 0; i--) {
+      if (redFlags[i] === "Salary: Below Hard Floor") {
+        redFlags.splice(i, 1);
+        falseSalaryHardFloorRemoved = true;
+      }
+    }
+  }
+
+  let techStackMatch = parsed.tech_stack_match ?? 0;
+  const seniorityMatch = parsed.seniority_match ?? 0;
+
+  // If the LLM returned overall_score = 0 because of a false salary hard-floor flag
+  // (missing/zero salary or foreign currency above floor), recover a Review score.
+  if (
+    falseSalaryHardFloorRemoved &&
+    (parsed.overall_score ?? 0) === 0 &&
+    techStackMatch >= 60 &&
+    seniorityMatch >= 60 &&
+    !redFlags.some((f) => CRITICAL_FLAGS.includes(f))
+  ) {
+    const locationPenalty = !isTricity && jobLocationLower.length > 0 ? (hasRemoteOption ? 10 : 20) : 0;
+    overallScore = Math.max(50, Math.round(techStackMatch * 0.55 + seniorityMatch * 0.35 - locationPenalty));
+  }
+
+  const isCrypto = cryptoKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
   if (isCrypto) {
     if (!redFlags.includes("Industry: Crypto/Web3")) redFlags.push("Industry: Crypto/Web3");
     overallScore = 0;
     techStackMatch = 0;
   }
 
-  const isGambling = GAMBLING_KEYWORDS.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
+  const isGambling = gamblingKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
   if (isGambling) {
     if (!redFlags.includes("Industry: Gambling/Betting")) redFlags.push("Industry: Gambling/Betting");
     overallScore = 0;

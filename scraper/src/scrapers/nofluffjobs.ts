@@ -78,12 +78,19 @@ export interface RawNoFluffPosting {
  * Extract salary string.
  * NoFluffJobs salary is always monthly (no 'unit' field), so just use from/to directly.
  */
-function extractSalary(salary?: RawNFJSalary): string | undefined {
-  if (!salary || !salary.from || !salary.to) return undefined;
+export function extractSalary(salary?: RawNFJSalary): string | undefined {
+  if (!salary) return undefined;
   if (salary.disclosedAt !== "VISIBLE") return undefined;
+  const fromVal = salary.from && salary.from > 0 ? salary.from : undefined;
+  const toVal = salary.to && salary.to > 0 ? salary.to : undefined;
+  if (!fromVal && !toVal) return undefined;
 
   const typeLabel = salary.type === "b2b" ? "B2B" : salary.type.toUpperCase();
-  return `${salary.from.toLocaleString("pl-PL")}–${salary.to.toLocaleString("pl-PL")} ${salary.currency} ${typeLabel}/mo`;
+  const rangeStr =
+    fromVal && toVal && fromVal !== toVal
+      ? `${fromVal.toLocaleString("pl-PL")}–${toVal.toLocaleString("pl-PL")}`
+      : `${(fromVal ?? toVal)!.toLocaleString("pl-PL")}`;
+  return `${rangeStr} ${salary.currency.toUpperCase()} ${typeLabel}/mo`;
 }
 
 /**

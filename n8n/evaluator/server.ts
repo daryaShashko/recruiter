@@ -15,6 +15,7 @@
 import * as http from "http";
 import { routeCompletion } from "./router";
 import { evaluateJob, JobForScoring } from "./scoring";
+import { getActiveControlPlaneConfig, invalidateControlPlaneCache } from "./notion-profile";
 
 const PORT = Number(process.env["EVALUATOR_PORT"] ?? 3100);
 
@@ -78,18 +79,37 @@ async function handleEvaluate(req: http.IncomingMessage, res: http.ServerRespons
   }
 
   try {
+    const controlPlane = await getActiveControlPlaneConfig();
+    const resolvedSystemPrompt = body.systemPrompt.includes("{{profile}}")
+      ? body.systemPrompt.replaceAll("{{profile}}", controlPlane.profileMarkdown)
+      : body.systemPrompt;
+
     const { content, provider } = await routeCompletion({
-      systemPrompt: body.systemPrompt,
+      systemPrompt: resolvedSystemPrompt,
       userMessage: body.userMessage,
       outputSchema: body.outputSchema,
     });
-    const result = evaluateJob(content, body.job);
-    console.log(`[evaluator] ${body.job.id ?? "?"} -> score=${result.overall_score} via ${provider}`);
+    const result = evaluateJob(content, body.job, controlPlane.scoringConfig);
+    console.log(
+      `[evaluator] ${body.job.id ?? "?"} -> score=${result.overall_score} via ${provider} (profile=${controlPlane.source})`,
+    );
     sendJson(res, 200, result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[evaluator] /evaluate failed:", message);
     sendJson(res, 502, { error: message });
+  }
+}
+
+async function handleReloadProfile(res: http.ServerResponse): Promise<void> {
+  try {
+    invalidateControlPlaneCache();
+    const cp = await getActiveControlPlaneConfig({ forceRefresh: true });
+    sendJson(res, 200, { status: "reloaded", source: cp.source });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[evaluator] /reload-profile failed:", message);
+    sendJson(res, 500, { error: message });
   }
 }
 
@@ -101,6 +121,11 @@ export const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && req.url === "/evaluate") {
     void handleEvaluate(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/reload-profile") {
+    void handleReloadProfile(res);
     return;
   }
 

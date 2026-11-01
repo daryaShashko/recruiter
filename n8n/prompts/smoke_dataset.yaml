@@ -1,0 +1,148 @@
+# ─────────────────────────────────────────────────────────
+# AI Recruiter — Fast Smoke Dataset for Prompt Evaluation
+# 6 representative boundary cases adapted from gold_dataset.yaml:
+#   1. T01: Node.js backend-only Review match (50 <= score < 80)
+#   2. T02: Hot Match Full-Stack (score >= 80)
+#   3. E01: Mixed stack Node.js primary migration (score >= 80)
+#   4. F08: Crypto restricted industry reject (score < 50)
+#   5. F01: Low salary / Junior reject (score < 50)
+#   6. E05: Title-only tech stack (score >= 50)
+# Zero external grading LLM calls — all assertions are deterministic JS.
+# ─────────────────────────────────────────────────────────
+
+- description: "T01: Senior Node.js Backend Developer — Remote (backend-only Node.js, review match)"
+  vars:
+    title: "Senior Node.js Backend Developer"
+    company: "TechFlow Solutions"
+    location: "Remote (EU)"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/techflow-senior-nodejs-backend-dev-12345"
+    body: >-
+      We are hiring a Senior Node.js Backend Developer to join our remote-first
+      engineering team. You will design and build RESTful APIs using TypeScript,
+      Express.js, and PostgreSQL. Experience with Docker, CI/CD, and cloud
+      services (AWS/GCP) is required. Our frontend is built with React.
+      Minimum 5 years of professional experience in backend development
+      with Node.js. Fully remote position within EU timezone.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 50 && j.overall_score < 80;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "T02: Tech Lead TypeScript/NestJS — Gdańsk hybrid (Hot Match Full-Stack)"
+  vars:
+    title: "Tech Lead — TypeScript/Node.js"
+    company: "DataBridge"
+    location: "Gdańsk, hybrid"
+    salary: "25,000 – 32,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/databridge-tech-lead-typescript-gdansk-ab12cd"
+    body: >-
+      We are looking for an experienced Tech Lead to guide our backend team
+      of 6 engineers. Our stack: TypeScript, NestJS, React, PostgreSQL,
+      Redis, Docker, Kubernetes. You will own technical decisions, code
+      reviews, and architecture for our SaaS platform. Hybrid model: 2 days
+      in our Gdańsk office. Requirements: 7+ years in software engineering,
+      2+ years in a lead role.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "E01: Node.js + Java legacy — Node.js is PRIMARY → should match"
+  vars:
+    title: "Senior Software Engineer"
+    company: "LegacyTech"
+    location: "Remote"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/legacytech-senior-engineer-nodejs-java-aaaa1"
+    body: >-
+      We are rebuilding our platform in Node.js and TypeScript. Primary
+      development is Node.js microservices with NestJS framework, React
+      frontend with Next.js, and PostgreSQL database. Some legacy Java
+      services exist but are actively being migrated to Node.js. You will
+      spend 80% of your time on Node.js and 20% maintaining Java services
+      during the transition. 5+ years experience, Node.js expertise required.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 80;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "F08: Senior Node.js at Crypto Startup — restricted industry → should NOT match"
+  vars:
+    title: "Senior Backend Developer (Node.js/TS)"
+    company: "Solana Labs"
+    location: "Remote (EU)"
+    salary: "$8,500 – $11,000 USD/month B2B"
+    url: "https://justjoin.it/offers/solana-labs-senior-backend-dev-99999"
+    body: >-
+      Solana Labs is looking for a Senior Backend Developer to build and optimize
+      high-throughput Node.js microservices and Web3 integration layers for our
+      decentralized applications (dApps). Tech stack: TypeScript, Node.js,
+      PostgreSQL, Docker, Rust, Solana Web3.js, anchor framework.
+      Salary is very competitive, remote first. Looking for 6+ years experience
+      with Node.js and a passion for blockchain and decentralized finance (DeFi).
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "F01: Junior JavaScript Developer — wrong seniority & low salary → should NOT match"
+  vars:
+    title: "Junior JavaScript Developer"
+    company: "StartupXYZ"
+    location: "Remote"
+    salary: "6,000 – 9,000 PLN gross"
+    url: "https://justjoin.it/offers/startupxyz-junior-javascript-dev-44444"
+    body: >-
+      This is an entry-level position for aspiring JavaScript developers.
+      You will learn React basics, HTML, CSS, and modern JavaScript.
+      No prior experience needed — we provide a 3-month training program.
+      Work alongside senior developers on real projects. Fully remote.
+      Perfect for bootcamp graduates or self-taught developers.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score < 50;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "E05: Salary info only, no description — evaluate on title → should NOT discard (score >= 50)"
+  vars:
+    title: "Senior Node.js Developer — Gdańsk"
+    company: "QuickHire"
+    location: "Gdańsk"
+    salary: "23,000 – 29,000 PLN net B2B"
+    url: "https://nofluffjobs.com/job/quickhire-senior-nodejs-gdansk-eeee5"
+    body: "No description available"
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 50;
+        } catch(e) { return false; }
+      weight: 3

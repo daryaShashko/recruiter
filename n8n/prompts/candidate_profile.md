@@ -1,27 +1,24 @@
 # Candidate Profile & Preferences
 
-This profile contains the candidate's professional experience, tech stack, financial expectations, and strict limitations. The AI recruiter assistant must evaluate all job postings against these criteria.
+This profile is dynamically compiled from the Notion Control Plane (Candidate CV & Matching Criteria databases). The AI recruiter assistant must evaluate all job postings against these criteria.
 
 ---
 
 ## 1. Professional Background & Stack
 
-- **Role / Seniority**: Senior Full-Stack Engineer / Senior Frontend Engineer with Backend ambitions. Strictly **NO** Junior, Mid-level, or Regular positions.
+- **Role / Seniority**: Senior Full-Stack Engineer / Senior Frontend Engineer with Backend ambitions. Strictly NO Junior, Mid-level, or Regular positions.
+- **Recent Experience (2026 (Last 6 mos)) — 🔥 Current Project (Last 6 Months — Fill in your new experience here!)**: Active recent 6-month project experience: update this row in Notion with your new stack, domain, responsibilities, and what makes a vacancy exciting for you now.
 - **Primary Tech Stack**: JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL.
-- **Secondary Stack / Familiarity**: Docker, REST APIs, AWS, Azure DevOps, CI/CD (Jenkins, Bamboo), Firebase, Redis (basic), MongoDB, MySQL.
-- **AI & Tools**: GitHub Copilot, Cursor, GenAI-assisted development (actively uses AI for modernization and productivity).
-- **Languages**:
-  - **English**: Professional (fluent reading/writing, professional speaking).
-  - **Russian**: Native.
-  - **Polish**: Intermediate. Job postings in Polish are acceptable, but fluent spoken Polish must **NOT** be a hard requirement for the role.
+- **Secondary Stack / Familiarity**: Docker, REST APIs, AWS, Azure DevOps, CI/CD (Jenkins, Bamboo, GitHub Actions), Firebase, Redis (basic), MongoDB, MySQL.
+- **AI & Tools**: GitHub Copilot, Cursor, Claude Code, Promptfoo, n8n, GenAI-assisted development & LLM evaluation pipelines (actively uses AI for modernization, evaluation harnesses, and productivity).
+- **Languages**: English: Professional (fluent reading/writing, professional speaking). Russian: Native. Polish: Intermediate (job postings in Polish are acceptable, but fluent spoken Polish must NOT be a hard requirement).
 
 ---
 
 ## 2. Target Role & Leadership Ambitions
 
-- **Core Balance**: The ideal role is Full-Stack (ranging from 50/50 to 70/30 in favor of Frontend). The candidate wants to leverage their elite Frontend expertise while actively contributing to and growing in Node.js/NestJS backend development.
-- **Management & Communication**: Strong communication skills and actively wants more responsibility, leadership, and management duties (Tech Lead / Team Lead roles).
-- **Hands-on Ratio**: For Tech Lead/Team Lead roles, the preferred hands-on coding ratio is 50% to 70%. The candidate does **NOT** want 100% people management without coding, nor do they want a pure individual contributor role with zero impact on team or processes.
+- **Core Full-Stack Balance (FE / BE Ratio)**: Ideal role is Full-Stack (50/50 to 70/30 in favor of Frontend) or Node.js/TS Backend-heavy where Senior JS/TS skills apply. Leverage elite Frontend expertise while actively contributing to and growing in Node.js/NestJS backend & AI engineering.
+- **Leadership, Management & Hands-On Ratio (Tech Lead / Team Lead)**: Strong communication skills; actively wants more responsibility, leadership, and management duties (Tech Lead / Team Lead roles). Preferred hands-on coding ratio is 50% to 70% (NO 100% people management without coding, and NO zero-impact pure coder role).
 
 ---
 
@@ -29,18 +26,16 @@ This profile contains the candidate's professional experience, tech stack, finan
 
 *Note: To avoid tax confusion, the AI assistant must calculate net/gross equivalents strictly based on Polish tax regulations.*
 
-- **Desired Target Compensation**: ~20,000 PLN / month NET (take-home pay).
-- **B2B Contract**: 25,000 – 30,000 PLN / month net+VAT (assumes tax/ZUS deductions to achieve 20k net on hands).
-- **UoP (Employment Contract)**: ~32,000 PLN / month GROSS (to clear ~20,000 PLN net after tax).
-- **Hard Floor (Strict Minimum)**: 18,000 PLN / month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, or ~28,000 PLN UoP Gross). Any offer below this is an automatic discard.
-- **B2B & Legal Status**: B2B Contract is highly preferred. The candidate does **NOT** require visa support or legalization assistance in Poland. They have all necessary documents and can instantly register a local business (JDG) to issue VAT invoices (faktura B2B).
+- **Target Compensation (~20k PLN Net / 25-30k B2B — Any Currency OK)**: Desired Target Compensation: ~20,000 PLN/month NET take-home pay (B2B: 25,000–30,000 PLN/month net+VAT; UoP: ~32,000 PLN/month GROSS). ANY CURRENCY IS ACCEPTED (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies to PLN equivalents (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF; e.g. ~5,800–7,000 EUR or ~6,300–7,600 USD B2B/month). B2B preferred; candidate has full legal access in Poland (no visa needed, ready for JDG).
+- **Hard Salary Floor (Min 18k PLN Net / ~22k B2B — Any Currency Converted to PLN)**: Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross). Any currency is accepted — always convert foreign currencies (EUR, USD, GBP, CHF, etc.) and hourly/daily/annual rates to monthly PLN before checking the floor. Only reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.
+- **Undisclosed or Zero Salary -> Keep & Flag as Red Flag (Do NOT Reject)**: Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty): Do NOT reject the vacancy and do NOT set overall_score to 0! Keep the vacancy, evaluate it normally on tech stack, seniority, domain, and location (score 50–85+ if the role is interesting), and add 'Salary not disclosed' to red_flags so the candidate knows the role is interesting but salary was not listed.
 
 ---
 
 ## 4. Location & Work Style
 
-- **Geographic Preferences**: Hybrid in Tricity (Gdańsk / Gdynia / Sopot) OR Fully Remote (Poland, EU, UK, USA).
-- **Disqualifier**: Hybrid or on-site positions in Warsaw, Kraków, Wrocław, or outside Poland (without a 100% remote option) are immediate rejections.
+- **Allowed Locations: Fully Remote or Tricity (Gdańsk/Gdynia/Sopot)**: Geographic Preferences: Hybrid in Tricity (Gdańsk / Gdynia / Sopot) OR Fully Remote (Poland, EU, UK, USA).
+- **Disqualified Locations: On-site/Hybrid outside Tricity (Warsaw, Kraków, Wrocław, etc.)**: Hybrid or on-site positions in Warsaw, Kraków, Wrocław, Katowice, or outside Poland (without a 100% remote option) are immediate rejections.
 
 ---
 
@@ -48,34 +43,29 @@ This profile contains the candidate's professional experience, tech stack, finan
 
 The AI recruiter assistant must automatically discard a vacancy if it meets any of the following:
 
-- **Financial Mismatch**: Offered salary translates to less than 18,000 PLN/month net on hands (or equivalent).
-- **NO Pure Frontend / Pure UI**: Reject positions that explicitly forbid backend access or involve only pixel-pushing (HTML/CSS/pure styling) without system logic, state management, or API design.
-- **NO Pure Backend**: Reject roles that require heavy Senior-level architectural backend experience right from day one.
-- **NO Legacy Maintenance / Feature Building**: The candidate is not afraid of legacy only if the scope is rewriting/migrating it to a modern stack (Node.js/TS), potentially using GenAI tools. If the job involves maintaining old code (PHP, Java, C#) or adding new features directly into the legacy codebase, reject immediately.
-- **NO Crypto / Web3 / Blockchain**: Absolutely do not consider any work, projects, or positions in cryptocurrency, blockchain, NFT, or Web3.
-- **NO Gambling / Betting**: Discard any roles in betting, casino, gaming, or gambling platforms.
-- **NO Agency / Outsourcing / Outstaffing**: Reject roles from outsourcing/outstaffing companies (e.g., EPAM, Luxoft, and similar vendor models). The candidate wants a Product company (preferably startup <50 people, or scale-up 50–300 people).
+- **NO Crypto / Web3 / Blockchain** [Force Reject (Score = 0)]: Absolutely do NOT consider any work, projects, or positions in cryptocurrency, blockchain, NFT, DeFi, smart contracts, or Web3. Immediate score = 0.
+- **NO Gambling / Betting / Casino** [Force Reject (Score = 0)]: Discard any roles in betting, casino, iGaming, or gambling platforms. Immediate score = 0.
+- **NO Agency / Outsourcing / Outstaffing (Product Companies Only)** [Force Reject (Score = 0)]: Reject roles from outsourcing/outstaffing companies and body-leasing vendors. Candidate wants a Product company (startup <50 or scale-up 50-300). Only flag as outsourcing if there is explicit evidence.
+- **NO Legacy Maintenance (PHP, Java, C#, Ruby without Migration to TS/Node)** [Force Reject (Score = 0)]: Reject roles involving maintaining or building new features directly inside legacy codebases (PHP, Java, C#, C++, Ruby) without a greenfield rewrite/migration scope to Node.js/TypeScript.
+- **NO Pure Pixel-Pushing HTML/CSS Frontend** [Discard (Score < 50)]: Reject positions that explicitly forbid backend access or involve only pixel-pushing (HTML/CSS/pure styling) without system logic, state management, or API design. (React roles with state/API logic are NOT pixel-pushing).
+- **NO Junior / Mid / Regular / Intern Roles** [Discard (Score < 50)]: Position is explicitly Junior or Mid-level (< 3 years experience or low seniority). Strictly score < 50.
+
+### Scoring Nuances & Guidelines
+
+- **Node.js / TypeScript Backend-Only Role -> Review (Score 60-75)**: Node.js/TypeScript backend-only role (no frontend scope mentioned): Score 60–75 (Review). Node.js IS the candidate's target stack — the only penalty is the absence of frontend work. Do NOT reject these roles below 50.
+- **Mixed Stack with Node.js PRIMARY (e.g. 80% Node, 20% Java Migration) -> Hot Match (>=80)**: If Node.js/TypeScript is explicitly stated as the primary technology (e.g. 80% Node.js, 20% legacy Java maintenance during migration), treat it as a Node.js role and score >= 80 if all other criteria match.
 
 ---
 
 ## 6. Target Domains & Industries
 
-- **Preferred / Acceptable**:
-  - HealthTech / MedTech / NeuroMed / Psychoanalysis (has direct experience)
-  - FinTech / Finance
-  - Enterprise / B2B SaaS
-  - E-commerce / Retail
-  - GovTech / Public Sector
-  - SportsTech
-  - Product Startups
-  - AI / ML Products
+- **Preferred Product Domains (AI/ML, HealthTech, FinTech, B2B SaaS, E-com, GovTech, SportsTech)**: Preferred / Acceptable domains: AI / ML Products, HealthTech / MedTech / NeuroMed / Psychoanalysis (direct experience), FinTech / Finance, Enterprise / B2B SaaS, E-commerce / Retail, GovTech, SportsTech, Product Startups (<50 or 50–300 scale-up).
 
 ---
 
 ## 7. Key Achievements (For Context & Matching)
 
-- Migrated core backend from Java to Node.js & MySQL to PostgreSQL (handled a 4-month intense backend feature delivery track).
-- Reduced operational costs by 15% through legacy modernization.
-- Led a team of 4 frontend developers (MIS-Clinic, 2019–2021).
-- Designed greenfield project architecture (Frontend & API integration) from scratch.
-- Developed the first mobile medical application in Belarus (React Native).
+- **Backend Migration: Java to Node.js & MySQL to PostgreSQL**: Migrated core backend from Java to Node.js & MySQL to PostgreSQL (handled a 4-month intense backend feature delivery track).
+- **Legacy Modernization (-15% Operational Cost)**: Reduced operational costs by 15% through legacy modernization and GenAI-assisted refactoring.
+- **Frontend Team Leadership (Team of 4 Developers)**: Led a team of 4 frontend developers (MIS-Clinic, 2019–2021) and designed greenfield project architecture (Frontend & API integration) from scratch.
+- **First Mobile Medical App in Belarus (React Native)**: Developed the first mobile medical application in Belarus using React Native.

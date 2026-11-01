@@ -146,3 +146,18 @@ The Notion Create Page node for Evaluation Log (`Notion: Log to Eval Log`) is pl
 - **Before**: `IF: Match?`
 - Logs every item regardless of match/reject outcome
 
+---
+
+## Databases 3 & 4: Notion Live Control Plane (CV & Matching Criteria)
+
+> **Module:** [`n8n/evaluator/notion-profile.ts`](../n8n/evaluator/notion-profile.ts) + CLI [`n8n/evaluator/notion-cli.ts`](../n8n/evaluator/notion-cli.ts)
+>
+> **Purpose:** Let the candidate edit their structured CV (`Candidate CV & Experience`) and evaluation rules (`Matching Criteria & Guardrails`) in Notion in real time, compiling active rows (`Active = ✅`) into both `n8n/prompts/candidate_profile.md` (`{{profile}}`) and `DynamicScoringConfig` for [`n8n/evaluator/scoring.ts`](../n8n/evaluator/scoring.ts).
+
+### Commands (run from `n8n/`)
+
+- `npm run notion:provision` — creates the `🎛️ AI Recruiter — CV & Criteria Control Plane` page and both databases in Notion, seeding all 12 CV rows and 13 Criteria rows.
+- `npm run notion:sync` — fetches active rows from Notion and updates `n8n/prompts/candidate_profile.md` + local snapshot `n8n/prompts/.notion-snapshot.json`.
+- `npm run notion:preview` — prints the compiled Markdown profile and `DynamicScoringConfig` offline.
+
+

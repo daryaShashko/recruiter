@@ -5,6 +5,7 @@ import { scrapeNoFluffJobs } from "./scrapers/nofluffjobs";
 import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
 import { closeBrowser } from "./utils/browser";
+import { enrichMissingSalaries } from "./utils/salary-enricher";
 import { JobOffer } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "true";
@@ -81,11 +82,13 @@ async function main(): Promise<void> {
   });
 
   const deduplicated = deduplicateOffers(allOffers);
+  const { offers: enrichedOffers, enrichedCount } =
+    enrichMissingSalaries(deduplicated);
   console.log(
-    `\nTotal: ${allOffers.length} collected, ${allOffers.length - deduplicated.length} duplicates removed, ${deduplicated.length} unique offers`,
+    `\nTotal: ${allOffers.length} collected, ${allOffers.length - deduplicated.length} duplicates removed, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
   );
 
-  if (deduplicated.length === 0) {
+  if (enrichedOffers.length === 0) {
     process.stderr.write(
       "ERROR: 0 job offers collected after deduplication.\n" +
         "Possible causes: scraper API broken, site structure changed, or network issues.\n",
@@ -95,12 +98,12 @@ async function main(): Promise<void> {
   }
 
   if (IS_DRY_RUN) {
-    saveDryRunOutput(deduplicated);
+    saveDryRunOutput(enrichedOffers);
   } else {
     try {
-      await sendToWebhook(deduplicated, "scraper-combined");
+      await sendToWebhook(enrichedOffers, "scraper-combined");
       console.log(
-        `\n✅ Successfully sent ${deduplicated.length} offers to webhook`,
+        `\n✅ Successfully sent ${enrichedOffers.length} offers to webhook`,
       );
     } catch (err) {
       console.error("Failed to send to webhook:", err);

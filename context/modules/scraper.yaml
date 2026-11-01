@@ -81,7 +81,16 @@ files:
     response_path: "response.data.data"
     id_format: "justjoin_{raw.slug}"
     status: implemented
-    salary_source: "employmentTypes[] — prefer currency=PLN + currencySource=original + type=b2b + unit=Month"
+    salary_source: >
+      employmentTypes[] (entries with numeric from & to) — priority order:
+      (1) currency=PLN + currencySource=original + type=b2b + unit=Month,
+      (2) currency=PLN + currencySource=original + unit=Month,
+      (3) currency=PLN + currencySource=original,
+      (4) currencySource=original + type=b2b + unit=Month (non-PLN, e.g. EUR/USD/GBP),
+      (5) currencySource=original + unit=Month,
+      (6) currencySource=original,
+      (7) first valid entry with from/to (e.g. currencySource=conversion).
+      Formatted as "from–to CURRENCY TYPE/mo|h".
     location_logic: "workplaceType=remote → 'Remote'; locations[].city contains Gdańsk → 'Gdańsk'; else primary city"
     body_strategy: "buildBody() — synthetic from title + experienceLevel + requiredSkills + niceToHaveSkills + locations"
     pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
@@ -133,7 +142,7 @@ files:
       page_size: 20
       safety_cap: 20
       coverage: "~104/108 (~96%) unique postings per run as of 2026-10-05; not 100% (not investigated further)"
-    salary_logic: "extractSalary() — requires disclosedAt=VISIBLE; returns 'from–to CURRENCY TYPE/mo'"
+    salary_logic: "extractSalary() — requires disclosedAt=VISIBLE and from>0 or to>0; returns 'from–to CURRENCY TYPE/mo' (any currency)"
     location_logic: "location.fullyRemote → 'Remote'; places[].city contains Gdańsk → 'Gdańsk'; else first non-provinceOnly city"
     body_strategy: "buildBody() — synthetic from title + company + category + seniority + technology + tags + locations"
     pre_filter: "matchesPreFilter() — drops non-remote/non-Gdańsk AND rejectLevels (junior/mid/intern)"
@@ -143,6 +152,14 @@ files:
       - "/api/search/posting is undocumented/unversioned — may break again on NFJ frontend changes"
       - "robots.txt disallows /api/ on nofluffjobs.com — already effectively hit via Playwright XHR interception pre-2026-05, not a new policy stance, but worth tracking (see ADR-019)"
     never_throws: true # catches internally, returns [] on failure
+
+  src/utils/salary-enricher.ts:
+    exports: [enrichMissingSalaries, isMissingOrZeroSalary, normalizeCompanyName, normalizeJobTitle]
+    purpose: >
+      Cross-platform salary enrichment: when an offer has missing or zero salary
+      (e.g. JustJoin undisclosed), searches offers scraped from other platforms
+      (e.g. NoFluffJobs) for the same normalized company and matching job title,
+      filling salary as "{salary} (via {source})".
 
   src/debug-urls.ts:
     exports: [] # debug script, not imported elsewhere

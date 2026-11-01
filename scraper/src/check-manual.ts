@@ -24,6 +24,7 @@ import { JobOffer } from "./types";
 import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
 import { openPage, closeBrowser } from "./utils/browser";
+import { extractSalary, RawEmploymentType } from "./scrapers/justjoin";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -136,14 +137,6 @@ interface RawJJSkill {
   name: string;
   level: number;
 }
-interface RawJJEmploymentType {
-  from?: number;
-  to?: number;
-  currency: string;
-  currencySource: string;
-  type: string;
-  unit: string;
-}
 interface RawJJLocation {
   city: string;
 }
@@ -156,7 +149,7 @@ interface RawJJOffer {
   locations?: RawJJLocation[];
   requiredSkills?: RawJJSkill[];
   niceToHaveSkills?: RawJJSkill[];
-  employmentTypes?: RawJJEmploymentType[];
+  employmentTypes?: RawEmploymentType[];
 }
 
 function buildJJBody(offer: RawJJOffer, url: string): string {
@@ -186,20 +179,6 @@ function buildJJBody(offer: RawJJOffer, url: string): string {
 
   lines.push(`URL: ${url}`);
   return lines.join("\n");
-}
-
-function extractJJSalary(types: RawJJEmploymentType[]): string | undefined {
-  const pln = types.filter(
-    (e) => e.currency === "PLN" && e.currencySource === "original",
-  );
-  const best =
-    pln.find((e) => e.type === "b2b" && e.unit === "Month") ??
-    pln.find((e) => e.unit === "Month") ??
-    pln[0];
-  if (!best?.from || !best?.to) return undefined;
-  const unitLabel = best.unit === "Hour" ? "/h" : "/mo";
-  const typeLabel = best.type === "b2b" ? "B2B" : best.type.toUpperCase();
-  return `${best.from.toLocaleString("pl-PL")}–${best.to.toLocaleString("pl-PL")} PLN ${typeLabel}${unitLabel}`;
 }
 
 async function tryJustJoinApi(
@@ -237,7 +216,7 @@ async function tryJustJoinApi(
         ? "Remote"
         : (offer.city ?? offer.locations?.[0]?.city),
     salary: offer.employmentTypes
-      ? extractJJSalary(offer.employmentTypes)
+      ? extractSalary(offer.employmentTypes)
       : undefined,
     tags: [
       ...(offer.requiredSkills?.map((s) => s.name.toLowerCase()) ?? []),

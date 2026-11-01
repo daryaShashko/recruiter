@@ -1,0 +1,127 @@
+# ─────────────────────────────────────────────────────────
+# AI Recruiter — Promptfoo Fast Smoke Evaluation Config
+#
+# Usage:
+#   cd scraper && npm run eval:smoke
+#
+# Runs 6 representative boundary cases from smoke_dataset.yaml
+# with deterministic JS assertions only (zero external grading calls).
+# ─────────────────────────────────────────────────────────
+
+description: "AI Recruiter — Evaluator Prompt v1 (Smoke)"
+
+# ─── Prompt ──────────────────────────────────────────────
+prompts:
+  - file://evaluator-template.json
+
+# ─── Provider ────────────────────────────────────────────
+providers:
+  - id: "{{env.LLM_PROVIDER}}"
+    label: "{{env.LLM_PROVIDER}}"
+    config:
+      temperature: 0
+      generationConfig:
+        responseMimeType: "application/json"
+        responseSchema:
+          type: object
+          required:
+            [
+              overall_score,
+              tech_stack_match,
+              seniority_match,
+              red_flags,
+              reason,
+              url,
+            ]
+          properties:
+            overall_score: { type: number, minimum: 0, maximum: 100 }
+            tech_stack_match: { type: number, minimum: 0, maximum: 100 }
+            seniority_match: { type: number, minimum: 0, maximum: 100 }
+            red_flags:
+              type: array
+              items: { type: string }
+            reason: { type: string }
+            url: { type: string }
+
+# ─── Default Assertions ────────────────────────────────────
+defaultTest:
+  vars:
+    profile: file://candidate_profile.md
+  assert:
+    # 1. Output must parse as a valid JSON object
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          return j !== null && typeof j === 'object';
+        } catch(e) { return false; }
+      weight: 2
+
+    # 2. JSON must contain all required fields with correct types
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return typeof j.overall_score === 'number' && j.overall_score >= 0 && j.overall_score <= 100
+            && typeof j.tech_stack_match === 'number' && j.tech_stack_match >= 0 && j.tech_stack_match <= 100
+            && typeof j.seniority_match === 'number' && j.seniority_match >= 0 && j.seniority_match <= 100
+            && Array.isArray(j.red_flags) && j.red_flags.every(x => typeof x === 'string')
+            && typeof j.reason === 'string' && j.reason.length > 0
+            && typeof j.url === 'string' && j.url.length > 0;
+        } catch(e) { return false; }
+      weight: 2
+
+    # 3. URL in response must echo back the input URL
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          return j !== null && j.url === context.vars.url;
+        } catch(e) { return false; }
+      weight: 1
+
+    # 4. red_flags: flat string array, no commas/markdown, 1-6 words per item
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j || !Array.isArray(j.red_flags)) return false;
+          for (const flag of j.red_flags) {
+            if (typeof flag !== 'string') return false;
+            if (flag.includes(',')) return false;
+            if (/[*_`\n\r]/.test(flag)) return false;
+            const words = flag.trim().split(/\s+/).length;
+            if (words < 1 || words > 6) return false;
+          }
+          return true;
+        } catch(e) { return false; }
+      weight: 2
+
+    # 5. Deterministic check: quality and specificity of the "reason" field
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j || typeof j.reason !== 'string') return false;
+          const r = j.reason.trim();
+          if (r.length < 15 || r.length > 320) return false;
+          const lower = r.toLowerCase();
+          const genericOnly = [
+            "does not match the candidate's profile",
+            "strong match for the candidate's preferred stack",
+            "good fit for the role",
+            "matches the profile"
+          ];
+          if (genericOnly.some(g => lower === g || lower === g + '.')) return false;
+          return /(node|react|typescript|javascript|nest|next|postgres|java|php|\.net|c#|python|go|ruby|angular|vue|aws|docker|remote|gdańsk|gdansk|tricity|warsaw|kraków|krakow|wrocław|wroclaw|poland|eu|hybrid|on-site|onsite|pln|eur|usd|b2b|uop|gross|net|salary|floor|\d+k|senior|lead|principal|staff|architect|junior|mid|regular|intern|crypto|web3|blockchain|solana|gambling|betting|casino|outsourc|outstaff|agency|epam|luxoft|legacy|migration|spam|invalid|stack)/i.test(r);
+        } catch(e) { return false; }
+      weight: 1
+
+# ─── Evaluate Options ───────────────────────────────────
+evaluateOptions:
+  maxConcurrency: 2
+  cache: true
+
+# ─── Test Cases ──────────────────────────────────────────
+tests: file://smoke_dataset.yaml

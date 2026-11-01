@@ -6,6 +6,8 @@ import {
   RawEmploymentType,
   RawJustJoinOffer,
 } from '../src/scrapers/justjoin';
+import { enrichMissingSalaries } from '../src/utils/salary-enricher';
+import { JobOffer } from '../src/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,17 +53,81 @@ describe('extractSalary', () => {
     expect(result).toContain('/mo');
   });
 
-  it('returns undefined when no PLN entries exist', () => {
+  it('returns a salary string for EUR original B2B monthly offer when no PLN original entry exists', () => {
     const types: RawEmploymentType[] = [{
-      from: 800,
-      to: 950,
-      currency: 'USD',
+      from: 4000,
+      to: 6000,
+      currency: 'EUR',
       currencySource: 'original',
       type: 'b2b',
       unit: 'Month',
       gross: false,
     }];
-    expect(extractSalary(types)).toBeUndefined();
+    const result = extractSalary(types);
+    expect(result).toBeDefined();
+    expect(result).toContain('EUR');
+    expect(result).toContain('B2B/mo');
+  });
+
+  it('returns a salary string for USD original permanent/uop monthly offer', () => {
+    const types: RawEmploymentType[] = [{
+      from: 5000,
+      to: 7000,
+      currency: 'usd',
+      currencySource: 'original',
+      type: 'uop',
+      unit: 'Month',
+      gross: true,
+    }];
+    const result = extractSalary(types);
+    expect(result).toBeDefined();
+    expect(result).toContain('USD');
+    expect(result).toContain('UOP/mo');
+  });
+
+  it('prefers PLN original B2B monthly over EUR conversion entry when both exist', () => {
+    const types: RawEmploymentType[] = [
+      {
+        from: 4500,
+        to: 5500,
+        currency: 'EUR',
+        currencySource: 'conversion',
+        type: 'b2b',
+        unit: 'Month',
+        gross: false,
+      },
+      makePlnB2bMonthly(20000, 24000),
+    ];
+    const result = extractSalary(types);
+    expect(result).toBeDefined();
+    expect(result).toContain('PLN');
+    expect(result).not.toContain('EUR');
+    expect(result).toContain('B2B/mo');
+  });
+
+  it('falls back to conversion entry when only conversion entries have from/to', () => {
+    const types: RawEmploymentType[] = [
+      {
+        currency: 'PLN',
+        currencySource: 'original',
+        type: 'b2b',
+        unit: 'Month',
+        gross: false,
+      },
+      {
+        from: 18000,
+        to: 22000,
+        currency: 'PLN',
+        currencySource: 'conversion',
+        type: 'b2b',
+        unit: 'Month',
+        gross: false,
+      },
+    ];
+    const result = extractSalary(types);
+    expect(result).toBeDefined();
+    expect(result).toContain('PLN');
+    expect(result).toContain('B2B/mo');
   });
 
   it('returns undefined for empty array', () => {
@@ -194,5 +260,39 @@ describe('normalizeOffer', () => {
     const offer = makeOffer({ requiredSkills: [], niceToHaveSkills: undefined as any });
     expect(() => normalizeOffer(offer)).not.toThrow();
     expect(normalizeOffer(offer).tags).toEqual([]);
+  });
+});
+
+describe('enrichMissingSalaries — cross-platform salary lookup', () => {
+  it('fills missing JustJoin salary from matching NoFluffJobs offer for the same company and role', () => {
+    const jjOffer: JobOffer = {
+      id: 'justjoin_acme-senior-fullstack',
+      title: 'Senior Full-Stack Engineer (React / Node.js)',
+      company: 'Acme Software Sp. z o.o.',
+      url: 'https://justjoin.it/job-offer/acme-senior-fullstack',
+      body: 'React + Node.js',
+      source: 'justjoin',
+      location: 'Remote',
+      salary: undefined,
+      tags: ['react', 'node.js'],
+      scrapedAt: '2026-10-29T18:00:00.000Z',
+    };
+
+    const nfjOffer: JobOffer = {
+      id: 'nofluffjobs_acme-123',
+      title: 'Senior Full-Stack Developer (React / Node.js)',
+      company: 'Acme Software',
+      url: 'https://nofluffjobs.com/pl/praca/acme-123',
+      body: 'React + Node.js',
+      source: 'nofluffjobs',
+      location: 'Remote',
+      salary: '6 000–7 500 EUR B2B/mo',
+      tags: ['react', 'node.js'],
+      scrapedAt: '2026-10-29T18:00:00.000Z',
+    };
+
+    const { offers, enrichedCount } = enrichMissingSalaries([jjOffer, nfjOffer]);
+    expect(enrichedCount).toBe(1);
+    expect(offers[0]?.salary).toBe('6 000–7 500 EUR B2B/mo (via nofluffjobs)');
   });
 });

@@ -252,8 +252,12 @@ evaluator_service: # ADR-019 (2026-10) — not yet wired into the live n8n workf
     small Node process on the same free VM.
   files:
     router.ts: "Fallback-chain LLM call — reuses n8n/providers/*.ts (ADR-016)"
-    scoring.ts: "JSON parse + hard-reject heuristics — see key_logic.scoring note below"
+    scoring.ts: "JSON parse + hard-reject heuristics + DynamicScoringConfig support"
     server.ts: "Zero-dependency http.createServer wrapper — POST /evaluate, GET /healthz"
+    prompt-builder.ts: "Builds systemPrompt (evaluator.md + candidate_profile.md) and userMessage"
+    notion-profile.ts: "Notion Live Control Plane client & compiler (CV + Matching Criteria → Markdown + DynamicScoringConfig)"
+    notion-cli.ts: "CLI entry point for notion:provision, notion:sync, notion:preview"
+    harness.ts: "Offline/live evaluation harness against promptfoo datasets"
   build_run:
     install: "cd n8n && npm install"
     build: "npm run build  # tsc → n8n/dist/"

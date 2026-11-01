@@ -16,6 +16,7 @@
     "eval:view": "npx promptfoo view",
     "eval:gemini": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml",
     "eval:gemini:view": "npx promptfoo view",
+    "eval:smoke": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-smoke.yaml",
     "check": "ts-node src/check-manual.ts"
   },
   "dependencies": {

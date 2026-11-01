@@ -22,7 +22,9 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
 4. **Legacy Maintenance**: The job involves maintaining or building new features directly inside legacy codebases (PHP, Java, C#, C++, Ruby) without a greenfield rewrite/migration scope. (The candidate is fine with legacy only if the entire job is migrating/rewriting it to Node.js/TypeScript).
 5. **Pure pixel-pushing Frontend**: The job involves ONLY HTML/CSS layout work with zero JavaScript system logic, zero API integration, zero state management. Score < 50. IMPORTANT: A React role that includes component logic, state management, or API calls is NOT pixel-pushing — do NOT apply this rule to it.
 6. **Wrong Location**: The job requires hybrid or in-office presence in Warsaw, Kraków, Wrocław, Katowice, or any city other than Gdańsk/Tricity.
-7. **Financial Mismatch**: The salary translates to less than 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, or ~28,000 PLN UoP Gross).
+7. **Financial Mismatch (Explicit Low Salary Only)**: The salary is explicitly disclosed (non-zero) and translates to less than 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross).
+   - **ANY currency is acceptable** (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies and hourly/daily/annual rates to monthly PLN before comparing (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF). Never reject a role just because salary is not in PLN.
+   - **Undisclosed / Missing / Zero salary is NOT a rejection**: If salary is missing, empty, `"0"`, `"N/A"`, `"Undisclosed"`, or `"Competitive"`, do NOT apply this rule and do NOT set `overall_score` to 0. Score the vacancy normally on stack, seniority, and location (can be Review 50–79 or Hot Match >= 80 if the role is interesting), and add `"Salary not disclosed"` to `red_flags`. Foreign currency offers in EUR, USD, or GBP are valid and welcome (use approximate conversion: 1 EUR ≈ 4.25 PLN, 1 USD ≈ 3.95 PLN, 1 GBP ≈ 5.00 PLN; e.g., >= 5,200 EUR B2B/mo or >= 5,600 USD B2B/mo clears the 22,000 PLN B2B floor).
 
 **Scoring Guidelines (overall_score: 0 to 100):**
 1. **Hot Match (score >= 80)**:
@@ -57,6 +59,12 @@ If the job description body is empty, "No description available", or contains no
    - 90-100: Title or description explicitly requests Senior, Lead, Architect, Principal, or Staff.
    - 60-89: Strong Mid/Regular role requesting 4+ years of experience, or where duties map to senior level.
    - < 60: Junior, entry-level, internship, or requires <2 years experience.
+
+**Calibration Examples (Few-Shot Reference):**
+- **Example 1 (Hot Match — Full-Stack + AI/Product)**: Senior Full-Stack Engineer (TypeScript, React, Node.js, NestJS) at a B2B SaaS product company, Remote EU, 6 500 EUR B2B/mo -> `{"overall_score":92,"tech_stack_match":95,"seniority_match":95,"red_flags":[],"reason":"Strong match: TypeScript/React/NestJS full-stack at a SaaS product company, Remote EU, 6500 EUR B2B/mo exceeds target.","url":"https://example.com/1"}`
+- **Example 2 (Review Match — Node.js Backend-Only)**: Senior Node.js / TypeScript Backend Developer (PostgreSQL, AWS, no frontend mentioned), Gdańsk Hybrid, 26 000 PLN B2B/mo -> `{"overall_score":68,"tech_stack_match":80,"seniority_match":90,"red_flags":["No frontend scope"],"reason":"Review match: Senior Node.js/TypeScript backend role in Gdańsk hybrid at 26k PLN B2B, penalized only for missing React frontend scope.","url":"https://example.com/2"}`
+- **Example 3 (Hot Match — Legacy Migration with Node.js Primary)**: Senior Engineer (80% Node.js/TypeScript + React, migrating 20% legacy Java services), Remote Poland, 28 000 PLN B2B/mo -> `{"overall_score":84,"tech_stack_match":85,"seniority_match":90,"red_flags":[],"reason":"Hot match: Node.js and React primary stack (80%) actively migrating legacy Java services, Remote Poland at 28k PLN B2B.","url":"https://example.com/3"}`
+- **Example 4 (Force Reject — Outsourcing / Body-Leasing)**: Senior React & Node.js Developer at an IT consultancy ("working for our financial client"), Remote, 25 000 PLN B2B/mo -> `{"overall_score":0,"tech_stack_match":0,"seniority_match":90,"red_flags":["Outsourcing agency"],"reason":"Rejected: role is at an outsourcing consultancy building for an external client rather than a product company.","url":"https://example.com/4"}`
 
 **CRITICAL OUTPUT FORMAT RULE:**
 Return ONLY a raw JSON object. Do NOT wrap it in markdown code blocks, backticks, or ```json``` fences. Do NOT add any text before or after the JSON. The very first character of your response MUST be `{` and the very last MUST be `}`.

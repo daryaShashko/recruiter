@@ -57,25 +57,55 @@ export interface RawJustJoinOffer {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Extract salary string. Prefers PLN + b2b + Month.
- * Falls back to any PLN entry, then undefined.
+ * Extract salary string. Prefers PLN + original + b2b + Month,
+ * then other PLN original entries, then non-PLN original entries
+ * (preferring b2b + Month, then Month, then any original),
+ * and finally falls back to any valid entry with from/to (e.g. conversion).
  */
 export function extractSalary(types: RawEmploymentType[]): string | undefined {
-  const originalPln = types.filter(
-    (e) => e.currency === "PLN" && e.currencySource === "original",
-  );
+  const valid = types.filter((e) => Boolean((e.from && e.from > 0) || (e.to && e.to > 0)));
 
-  // Prefer monthly b2b, then any PLN original
   const best =
-    originalPln.find((e) => e.type === "b2b" && e.unit === "Month") ??
-    originalPln.find((e) => e.unit === "Month") ??
-    originalPln[0];
+    valid.find(
+      (e) =>
+        e.currency === "PLN" &&
+        e.currencySource === "original" &&
+        e.type === "b2b" &&
+        e.unit === "Month",
+    ) ??
+    valid.find(
+      (e) =>
+        e.currency === "PLN" &&
+        e.currencySource === "original" &&
+        e.unit === "Month",
+    ) ??
+    valid.find(
+      (e) => e.currency === "PLN" && e.currencySource === "original",
+    ) ??
+    valid.find(
+      (e) =>
+        e.currencySource === "original" &&
+        e.type === "b2b" &&
+        e.unit === "Month",
+    ) ??
+    valid.find(
+      (e) => e.currencySource === "original" && e.unit === "Month",
+    ) ??
+    valid.find((e) => e.currencySource === "original") ??
+    valid[0];
 
-  if (!best || !best.from || !best.to) return undefined;
+  if (!best) return undefined;
+  const fromVal = best.from && best.from > 0 ? best.from : undefined;
+  const toVal = best.to && best.to > 0 ? best.to : undefined;
+  if (!fromVal && !toVal) return undefined;
 
   const unitLabel = best.unit === "Hour" ? "/h" : "/mo";
   const typeLabel = best.type === "b2b" ? "B2B" : best.type.toUpperCase();
-  return `${best.from.toLocaleString("pl-PL")}–${best.to.toLocaleString("pl-PL")} PLN ${typeLabel}${unitLabel}`;
+  const rangeStr =
+    fromVal && toVal && fromVal !== toVal
+      ? `${fromVal.toLocaleString("pl-PL")}–${toVal.toLocaleString("pl-PL")}`
+      : `${(fromVal ?? toVal)!.toLocaleString("pl-PL")}`;
+  return `${rangeStr} ${best.currency.toUpperCase()} ${typeLabel}${unitLabel}`;
 }
 
 /**
