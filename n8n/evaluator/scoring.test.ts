@@ -45,12 +45,27 @@ describe("evaluateJob — happy path", () => {
     expect(result.match).toBe(false);
   });
 
-  it("does not penalize a fully remote job in any country", () => {
-    for (const location of ["Remote", "Remote (Denmark)", "London, UK (Remote)", "Tokyo — fully remote"]) {
+  it("does not penalize a fully remote job in any country unless remote work is US-only", () => {
+    for (const location of ["Remote", "Remote (Denmark)", "Remote (US)", "London, UK (Remote)", "Tokyo — fully remote"]) {
       const result = evaluateJob(rawLlm({ overall_score: 85 }), makeJob({ location, body: "Node.js and React." }));
       expect(result.overall_score).toBe(85);
       expect(result.red_flags).not.toContain("Location: Relocation Required");
+      expect(result.red_flags).not.toContain("Location: Remote Region Restricted");
     }
+
+    const usOnly = evaluateJob(
+      rawLlm({ overall_score: 85 }),
+      makeJob({ location: "Remote — US only", body: "Node.js and React." }),
+    );
+    expect(usOnly.overall_score).toBe(75);
+    expect(usOnly.red_flags).toContain("Location: Remote Region Restricted");
+
+    const residenceRequired = evaluateJob(
+      rawLlm({ overall_score: 85 }),
+      makeJob({ location: "Remote", body: "Must reside in the United States. Node.js and React." }),
+    );
+    expect(residenceRequired.overall_score).toBe(75);
+    expect(residenceRequired.red_flags).toContain("Location: Remote Region Restricted");
   });
 });
 
@@ -160,6 +175,15 @@ describe("evaluateJob — non-JS stack rules", () => {
       expect(result.red_flags).toContain("Stack: Legacy/Non-JS");
       expect(result.overall_score).toBe(0);
     }
+  });
+
+  it("does not reject a pure Node.js backend role", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 70, red_flags: ["Pure backend role, no frontend"] }),
+      makeJob({ location: "Gdańsk" }),
+    );
+    expect(result.red_flags).toContain("Stack: Pure Backend");
+    expect(result.overall_score).toBe(70);
   });
 });
 

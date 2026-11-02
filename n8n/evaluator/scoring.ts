@@ -6,10 +6,9 @@
  * context/decisions.yaml), captured directly from the n8n API on 2026-10-05 —
  * not from any prior assumption about what it does. Notably, the real rules differ
  * from what context/ingest-workflow.yaml documented: there is no hard reject for
- * "wrong location" (missing Tricity/remote only costs a 10-20 point penalty), and
- * the salary hard floor is enforced only if the LLM itself reports it as a red flag
- * (which then maps to the "Salary: Below Hard Floor" critical tag) — there is no
- * programmatic numeric salary check here.
+ * "wrong location"; relocation costs a flat 10-point penalty. Explicit salary floors
+ * are enforced programmatically after converting recognized currencies to PLN; unknown
+ * or missing currencies are never compared 1:1 with PLN.
  *
  * 2026-11 rule change (diverges from the live node until redeployed): fully remote
  * roles in any country get no location penalty; hybrid/on-site outside the Tricity
@@ -67,7 +66,6 @@ const CRITICAL_FLAGS = [
   "Industry: Agency/Outsourcing",
   "Salary: Below Hard Floor",
   "Stack: Legacy/Non-JS",
-  "Stack: Pure Backend",
 ];
 
 const OUTSOURCING_KEYWORDS = [
@@ -170,6 +168,7 @@ function mapToStandardTag(rawTag: unknown): string {
   }
 
   // Location
+  if (text.includes("remote region restricted")) return "Location: Remote Region Restricted";
   if (text.includes("relocat")) return "Location: Relocation Required";
   if (text.includes("warsaw") || text.includes("warszawa")) return "Location: Warsaw";
   if (text.includes("krakow") || text.includes("kraków")) return "Location: Kraków";
@@ -208,13 +207,9 @@ function mapToStandardTag(rawTag: unknown): string {
     return "Stack: Non-JS Nice-to-have";
   }
   if (
+    (mentionsNonJsLanguage(text) && !NICE_TO_HAVE_PATTERN.test(text)) ||
     text.includes("legacy") ||
-    text.includes("maintenance") ||
-    text.includes("php") ||
-    /\bjava\b/.test(text) || // word match: "javascript" must NOT count as Java
-    text.includes("c++") ||
-    text.includes("c#") ||
-    text.includes("non-js required")
+    text.includes("maintenance")
   ) {
     return "Stack: Legacy/Non-JS";
   }
@@ -488,15 +483,25 @@ export function evaluateJob(
     jobBodyLower.includes("w 100% zdalnie");
 
   const isTricity = tricityKeywords.some((k) => jobLocationLower.includes(k));
+  const requiresOnsiteRelocation = !isTricity && !isRemote && jobLocationLower.length > 0;
+  const remoteRegionRestricted =
+    isRemote &&
+    (    /\b(?:us|usa|united states)\s+only\b|\bremote\s+(?:within|in)\s+(?:the\s+)?(?:us|usa|united states)\b/i.test(
+      jobLocationLower,
+    ) ||
+      /\bmust\s+(?:reside|be based)\s+in\s+(?:the\s+)?(?:us|usa|united states)\b/i.test(jobBodyLower));
 
-  // Location: fully remote is welcome in ANY country (no penalty). Hybrid/on-site
-  // outside the Tricity is NOT a reject — it is flagged and costs RELOCATION_PENALTY.
-  const needsRelocation = !isTricity && !isRemote && jobLocationLower.length > 0;
+  // Fully remote is welcome globally unless residence is restricted to the US.
+  // Hybrid/on-site outside the Tricity and US-only remote roles require relocation.
+  const needsRelocation = requiresOnsiteRelocation || remoteRegionRestricted;
+  const relocationFlag = remoteRegionRestricted && !requiresOnsiteRelocation
+    ? "Location: Remote Region Restricted"
+    : "Location: Relocation Required";
 
   let overallScore = parsed.overall_score ?? 0;
 
   if (needsRelocation) {
-    if (!redFlags.some((f) => f.startsWith("Location:"))) redFlags.push("Location: Relocation Required");
+    if (!redFlags.some((f) => f.startsWith("Location:"))) redFlags.push(relocationFlag);
     overallScore = Math.max(0, Math.round(overallScore - RELOCATION_PENALTY));
   }
 

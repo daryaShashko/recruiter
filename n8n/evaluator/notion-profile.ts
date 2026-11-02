@@ -278,7 +278,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     ruleType: "Target / Preference",
     valueOrKeywords: "warsaw, warszawa, kraków, krakow, wrocław, wroclaw, katowice, poznań",
     description:
-      "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and score about 10 points lower than an equivalent remote role. Remote limited to a region the candidate cannot work from (e.g. 'US only') is treated the same way ('Remote region restricted').",
+      "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and score about 10 points lower than an equivalent remote role. Remote work that explicitly requires residence in the US or Canada (e.g. 'US only' or 'must reside in Canada') is treated the same way ('Remote region restricted'); an employer's hiring-market label alone does not prove a residence restriction.",
     order: 4,
     active: true,
   },
