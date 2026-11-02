@@ -31,7 +31,12 @@ CI runs only deterministic checks. `cd scraper && npm run eval:full` manually
 runs the four semantic rubrics from `rubric_dataset.yaml` against Gemini; it
 requires `GOOGLE_API_KEY`, consumes quota, and is not a CI gate. Regex checks
 wording rather than meaning and may need adjustment if model phrasing changes.
-Live CI verification after push is pending; no new cloud eval was run for this note.
+Post-push run `41527947241` first had 13/24 transient Gemini 503 errors; its single
+retry had 0 errors and 22/24 passed. It exposed two deterministic wording mismatches:
+E01 said "80% allocation" rather than "80% Node.js", and F09 put its location
+penalty in `reason` but omitted a location red flag after the new relocation policy.
+Both assertions were adjusted against those saved responses. A further green run
+after these fixes is still pending; no extra cloud eval was started here.
 
 ---
 

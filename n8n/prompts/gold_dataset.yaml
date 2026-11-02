@@ -422,7 +422,7 @@
         try {
           const reason = JSON.parse(output).reason;
           return typeof reason === 'string'
-            && /\b80%\s*node(?:\.js)?\b|\bnode(?:\.js)?\b[^.;]{0,60}\b(?:primary|main|core|80%)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bnode(?:\.js)?\b/i.test(reason)
+            && /\b80%\s*(?:node(?:\.js)?|allocation)|\bnode(?:\.js)?\b[^.;]{0,60}\b(?:primary|main|core|80%)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bnode(?:\.js)?\b/i.test(reason)
             && !/\bjava\b[^.;,]{0,40}\b(?:primary|main|core|80%)\b|\b(?:primary|main|core|80%)\b[^.;,]{0,40}\bjava\b/i.test(reason);
         } catch(e) { return false; }
       weight: 1
@@ -567,7 +567,7 @@
           if (!j) return false;
           const isLow = j.overall_score < 50;
           const hasRedFlags = Array.isArray(j.red_flags) && j.red_flags.length > 0;
-          const hasLocation = j.red_flags.some(x => x.toLowerCase().includes('location') || x.toLowerCase().includes('katowice') || x.toLowerCase().includes('mismatch'));
+          const hasLocation = typeof j.reason === 'string' && /locat|katowice|hybrid/i.test(j.reason);
           return isLow && hasRedFlags && hasLocation;
         } catch(e) { return false; }
       weight: 3
