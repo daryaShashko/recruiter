@@ -228,7 +228,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords:
       "25000-30000 PLN B2B | 5800-7000 EUR B2B | 6300-7600 USD B2B | 32000 PLN UoP Gross | ~20000 PLN Net | Any currency OK",
     description:
-      "Desired Target Compensation: ~20,000 PLN/month NET take-home pay (B2B: 25,000–30,000 PLN/month net+VAT; UoP: ~32,000 PLN/month GROSS). ANY CURRENCY IS ACCEPTED (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies to PLN equivalents (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF; e.g. ~5,800–7,000 EUR or ~6,300–7,600 USD B2B/month). B2B preferred; candidate has full legal access in Poland (no visa needed, ready for JDG).",
+      "Desired Target Compensation: ~20,000 PLN/month NET take-home pay (B2B: 25,000–30,000 PLN/month net+VAT; UoP: ~32,000 PLN/month GROSS). ANY CURRENCY IS ACCEPTED (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies to PLN equivalents, never 1:1 (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF, ~0.38 PLN/SEK, ~0.37 PLN/NOK, ~0.57 PLN/DKK, ~2.95 PLN/SGD, ~1.08 PLN/AED, ~0.026 PLN/JPY; e.g. ~5,800–7,000 EUR or ~6,300–7,600 USD B2B/month). B2B preferred; candidate has full legal access in Poland (no visa needed, ready for JDG).",
     order: 1,
     active: true,
   },
@@ -240,7 +240,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     ruleType: "Force Reject (Score = 0)",
     valueOrKeywords: "22000",
     description:
-      "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross). Any currency is accepted — always convert foreign currencies (EUR, USD, GBP, CHF, etc.) and hourly/daily/annual rates to monthly PLN before checking the floor. Only reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
+      "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross). Any currency is accepted — always convert foreign currencies (EUR, USD, GBP, CHF, SEK, NOK, DKK, SGD, AED, JPY, etc.) and hourly/daily/annual rates to monthly PLN before checking the floor — never compare a foreign amount 1:1 with PLN. Only reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
     order: 2,
     active: true,
   },
@@ -260,25 +260,25 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   // ── 2. Location & Work Style ──────────────────────────────────────────────
   {
     id: "crit-location-allowed",
-    ruleName: "Allowed Locations: Fully Remote or Tricity (Gdańsk/Gdynia/Sopot)",
+    ruleName: "Allowed Locations: Fully Remote (Any Country) or Tricity (Gdańsk/Gdynia/Sopot)",
     category: "Location & Work Style",
     enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Target / Preference",
     valueOrKeywords: "gdansk, gdańsk, gdynia, sopot, trojmiasto, trójmiasto, remote, zdalnie, zdalna",
     description:
-      "Geographic Preferences: Hybrid in Tricity (Gdańsk / Gdynia / Sopot) OR Fully Remote (Poland, EU, UK, USA).",
+      "Geographic Preferences: Fully Remote in ANY country (Poland, EU, UK, Scandinavia, Switzerland, USA, Asia, etc.; Polish/EU passport, ready for Polish B2B/JDG) OR Hybrid/office in Tricity (Gdańsk / Gdynia / Sopot). No location penalty for these.",
     order: 3,
     active: true,
   },
   {
     id: "crit-location-reject",
-    ruleName: "Disqualified Locations: On-site/Hybrid outside Tricity (Warsaw, Kraków, Wrocław, etc.)",
+    ruleName: "Relocation Required: On-site/Hybrid outside Tricity -> Flag & ~10 Points Lower (NOT a Reject)",
     category: "Location & Work Style",
-    enforcement: "Prompt Rule (LLM Only)",
-    ruleType: "Force Reject (Score = 0)",
+    enforcement: "Hard Gate (Code + Prompt)",
+    ruleType: "Target / Preference",
     valueOrKeywords: "warsaw, warszawa, kraków, krakow, wrocław, wroclaw, katowice, poznań",
     description:
-      "Hybrid or on-site positions in Warsaw, Kraków, Wrocław, Katowice, or outside Poland (without a 100% remote option) are immediate rejections.",
+      "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and score about 10 points lower than an equivalent remote role. Remote limited to a region the candidate cannot work from (e.g. 'US only') is treated the same way ('Remote region restricted').",
     order: 4,
     active: true,
   },
@@ -324,13 +324,13 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   },
   {
     id: "crit-reject-legacy",
-    ruleName: "NO Legacy Maintenance (PHP, Java, C#, Ruby without Migration to TS/Node)",
+    ruleName: "NO Non-JS Language as Must-Have (Java, C#, PHP, Python, Go, Ruby...; Nice-to-Have Is OK)",
     category: "Hard Reject (Red Flag)",
     enforcement: "Prompt Rule (LLM Only)",
     ruleType: "Force Reject (Score = 0)",
     valueOrKeywords: "php, java, c#, .net, ruby, c++, legacy maintenance",
     description:
-      "Reject roles involving maintaining or building new features directly inside legacy codebases (PHP, Java, C#, C++, Ruby) without a greenfield rewrite/migration scope to Node.js/TypeScript.",
+      "Reject roles where a non-JavaScript language (Java, C#, .NET, PHP, Python, Go, Ruby, C++, Kotlin, etc.) is a must-have or the primary day-to-day language, or that maintain a legacy non-JS codebase without a rewrite/migration to Node.js/TypeScript (red_flag: Non-JS required). Do NOT reject when the non-JS language is only nice-to-have, a plus, or learnable on the job — the candidate is happy to pick it up with AI-assisted development (red_flag: Non-JS nice-to-have). JavaScript/TypeScript is NOT Java.",
     order: 8,
     active: true,
   },

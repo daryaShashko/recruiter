@@ -6,6 +6,7 @@
 #   T01–T08: TRUE matches  (should return match: true)
 #   F01–F07: FALSE matches (should return match: false)
 #   E01–E05: EDGE cases    (tricky scenarios)
+#   G01–G02: GLOBAL rules  (remote abroad, non-JS nice-to-have; added 2026-11)
 #
 # Expand this file over time with real production edge cases.
 # Target: 30–50 test cases for reliable F1-score calculation.
@@ -38,9 +39,16 @@
           return j.overall_score >= 50 && j.overall_score < 80;
         } catch(e) { return false; }
       weight: 3
-    - type: llm-rubric
-      value: "Reasoning must mention Node.js or TypeScript as the primary stack."
-      provider: google:gemini-3.1-flash-lite
+    # Backend-only T01: require Node.js backend evidence; "primary frontend" alone is not enough.
+    - type: javascript
+      value: |
+        try {
+          const reason = JSON.parse(output).reason;
+          return typeof reason === 'string'
+            && /\bnode(?:\.js)?(?:\/typescript)?\b[^.;]{0,40}\bbackend role\b/i.test(reason)
+            && !/\b(?:java|python|php)\b[^.;]{0,40}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,40}\b(?:java|python|php)\b/i.test(reason);
+        } catch(e) { return false; }
+      weight: 1
 
 - description: "T02: Tech Lead TypeScript/NestJS — Gdańsk hybrid"
   vars:
@@ -256,9 +264,16 @@
           return j.overall_score < 50;
         } catch(e) { return false; }
       weight: 3
-    - type: llm-rubric
-      value: "Reasoning must identify Java as the primary stack, not JavaScript/Node.js."
-      provider: google:gemini-3.1-flash-lite
+    # F02: Java must be explicitly primary; a primary JS/Node claim is contradictory.
+    - type: javascript
+      value: |
+        try {
+          const reason = JSON.parse(output).reason;
+          return typeof reason === 'string'
+            && /\bjava(?:\/spring boot)?\b[^.;]{0,60}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bjava\b/i.test(reason)
+            && !/\b(?:node(?:\.js)?|typescript|javascript)\b[^.;]{0,45}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,45}\b(?:node(?:\.js)?|typescript|javascript)\b/i.test(reason);
+        } catch(e) { return false; }
+      weight: 1
 
 - description: "F03: Senior C#/.NET — wrong stack and database"
   vars:
@@ -304,7 +319,7 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "F05: Senior Node.js Warsaw on-site only — wrong location"
+- description: "F05: Senior Node.js Warsaw on-site only — relocation required (flagged, lower, NOT rejected)"
   vars:
     title: "Senior Node.js Developer"
     company: "WarsawTech"
@@ -322,7 +337,9 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score < 50;
+          const flags = Array.isArray(j.red_flags) ? j.red_flags : [];
+          const hasRelocation = flags.some(x => /locat|on-site|office/i.test(String(x)));
+          return j.overall_score > 0 && j.overall_score < 80 && hasRelocation;
         } catch(e) { return false; }
       weight: 3
 
@@ -538,5 +555,53 @@
           const hasRedFlags = Array.isArray(j.red_flags) && j.red_flags.length > 0;
           const hasLocation = j.red_flags.some(x => x.toLowerCase().includes('location') || x.toLowerCase().includes('katowice') || x.toLowerCase().includes('mismatch'));
           return isLow && hasRedFlags && hasLocation;
+        } catch(e) { return false; }
+      weight: 3
+
+# ═══════════════════════════════════════════════════════════
+#  GLOBAL RULES (2026-11): remote anywhere, relocation flag, non-JS nice-to-have
+# ═══════════════════════════════════════════════════════════
+
+- description: "G01: Senior TypeScript Full-Stack — fully remote from Denmark, DKK salary → should match, no location flag"
+  vars:
+    title: "Senior Full-Stack Engineer (TypeScript)"
+    company: "NordicSaaS ApS"
+    location: "Remote (Denmark)"
+    salary: "60,000 – 70,000 DKK/month"
+    url: "https://boards.greenhouse.io/nordicsaas/jobs/1001"
+    body: >-
+      Product company building B2B SaaS. Stack: TypeScript, React, Next.js,
+      Node.js, NestJS, PostgreSQL. Fully remote within EU timezones; we hire via
+      B2B contracts across the EU. 6+ years of experience, senior level.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          const flags = Array.isArray(j.red_flags) ? j.red_flags : [];
+          const hasLocation = flags.some(x => /locat|relocat/i.test(String(x)));
+          return j.overall_score >= 50 && !hasLocation;
+        } catch(e) { return false; }
+      weight: 3
+
+- description: "G02: Senior Node.js — Python nice-to-have, remote UK → should match (not rejected for Python)"
+  vars:
+    title: "Senior Backend Engineer (Node.js)"
+    company: "LondonHealth Ltd"
+    location: "Remote (UK/EU)"
+    salary: "£6,000 – £7,500/month B2B"
+    url: "https://jobs.ashbyhq.com/londonhealth/2002"
+    body: >-
+      HealthTech product company. Primary stack: Node.js, TypeScript,
+      PostgreSQL, AWS. Python is nice to have — you can learn it on the job for
+      our data tooling. Senior level, 5+ years. Fully remote across UK and EU.
+  assert:
+    - type: javascript
+      value: |
+        try {
+          const j = JSON.parse(output);
+          if (!j) return false;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3

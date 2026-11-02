@@ -10,6 +10,14 @@
  * the salary hard floor is enforced only if the LLM itself reports it as a red flag
  * (which then maps to the "Salary: Below Hard Floor" critical tag) — there is no
  * programmatic numeric salary check here.
+ *
+ * 2026-11 rule change (diverges from the live node until redeployed): fully remote
+ * roles in any country get no location penalty; hybrid/on-site outside the Tricity
+ * gets "Location: Relocation Required" and a flat RELOCATION_PENALTY. Salaries are
+ * converted to PLN via CURRENCY_RATES_TO_PLN (unknown currency → no code floor check,
+ * never 1:1). A non-JS language is critical only when required; "nice-to-have"
+ * mentions map to the non-critical "Stack: Non-JS Nice-to-have", and "javascript"
+ * no longer matches the Java check.
  */
 
 import type { DynamicScoringConfig } from "./notion-profile";
@@ -112,6 +120,23 @@ const CRYPTO_KEYWORDS = [
 
 const GAMBLING_KEYWORDS = ["gambling", "betting", "casino", "sportsbook", "sports-betting"];
 
+/** Score penalty for hybrid/on-site roles outside the Tricity (not a reject). */
+const RELOCATION_PENALTY = 10;
+
+const NICE_TO_HAVE_PATTERN =
+  /nice[\s-]to[\s-]have|good[\s-]to[\s-]have|\bplus\b|\bbonus\b|optional|willing(?:ness)?\s+to\s+learn|can\s+learn|learn\s+on\s+the\s+job/;
+
+/** True when `text` names a non-JavaScript language ("javascript" itself does not count as Java). */
+function mentionsNonJsLanguage(text: string): boolean {
+  return (
+    text.includes("non-js") ||
+    text.includes("c#") ||
+    text.includes("c++") ||
+    text.includes(".net") ||
+    /\b(?:java|php|python|golang|go|ruby|kotlin|scala|rust|swift|elixir)\b/.test(text)
+  );
+}
+
 /** Predefined clean taxonomy tags mapper — ported verbatim from the live node. */
 function mapToStandardTag(rawTag: unknown): string {
   let tag: unknown = rawTag;
@@ -178,13 +203,18 @@ function mapToStandardTag(rawTag: unknown): string {
   }
 
   // Stack
+  // A non-JS language that is only nice-to-have / learnable is NOT a reject.
+  if (mentionsNonJsLanguage(text) && NICE_TO_HAVE_PATTERN.test(text)) {
+    return "Stack: Non-JS Nice-to-have";
+  }
   if (
     text.includes("legacy") ||
     text.includes("maintenance") ||
     text.includes("php") ||
-    text.includes("java") ||
+    /\bjava\b/.test(text) || // word match: "javascript" must NOT count as Java
     text.includes("c++") ||
-    text.includes("c#")
+    text.includes("c#") ||
+    text.includes("non-js required")
   ) {
     return "Stack: Legacy/Non-JS";
   }
@@ -291,71 +321,99 @@ export function isSalaryUnspecified(salary?: string): boolean {
   return numbers.every((n) => Number(n) === 0);
 }
 
+/** Matches an alphabetic currency token not glued to other letters ("4000EUR" ok, "europe" not). */
+function token(alternatives: string): RegExp {
+  return new RegExp(`(?<![a-z])(?:${alternatives})(?![a-z])`, "i");
+}
+
+/**
+ * Approximate conversion rates to PLN (PLN per 1 unit of currency).
+ * Static approximations, not live FX data — good enough for a hard-floor gate.
+ * Order matters: more specific patterns (e.g. "S$", "HK$", "CNY") must be
+ * checked before generic ones ("$", "¥").
+ */
+const CURRENCY_RATES_TO_PLN: ReadonlyArray<{ readonly code: string; readonly pattern: RegExp; readonly rate: number }> = [
+  { code: "PLN", pattern: /(?<![a-z])(?:pln|zl|zlotych)(?![a-z])|zł/i, rate: 1 },
+  { code: "EUR", pattern: /(?<![a-z])(?:eur|euro|euros)(?![a-z])|€/i, rate: 4.25 },
+  { code: "GBP", pattern: /(?<![a-z])gbp(?![a-z])|£/i, rate: 5.0 },
+  { code: "CHF", pattern: token("chf"), rate: 4.55 },
+  { code: "NZD", pattern: /(?<![a-z])(?:nzd|nz\$)/i, rate: 2.35 },
+  { code: "SGD", pattern: /(?<![a-z])(?:sgd(?![a-z])|s\$)/i, rate: 2.95 },
+  { code: "HKD", pattern: /(?<![a-z])(?:hkd(?![a-z])|hk\$)/i, rate: 0.51 },
+  { code: "CAD", pattern: /(?<![a-z])(?:cad(?![a-z])|c\$|ca\$)/i, rate: 2.85 },
+  { code: "AUD", pattern: /(?<![a-z])(?:aud(?![a-z])|a\$|au\$)/i, rate: 2.6 },
+  { code: "USD", pattern: /(?<![a-z])usd(?![a-z])|\$/i, rate: 3.95 },
+  { code: "SEK", pattern: token("sek"), rate: 0.38 },
+  { code: "NOK", pattern: token("nok"), rate: 0.37 },
+  { code: "DKK", pattern: token("dkk"), rate: 0.57 },
+  { code: "ISK", pattern: token("isk"), rate: 0.029 },
+  { code: "CZK", pattern: /(?<![a-z])czk(?![a-z])|kč/i, rate: 0.17 },
+  { code: "HUF", pattern: token("huf"), rate: 0.011 },
+  { code: "RON", pattern: token("ron"), rate: 0.85 },
+  { code: "BGN", pattern: token("bgn"), rate: 2.17 },
+  { code: "AED", pattern: token("aed|dirham|dirhams"), rate: 1.08 },
+  { code: "CNY", pattern: /(?<![a-z])(?:cny|rmb)(?![a-z])|元/i, rate: 0.55 },
+  // "¥" alone is ambiguous (JPY or CNY); treated as JPY because Japan is the target market.
+  { code: "JPY", pattern: /(?<![a-z])(?:jpy|yen)(?![a-z])|¥|円/i, rate: 0.026 },
+];
+
+/**
+ * Above this monthly PLN value a salary without an explicit period is assumed to be
+ * annual (e.g. "CHF 120'000–140'000" or "¥9,000,000"). No realistic monthly IT
+ * salary exceeds 100k PLN/month.
+ */
+const ANNUAL_INFERENCE_THRESHOLD_PLN = 100_000;
+
+/** Returns the PLN conversion rate for the currency in `salary`, or undefined if unknown/absent. */
+export function detectRateToPln(salary: string): number | undefined {
+  for (const { pattern, rate } of CURRENCY_RATES_TO_PLN) {
+    if (pattern.test(salary)) return rate;
+  }
+  return undefined;
+}
+
 /**
  * Deterministically extract the upper-bound monthly salary in PLN from a formatted
- * salary string (supports PLN, EUR, USD, GBP, CHF, CAD, AUD, SEK, NOK, DKK, CZK
- * and monthly/hourly/daily/annual rates).
- * Returns `undefined` when missing, zero, unparseable, or in an unknown currency.
+ * salary string (see CURRENCY_RATES_TO_PLN for supported currencies; supports
+ * monthly/hourly/daily/annual rates, "k"/"M" shorthands and Swiss "120'000" separators).
+ * Returns `undefined` when missing, zero, unparseable, or when the currency is unknown
+ * or absent — an unknown currency is never treated as PLN 1:1.
  */
 export function extractMaxMonthlyPln(salary?: string): number | undefined {
   if (isSalaryUnspecified(salary) || !salary) return undefined;
 
-  const lower = salary.toLowerCase();
+  const rateToPln = detectRateToPln(salary);
+  if (rateToPln === undefined) return undefined;
 
-  let rateToPln: number | undefined;
-  if (lower.includes("pln") || lower.includes("zł") || lower.includes("zl")) {
-    rateToPln = 1;
-  } else if (lower.includes("eur") || lower.includes("€")) {
-    rateToPln = 4.25;
-  } else if (/\bcad\b|c\$/i.test(salary)) {
-    rateToPln = 2.85;
-  } else if (/\baud\b|a\$/i.test(salary)) {
-    rateToPln = 2.6;
-  } else if (lower.includes("usd") || lower.includes("$")) {
-    rateToPln = 3.95;
-  } else if (lower.includes("gbp") || lower.includes("£")) {
-    rateToPln = 5.0;
-  } else if (/\bchf\b/i.test(salary)) {
-    rateToPln = 4.55;
-  } else if (/\bsek\b/i.test(salary)) {
-    rateToPln = 0.38;
-  } else if (/\bnok\b/i.test(salary)) {
-    rateToPln = 0.37;
-  } else if (/\bdkk\b/i.test(salary)) {
-    rateToPln = 0.57;
-  } else if (/\bczk\b|kč/i.test(salary)) {
-    rateToPln = 0.17;
-  } else {
-    // Reject other 3-letter currency codes we don't have a conversion rate for
-    if (/\b(?:jpy|uah|inr|brl|try|huf|ron|bgn|sgd|hkd|nzd)\b/i.test(salary)) {
-      return undefined;
-    }
-    rateToPln = 1;
-  }
-
-  const isHourly = /(?:\/\s*h(?:r|our)?\b|per\s+hour|\bgodz)/i.test(salary);
-  const isDaily = /(?:\/\s*d(?:ay)?\b|per\s+day|\bdziennie)/i.test(salary);
-  const isYearly = /(?:\/\s*y(?:r|ear)?\b|per\s+year|per\s+annum|\bp\.?a\.?\b|\brocznie|\bannual)/i.test(
-    salary,
-  );
+  const isHourly = /(?:\/\s*h(?:r|our)?\b|per\s+hour|\bhourly\b|\bgodz)/i.test(salary);
+  const isDaily = /(?:\/\s*d(?:ay)?\b|per\s+day|\bdaily\b|\bdziennie)/i.test(salary);
+  const isYearly =
+    /(?:\/\s*y(?:r|ear)?\b|per\s+year|per\s+annum|\ba\s+year\b|\byearly\b|\bp\.?a\.?(?![a-z])|\brocznie|\bannual)/i.test(
+      salary,
+    );
 
   // Strip "(via ...)" and "B2B" so embedded digits are never parsed as salary numbers
   const cleanedForNumbers = salary
     .replace(/\(via\s+[^)]+\)/gi, " ")
     .replace(/\bb2b\b/gi, " ");
 
-  // Support "k" shorthand (e.g. "6k - 8k EUR" or "25k PLN")
-  const expandedK = cleanedForNumbers.replace(
-    /(\d+(?:[.,]\d+)?)\s*k\b/gi,
-    (_m, numStr: string) => String(Math.round( Number(numStr.replace(",", ".")) * 1000 )),
-  );
+  // Support "k" and "M"/"mln" shorthands (e.g. "6k - 8k EUR", "25k PLN", "8M JPY")
+  const expandedShorthand = cleanedForNumbers
+    .replace(
+      /(\d+(?:[.,]\d+)?)\s*k\b/gi,
+      (_m, numStr: string) => String(Math.round(Number(numStr.replace(",", ".")) * 1000)),
+    )
+    .replace(
+      /(\d+(?:[.,]\d+)?)\s*(?:m|mn|mln)\b/gi,
+      (_m, numStr: string) => String(Math.round(Number(numStr.replace(",", ".")) * 1_000_000)),
+    );
 
   const rawTokens =
-    expandedK.match(/(?<!\d)(?:\d{1,3}(?:[\s\u00a0.,]\d{3})+|\d+)(?!\d)/g) ?? [];
+    expandedShorthand.match(/(?<!\d)(?:\d{1,3}(?:[\s\u00a0.,'’]\d{3})+|\d+)(?!\d)/g) ?? [];
 
   const minThreshold = isHourly ? 15 : isDaily ? 100 : 30;
   const parsedNumbers = rawTokens
-    .map((tok) => Number(tok.replace(/[\s\u00a0.,]/g, "")))
+    .map((tok) => Number(tok.replace(/[\s\u00a0.,'’]/g, "")))
     .filter((n) => Number.isFinite(n) && n >= minThreshold);
 
   if (parsedNumbers.length === 0) return undefined;
@@ -369,7 +427,12 @@ export function extractMaxMonthlyPln(salary?: string): number | undefined {
         ? maxNumber / 12
         : maxNumber;
 
-  return Math.round(monthlyInOriginalCurrency * rateToPln);
+  let monthlyPln = monthlyInOriginalCurrency * rateToPln;
+  if (!isHourly && !isDaily && !isYearly && monthlyPln > ANNUAL_INFERENCE_THRESHOLD_PLN) {
+    monthlyPln = monthlyPln / 12;
+  }
+
+  return Math.round(monthlyPln);
 }
 
 /**
@@ -426,16 +489,15 @@ export function evaluateJob(
 
   const isTricity = tricityKeywords.some((k) => jobLocationLower.includes(k));
 
-  // Location: no city is a hard reject — a 10-20 point penalty only.
-  const hasRemoteOption =
-    isRemote || jobLocationLower.includes("hybrid") || jobBodyLower.includes("hybrid") || jobBodyLower.includes("remote");
+  // Location: fully remote is welcome in ANY country (no penalty). Hybrid/on-site
+  // outside the Tricity is NOT a reject — it is flagged and costs RELOCATION_PENALTY.
+  const needsRelocation = !isTricity && !isRemote && jobLocationLower.length > 0;
 
   let overallScore = parsed.overall_score ?? 0;
 
-  if (!isTricity && jobLocationLower.length > 0) {
+  if (needsRelocation) {
     if (!redFlags.some((f) => f.startsWith("Location:"))) redFlags.push("Location: Relocation Required");
-    const penalty = hasRemoteOption ? 10 : 20;
-    overallScore = Math.max(0, Math.round(overallScore - penalty));
+    overallScore = Math.max(0, Math.round(overallScore - RELOCATION_PENALTY));
   }
 
   const isAgency =
@@ -505,7 +567,7 @@ export function evaluateJob(
     seniorityMatch >= 60 &&
     !redFlags.some((f) => CRITICAL_FLAGS.includes(f))
   ) {
-    const locationPenalty = !isTricity && jobLocationLower.length > 0 ? (hasRemoteOption ? 10 : 20) : 0;
+    const locationPenalty = needsRelocation ? RELOCATION_PENALTY : 0;
     overallScore = Math.max(50, Math.round(techStackMatch * 0.55 + seniorityMatch * 0.35 - locationPenalty));
   }
 

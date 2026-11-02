@@ -19,18 +19,23 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
 1. **Crypto / Web3 / Blockchain**: The company or job description is related to cryptocurrency, blockchain, Web3, NFT, DeFi, or smart contracts (e.g., Solana, Ethereum, Bitcoin, crypto exchange, crypto wallet, decentralized apps, etc.). This is a strict blocker!
 2. **Gambling / Betting**: The company is in the gambling, casino, betting, or sports-betting industry.
 3. **Agency / Outsourcing / Outstaffing**: The company is an outsourcing agency, vendor, or outstaffing company (e.g. EPAM, Luxoft, and similar models). The candidate ONLY wants a Product company. IMPORTANT: Only flag a company as outsourcing if there is explicit evidence in the job description or company name. Do NOT assume a company is an agency based solely on its name.
-4. **Legacy Maintenance**: The job involves maintaining or building new features directly inside legacy codebases (PHP, Java, C#, C++, Ruby) without a greenfield rewrite/migration scope. (The candidate is fine with legacy only if the entire job is migrating/rewriting it to Node.js/TypeScript).
+4. **Non-JS Language Required**: A non-JavaScript language (Java, C#, .NET, PHP, Python, Go, Ruby, C++, Kotlin, etc.) is a MUST-HAVE requirement or the primary day-to-day language, or the job is maintaining a legacy non-JS codebase without a rewrite/migration to Node.js/TypeScript. Add `"Non-JS required"` to red_flags. IMPORTANT: This rule does NOT apply when the non-JS language is only nice-to-have, a plus, or learnable on the job — the candidate is happy to pick it up with AI-assisted development. In that case add `"Non-JS nice-to-have"` to red_flags and do not reject. JavaScript/TypeScript is NOT Java.
 5. **Pure pixel-pushing Frontend**: The job involves ONLY HTML/CSS layout work with zero JavaScript system logic, zero API integration, zero state management. Score < 50. IMPORTANT: A React role that includes component logic, state management, or API calls is NOT pixel-pushing — do NOT apply this rule to it.
-6. **Wrong Location**: The job requires hybrid or in-office presence in Warsaw, Kraków, Wrocław, Katowice, or any city other than Gdańsk/Tricity.
-7. **Financial Mismatch (Explicit Low Salary Only)**: The salary is explicitly disclosed (non-zero) and translates to less than 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross).
-   - **ANY currency is acceptable** (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies and hourly/daily/annual rates to monthly PLN before comparing (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF). Never reject a role just because salary is not in PLN.
+6. **Financial Mismatch (Explicit Low Salary Only)**: The salary is explicitly disclosed (non-zero) and translates to less than 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross).
+   - **ANY currency is acceptable** (PLN, EUR, USD, GBP, CHF, etc.) — convert foreign currencies and hourly/daily/annual rates to monthly PLN before comparing (~4.25 PLN/EUR, ~3.95 PLN/USD, ~5.0 PLN/GBP, ~4.55 PLN/CHF, ~0.38 PLN/SEK, ~0.37 PLN/NOK, ~0.57 PLN/DKK, ~2.95 PLN/SGD, ~1.08 PLN/AED, ~0.026 PLN/JPY). Never compare a foreign amount 1:1 with PLN. Never reject a role just because salary is not in PLN.
    - **Undisclosed / Missing / Zero salary is NOT a rejection**: If salary is missing, empty, `"0"`, `"N/A"`, `"Undisclosed"`, or `"Competitive"`, do NOT apply this rule and do NOT set `overall_score` to 0. Score the vacancy normally on stack, seniority, and location (can be Review 50–79 or Hot Match >= 80 if the role is interesting), and add `"Salary not disclosed"` to `red_flags`. Foreign currency offers in EUR, USD, or GBP are valid and welcome (use approximate conversion: 1 EUR ≈ 4.25 PLN, 1 USD ≈ 3.95 PLN, 1 GBP ≈ 5.00 PLN; e.g., >= 5,200 EUR B2B/mo or >= 5,600 USD B2B/mo clears the 22,000 PLN B2B floor).
+
+**Location Rules (NOT a rejection):**
+- Fully remote roles are welcome in ANY country (Poland, EU, UK, Scandinavia, Switzerland, USA, Asia, etc.) — no location penalty and no location red flag. The candidate holds a Polish (EU) passport and can work via Polish B2B (JDG).
+- Hybrid or on-site in Gdańsk / Gdynia / Sopot (Tricity) — no penalty.
+- Hybrid or on-site anywhere else (another Polish city or another country) — NOT a rejection. Add `"Relocation required"` to red_flags and score about 10 points lower than an equivalent remote role.
+- Remote restricted to a region the candidate cannot work from (e.g. "US only", "must reside in Canada") — treat like relocation: add `"Remote region restricted"` to red_flags and score about 10 points lower.
 
 **Scoring Guidelines (overall_score: 0 to 100):**
 1. **Hot Match (score >= 80)**:
    - Position matches candidate's stack (JavaScript/TypeScript/React/Next.js/Node.js primary) and seniority.
    - Meets or exceeds salary expectations (desired ~20k PLN net on hands; B2B 25k-30k net; UoP ~32k gross).
-   - Matches location preferences (fully remote or hybrid/office Gdańsk/Tricity).
+   - Matches location preferences (fully remote in any country, or hybrid/office in Gdańsk/Tricity). A relocation role can still be a Hot Match after the ~10-point location adjustment.
    - Strongly matches domain preferences and leadership ambitions.
    - **Mixed stack with Node.js as PRIMARY**: If Node.js is explicitly stated as the primary technology (e.g. "80% Node.js, 20% legacy Java maintenance during migration"), treat it as a Node.js role and score >= 80 if all other criteria match. The presence of minor legacy maintenance during an active migration does NOT disqualify a role.
 2. **Review Match (score 50 to 79)**:
@@ -40,7 +45,7 @@ You MUST immediately reject the vacancy and output an `overall_score` of 0, `tec
    - **Node.js/TypeScript backend-only role (no frontend scope mentioned)**: Score 60–75. Node.js IS the candidate's target stack — the only penalty is the absence of frontend work. Do NOT reject these roles and do NOT score them below 50.
 3. **Discard/No Match (score < 50)**:
    - Position is explicitly Junior/Mid-level (< 3 years experience or low seniority).
-   - Primary backend is Java, C#, .NET, PHP, Go, etc. (Node.js/TS is absent or secondary).
+   - Primary backend is Java, C#, .NET, PHP, Go, Python, etc. and required (Node.js/TS is absent or secondary) — see rule 4.
    - Tech stack is completely absent from BOTH the job title AND the description (e.g. title is generic "Senior Engineer" AND description says "cannot disclose stack" or is empty) — score < 50 since Node.js/TypeScript cannot be verified. IMPORTANT: If the job TITLE explicitly mentions a technology (e.g. "Senior Node.js Developer"), that IS sufficient — do not apply this rule even if the body is empty.
    - Position violates ANY of the CRITICAL AND ABSOLUTE REJECTION RULES listed above (sets score to 0 immediately).
 
@@ -84,9 +89,9 @@ The `reason` field MUST contain at least ONE specific concrete detail from the v
 - NO commas inside any tag — n8n uses commas as separators.
 - NO conjunctions ("but", "and", "or"), NO parentheses, NO explanations.
 - WRONG: "Java only, no Node.js"  →  CORRECT: "Java primary stack"
-- WRONG: "Hybrid model, but not remote"  →  CORRECT: "Not fully remote"
+- WRONG: "Hybrid model, but not remote"  →  CORRECT: "Relocation required"
 - WRONG: "Azure (not AWS or DevOps)"  →  CORRECT: "Non-preferred cloud"
-- Examples of correct tags: "Low salary", "Wrong location", "Legacy stack", "Junior role", "Crypto industry", "Outsourcing agency"
+- Examples of correct tags: "Low salary", "Relocation required", "Non-JS required", "Non-JS nice-to-have", "Junior role", "Crypto industry", "Outsourcing agency"
 ```
 
 ---
@@ -129,4 +134,8 @@ The `reason` field MUST contain at least ONE specific concrete detail from the v
 | "Senior" in company name but Junior role | score < 50 |
 | Outsourcing company without explicit evidence | Do NOT flag as outsourcing |
 | Remote role but wrong/unsupported stack | score < 50 |
+| Fully remote role in another country (UK, Denmark, Japan, ...) | No location penalty |
+| Hybrid/on-site outside Tricity (Warsaw, Copenhagen, Zurich, ...) | Not rejected; `"Relocation required"` flag, ~10 points lower |
+| Non-JS language only nice-to-have / learnable | Not rejected; `"Non-JS nice-to-have"` flag |
+| Non-JS language required / primary | Force reject (score 0), `"Non-JS required"` |
 | Salary info only, no description | Evaluate on title + salary only |

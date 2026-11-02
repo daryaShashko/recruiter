@@ -45,11 +45,12 @@ describe("evaluateJob — happy path", () => {
     expect(result.match).toBe(false);
   });
 
-  it("surprising-but-real: even a fully remote job gets a 10-point penalty unless its location literally mentions the Tricity — ported verbatim from the live node, not a hard reject", () => {
-    const result = evaluateJob(rawLlm({ overall_score: 85 }), makeJob({ location: "Remote", body: "Fully remote role, Node.js and React." }));
-
-    expect(result.overall_score).toBe(75);
-    expect(result.red_flags).toContain("Location: Relocation Required");
+  it("does not penalize a fully remote job in any country", () => {
+    for (const location of ["Remote", "Remote (Denmark)", "London, UK (Remote)", "Tokyo — fully remote"]) {
+      const result = evaluateJob(rawLlm({ overall_score: 85 }), makeJob({ location, body: "Node.js and React." }));
+      expect(result.overall_score).toBe(85);
+      expect(result.red_flags).not.toContain("Location: Relocation Required");
+    }
   });
 });
 
@@ -69,16 +70,21 @@ describe("evaluateJob — pipeline failure fallbacks", () => {
   });
 });
 
-describe("evaluateJob — location heuristic (no hard reject, penalty only)", () => {
-  it("applies a 10-point penalty for a non-Tricity but remote-friendly job", () => {
+describe("evaluateJob — location heuristic (no hard reject, relocation penalty only)", () => {
+  it("flags and applies a 10-point penalty for a hybrid job outside the Tricity", () => {
     const result = evaluateJob(rawLlm({ overall_score: 80 }), makeJob({ location: "Warszawa", body: "Hybrid, 2 days office" }));
     expect(result.overall_score).toBe(70);
     expect(result.red_flags).toContain("Location: Relocation Required");
   });
 
-  it("applies a 20-point penalty for a non-Tricity, fully on-site job", () => {
-    const result = evaluateJob(rawLlm({ overall_score: 80 }), makeJob({ location: "Warszawa", body: "On-site only; office presence required." }));
-    expect(result.overall_score).toBe(60);
+  it("applies the same 10-point penalty for an on-site job abroad (not a reject)", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 80 }),
+      makeJob({ location: "Copenhagen, Denmark", body: "On-site only; office presence required." }),
+    );
+    expect(result.overall_score).toBe(70);
+    expect(result.match).toBe(true);
+    expect(result.red_flags).toContain("Location: Relocation Required");
   });
 
   it("does not penalize a Tricity location", () => {
@@ -125,6 +131,35 @@ describe("evaluateJob — programmatic hard-reject rules", () => {
     );
     expect(result.overall_score).toBe(0);
     expect(result.red_flags).toContain("Salary: Below Hard Floor");
+  });
+});
+
+describe("evaluateJob — non-JS stack rules", () => {
+  it("does not treat a JavaScript red flag as Java/legacy", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 82, red_flags: ["JavaScript only no TypeScript"] }),
+      makeJob({ location: "Gdańsk" }),
+    );
+    expect(result.red_flags).not.toContain("Stack: Legacy/Non-JS");
+    expect(result.overall_score).toBe(82);
+  });
+
+  it("keeps the job when a non-JS language is only nice-to-have", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 80, red_flags: ["Java nice to have", "Python is a plus"] }),
+      makeJob({ location: "Gdańsk" }),
+    );
+    expect(result.red_flags).toContain("Stack: Non-JS Nice-to-have");
+    expect(result.red_flags).not.toContain("Stack: Legacy/Non-JS");
+    expect(result.overall_score).toBe(80);
+  });
+
+  it("force-zeroes when a non-JS language is required", () => {
+    for (const flag of ["Java primary stack", "Non-JS required"]) {
+      const result = evaluateJob(rawLlm({ overall_score: 70, red_flags: [flag] }), makeJob({ location: "Gdańsk" }));
+      expect(result.red_flags).toContain("Stack: Legacy/Non-JS");
+      expect(result.overall_score).toBe(0);
+    }
   });
 });
 
@@ -195,7 +230,36 @@ describe("extractMaxMonthlyPln — salary parsing", () => {
     expect(extractMaxMonthlyPln("0–0 EUR B2B/mo")).toBeUndefined();
     expect(extractMaxMonthlyPln("Undisclosed")).toBeUndefined();
     expect(extractMaxMonthlyPln("N/A")).toBeUndefined();
-    expect(extractMaxMonthlyPln("10 000 JPY")).toBeUndefined();
+  });
+
+  it("returns undefined for an unknown or absent currency instead of assuming PLN 1:1", () => {
+    expect(extractMaxMonthlyPln("10 000 XYZ")).toBeUndefined();
+    expect(extractMaxMonthlyPln("25000-30000")).toBeUndefined();
+    expect(extractMaxMonthlyPln("40 000 kr/month")).toBeUndefined(); // SEK/NOK/DKK ambiguous
+  });
+
+  it("converts Scandinavian, Asian and other currencies to PLN", () => {
+    expect(extractMaxMonthlyPln("55 000–65 000 SEK/mo")).toBe(Math.round(65000 * 0.38));
+    expect(extractMaxMonthlyPln("60 000 DKK per month")).toBe(Math.round(60000 * 0.57));
+    expect(extractMaxMonthlyPln("70000 NOK/mo")).toBe(Math.round(70000 * 0.37));
+    expect(extractMaxMonthlyPln("S$9,000–12,000/month")).toBe(Math.round(12000 * 2.95));
+    expect(extractMaxMonthlyPln("30,000 AED/mo")).toBe(Math.round(30000 * 1.08));
+    expect(extractMaxMonthlyPln("6000EUR B2B/mo")).toBe(Math.round(6000 * 4.25));
+  });
+
+  it("does not mistake US$ for SGD or CA$ for AUD", () => {
+    expect(extractMaxMonthlyPln("US$7,000/mo")).toBe(Math.round(7000 * 3.95));
+    expect(extractMaxMonthlyPln("CA$10,000/mo")).toBe(Math.round(10000 * 2.85));
+  });
+
+  it("parses Japanese annual salaries (¥, M shorthand, implicit annual)", () => {
+    expect(extractMaxMonthlyPln("¥8,000,000 - ¥12,000,000 per year")).toBe(Math.round((12_000_000 / 12) * 0.026));
+    expect(extractMaxMonthlyPln("8M - 12M JPY")).toBe(Math.round((12_000_000 / 12) * 0.026));
+  });
+
+  it("infers annual salaries without an explicit period and parses Swiss apostrophe separators", () => {
+    expect(extractMaxMonthlyPln("CHF 120'000 - 140'000")).toBe(Math.round((140000 * 4.55) / 12));
+    expect(extractMaxMonthlyPln("€70,000 – €90,000")).toBe(Math.round((90000 * 4.25) / 12));
   });
 });
 

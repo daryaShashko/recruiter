@@ -271,6 +271,17 @@ evaluator_service: # ADR-019 (2026-10) — not yet wired into the live n8n workf
     (deploy the service + repoint one HTTP Request node, delete the old two Code nodes)
     is a separate, deliberately-not-yet-taken action since it touches the production
     pipeline.
+  rule_change_2026_11: >
+    Global rules updated in the repo only (scoring.ts, evaluator.md, evaluator-template.json,
+    candidate_profile.md, notion-profile.ts seed, gold_dataset F05 + G01/G02): fully remote
+    in any country → no location penalty; hybrid/on-site outside Tricity → flag
+    "Location: Relocation Required" and a flat 10-point penalty (was 10/20, and remote was
+    penalized too); salary converted to PLN via CURRENCY_RATES_TO_PLN (adds SGD/HKD/NZD/
+    JPY/CNY/AED/ISK/HUF/RON/BGN, unknown or missing currency → no code floor check, never
+    1:1; implicit-annual inference above 100k PLN/month); non-JS language rejects only when
+    required — "nice-to-have" maps to non-critical "Stack: Non-JS Nice-to-have", and
+    "javascript" no longer matches the Java check. The live n8n inline nodes and the live
+    Notion Matching Criteria rows are NOT updated by this change.
   known_facts_captured: >
     Pulled directly from the live node via the n8n API on 2026-10-05, correcting stale
     assumptions in both historical patch scripts and this file's own older notes below:
