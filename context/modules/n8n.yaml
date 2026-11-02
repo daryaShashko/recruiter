@@ -66,7 +66,7 @@ workflows:
       cross-batch HTTP query (fingerprint OR urlNorm OR url) +
       Code:CheckDuplicate parses Notion API response → isDuplicate boolean.
       CLOUD-11-A hotfix (2026-06-01):
-      - Read Candidate Profile uses On Error = Continue (ignore error output) to allow fallback profile path handling.
+      - Historical note: Read Candidate Profile formerly tolerated a local profile fallback; it now queries Notion and fails closed on errors.
       - Notion: Log to Eval Log maps Model from env vars: LLM_PROVIDER:LLM_MODEL.
         Superseded 2026-06-02 (context/roadmap.yaml current_focus, CLOUD-11-A): all $env
         removed from Code: LLM Router; Model field set to a constant.
@@ -151,10 +151,9 @@ workflows:
         on_false: "Code: Build Ollama Payload"
       - name: Build Ollama Payload
         type: n8n-nodes-base.code
-        config: "builds systemPrompt (from candidate_profile.md) + userMessage from job fields"
-        note: "P12-6: renamed conceptually to Build LLM Payload; node name unchanged for ref compatibility.
-               No ollamaBody, no assistant prefill. Returns { ...job, systemPrompt, userMessage }."
-      - name: Code: LLM Router
+        config: "Historical flow node; live Ingest Jobs builds its system prompt from Notion CV and Matching Criteria."
+        note: "Live node returns job data, system prompt, user message, and Notion-derived scoring config; errors fail closed."
+      - name: "Code: LLM Router"
         type: n8n-nodes-base.code
         phase: P12-6
         config: >-
@@ -254,9 +253,9 @@ evaluator_service: # ADR-019 (2026-10) — not yet wired into the live n8n workf
     router.ts: "Fallback-chain LLM call — reuses n8n/providers/*.ts (ADR-016)"
     scoring.ts: "JSON parse + hard-reject heuristics + DynamicScoringConfig support"
     server.ts: "Zero-dependency http.createServer wrapper — POST /evaluate, GET /healthz"
-    prompt-builder.ts: "Builds systemPrompt (evaluator.md + candidate_profile.md) and userMessage"
+    prompt-builder.ts: "Offline evaluator template helper; production system prompt is assembled from live Notion rows"
     notion-profile.ts: "Notion Live Control Plane client & compiler (CV + Matching Criteria → Markdown + DynamicScoringConfig)"
-    notion-cli.ts: "CLI entry point for notion:provision, notion:sync, notion:preview"
+    notion-cli.ts: "Historical provisioning/preview CLI; notion:sync writes a local export, not the production source"
     harness.ts: "Offline/live evaluation harness against promptfoo datasets"
   build_run:
     install: "cd n8n && npm install"
@@ -267,21 +266,20 @@ evaluator_service: # ADR-019 (2026-10) — not yet wired into the live n8n workf
   status: >
     Built, unit-tested, and smoke-tested locally (real HTTP round-trip against the real
     OpenRouter/Gemini APIs, no keys → correctly aggregates both 401/403 into a 502).
-    NOT deployed to the Oracle VM and NOT wired into the live workflow yet — that step
-    (deploy the service + repoint one HTTP Request node, delete the old two Code nodes)
-    is a separate, deliberately-not-yet-taken action since it touches the production
-    pipeline.
+    The evaluator service itself is NOT deployed to the Oracle VM or wired into the live
+    workflow; production is still using the inline Code nodes, now patched with the
+    approved prompt and tested scorer.
   rule_change_2026_11: >
-    Global rules updated in the repo only (scoring.ts, evaluator.md, evaluator-template.json,
-    candidate_profile.md, notion-profile.ts seed, gold_dataset F05 + G01/G02): fully remote
-    in any country → no location penalty; hybrid/on-site outside Tricity → flag
-    "Location: Relocation Required" and a flat 10-point penalty (was 10/20, and remote was
-    penalized too); salary converted to PLN via CURRENCY_RATES_TO_PLN (adds SGD/HKD/NZD/
-    JPY/CNY/AED/ISK/HUF/RON/BGN, unknown or missing currency → no code floor check, never
-    1:1; implicit-annual inference above 100k PLN/month); non-JS language rejects only when
-    required — "nice-to-have" maps to non-critical "Stack: Non-JS Nice-to-have", and
-    "javascript" no longer matches the Java check. The live n8n inline nodes and the live
-    Notion Matching Criteria rows are NOT updated by this change.
+    2026-11-02: Updated five active Matching Criteria rows in Notion for global remote,
+    relocation (minus 10, not rejection), monthly currency conversion, compensation,
+    and non-JS language requirements. The live Ingest Jobs workflow was rewired to query
+    active CV and Matching Criteria rows via notionApi for each new vacancy, without an
+    embedded profile or local prompt file fallback. An unavailable/incomplete Notion
+    response sets profileError; Code: LLM Router skips the LLM and Code: Parse Ollama
+    Response emits score 0 with Pipeline: Notion Error for Evaluation Log. The parser
+    still embeds the tested TypeScript scoring logic; no evaluator service was deployed.
+    Note: n8n TLS connections reset during follow-up verification; deployment is not
+    end-to-end verified until the workflow becomes reachable again.
   known_facts_captured: >
     Pulled directly from the live node via the n8n API on 2026-10-05, correcting stale
     assumptions in both historical patch scripts and this file's own older notes below:
@@ -310,7 +308,7 @@ ollama:
     keep_alive: 0 # MANDATORY — prevents VRAM leak between requests
     messages:
       - role: system
-        content: "see n8n/prompts/evaluator.md"
+        content: "historical Ollama request template; live criteria now come from Notion"
       - role: user
         content: |
           Job Title: {{ $json.title }}
@@ -328,10 +326,10 @@ ollama:
     fallback_on_error: "{ match: false, reason: 'Parse error: ...', url: $json.url }"
 
 evaluator_prompt:
-  file: n8n/prompts/evaluator.md
-  template_file: n8n/prompts/evaluator-template.json
-  status: written
-  last_updated: "2026-05-29"
+  source: "Notion Candidate CV and Matching Criteria databases (read by live n8n workflow)"
+  offline_template_file: n8n/prompts/evaluator-template.json
+  status: "live Notion rows; offline promptfoo template retained only for eval compatibility"
+  last_updated: "2026-11-02"
   eval_results: "21/22 (95.45%) — promptfoo gold dataset, gemini-3.1-flash-lite"
   model_notes:
     - "llama3.1:8b responds well to explicit role-playing ('You are an expert IT recruiter')"

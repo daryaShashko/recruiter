@@ -7,10 +7,8 @@
  * databases in real time.
  *
  * Features:
- * 1. Complete seed dataset migrated from `n8n/prompts/candidate_profile.md`,
- *    `n8n/prompts/evaluator.md`, and `n8n/evaluator/scoring.ts`.
- * 2. Compiler from structured entries -> clean `candidate_profile.md` markdown
- *    for LLM prompts + `DynamicScoringConfig` for deterministic code gates.
+ * 1. Historic seed entries for initial Notion provisioning; production reads live rows.
+ * 2. Compiler from Notion entries -> LLM profile text + `DynamicScoringConfig`.
  * 3. Dependency-free Notion REST API client (create databases, seed rows,
  *    query active rows, and cache with TTL).
  */
@@ -78,7 +76,7 @@ export interface DynamicScoringConfig {
   readonly minB2bPlnFloor?: number;
 }
 
-// ─── Complete Seed Data (Migrated from candidate_profile.md & scoring.ts) ────
+// ─── Historical Provisioning Seed Data ──────────────────────────────────────
 
 export const DEFAULT_CV_ENTRIES: readonly CvEntry[] = [
   {
@@ -266,7 +264,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     ruleType: "Target / Preference",
     valueOrKeywords: "gdansk, gdańsk, gdynia, sopot, trojmiasto, trójmiasto, remote, zdalnie, zdalna",
     description:
-      "Geographic Preferences: Fully Remote in ANY country (Poland, EU, UK, Scandinavia, Switzerland, USA, Asia, etc.; Polish/EU passport, ready for Polish B2B/JDG) OR Hybrid/office in Tricity (Gdańsk / Gdynia / Sopot). No location penalty for these.",
+      "Geographic Preferences: Fully remote in ANY country (Poland, EU, UK, Scandinavia, Switzerland, USA, Asia, etc.; Polish/EU passport, ready for Polish B2B/JDG) OR Hybrid/office in Tricity (Gdańsk / Gdynia / Sopot). No location penalty for these. Exclude explicitly Russia-/Ukraine-/active-conflict-based roles; mainland China-based roles are a culture-risk red flag, not an automatic rejection. Remote roles explicitly requiring residence in the US or Canada get 'Remote region restricted' and a 10-point penalty; US/Canada remote labels alone do not imply residence requirements.",
     order: 3,
     active: true,
   },
@@ -278,7 +276,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     ruleType: "Target / Preference",
     valueOrKeywords: "warsaw, warszawa, kraków, krakow, wrocław, wroclaw, katowice, poznań",
     description:
-      "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and score about 10 points lower than an equivalent remote role. Remote work that explicitly requires residence in the US or Canada (e.g. 'US only' or 'must reside in Canada') is treated the same way ('Remote region restricted'); an employer's hiring-market label alone does not prove a residence restriction.",
+      "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and subtract 10 points from the score. Remote work that explicitly requires residence in the US or Canada (e.g. 'US only' or 'must reside in Canada') is treated the same way ('Remote region restricted'); an employer's hiring-market label alone does not prove a residence restriction.",
     order: 4,
     active: true,
   },
@@ -479,21 +477,20 @@ export function compileDynamicScoringConfig(
       "outsourcing agency",
       "outsourcing company",
     ]),
-    tricityKeywords: findKeywords("crit-location-allowed", "allowed locations", [
+    tricityKeywords: [
       "gdansk",
       "gdańsk",
       "gdynia",
       "sopot",
       "trojmiasto",
       "trójmiasto",
-    ]),
+    ],
     minB2bPlnFloor,
   };
 }
 
 /**
- * Compile active CV & Criteria entries into a structured Markdown document
- * that serves as a drop-in replacement for `candidate_profile.md` (`{{profile}}`).
+ * Compile active Notion CV and Matching Criteria entries into LLM profile text.
  */
 export function compileCandidateProfileMarkdown(
   cvEntries: readonly CvEntry[],
@@ -945,16 +942,23 @@ export async function fetchNotionControlPlaneData(
       id: string;
       properties?: Record<string, unknown>;
     }>;
+    has_more?: boolean;
   }
 
   const [cvResp, critResp] = await Promise.all([
     notionRequest<QueryResp>(opts, "POST", `/databases/${cvDbId.replace(/-/g, "")}/query`, {
       sorts: [{ property: "Order", direction: "ascending" }],
+      page_size: 100,
     }),
     notionRequest<QueryResp>(opts, "POST", `/databases/${criteriaDbId.replace(/-/g, "")}/query`, {
       sorts: [{ property: "Order", direction: "ascending" }],
+      page_size: 100,
     }),
   ]);
+  if (!Array.isArray(cvResp.results) || !Array.isArray(critResp.results) ||
+      cvResp.has_more === true || critResp.has_more === true) {
+    throw new Error("Notion CV or Matching Criteria returned incomplete results");
+  }
 
   const cvEntries: CvEntry[] = (cvResp.results ?? []).map((row, idx) => {
     const p = row.properties ?? {};
@@ -993,12 +997,12 @@ export async function fetchNotionControlPlaneData(
   };
 }
 
-// ─── TTL Cache + Snapshot / Default Fallback Resolver ────────────────────────
+// ─── Live Notion Control Plane ───────────────────────────────────────────────
 
 export interface ActiveControlPlaneConfig {
   readonly profileMarkdown: string;
   readonly scoringConfig: DynamicScoringConfig;
-  readonly source: "notion" | "snapshot" | "default";
+  readonly source: "notion";
   readonly loadedAt: number;
 }
 
@@ -1013,74 +1017,34 @@ export function invalidateControlPlaneCache(): void {
 export async function getActiveControlPlaneConfig(options?: {
   forceRefresh?: boolean;
   ttlMs?: number;
-  snapshotPath?: string;
   clientOptions?: NotionClientOptions;
 }): Promise<ActiveControlPlaneConfig> {
   const ttlMs = options?.ttlMs ?? DEFAULT_CACHE_TTL_MS;
   const now = Date.now();
-
-  if (
-    cachedControlPlane !== null &&
-    !options?.forceRefresh &&
-    now - cachedControlPlane.loadedAt < ttlMs
-  ) {
+  if (cachedControlPlane && !options?.forceRefresh && now - cachedControlPlane.loadedAt < ttlMs) {
     return cachedControlPlane;
   }
 
-  const notionToken = (options?.clientOptions?.token ?? process.env["NOTION_TOKEN"] ?? "").trim();
+  const token = (options?.clientOptions?.token ?? process.env["NOTION_TOKEN"] ?? "").trim();
   const cvDbId = (process.env["NOTION_CV_DB_ID"] ?? "").trim();
   const criteriaDbId = (process.env["NOTION_CRITERIA_DB_ID"] ?? "").trim();
-
-  if (notionToken.length > 0 && cvDbId.length > 0 && criteriaDbId.length > 0) {
-    try {
-      const clientOpts: NotionClientOptions = options?.clientOptions ?? { token: notionToken };
-      const data = await fetchNotionControlPlaneData(clientOpts, cvDbId, criteriaDbId);
-      cachedControlPlane = {
-        profileMarkdown: data.profileMarkdown,
-        scoringConfig: data.scoringConfig,
-        source: "notion",
-        loadedAt: Date.now(),
-      };
-      return cachedControlPlane;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[notion-profile] Live Notion fetch failed, falling back to snapshot/default: ${msg}`);
-    }
+  if (!token || !cvDbId || !criteriaDbId) {
+    throw new Error("Notion CV and Matching Criteria credentials are required");
   }
 
-  const resolvedSnapshotPath =
-    options?.snapshotPath ?? path.resolve(__dirname, "../prompts/.notion-snapshot.json");
-
-  if (fs.existsSync(resolvedSnapshotPath)) {
-    try {
-      const raw = fs.readFileSync(resolvedSnapshotPath, "utf-8");
-      const parsed = JSON.parse(raw) as {
-        cvEntries?: unknown;
-        criteriaEntries?: unknown;
-      };
-      if (Array.isArray(parsed.cvEntries) && Array.isArray(parsed.criteriaEntries)) {
-        const cvEntries = parsed.cvEntries as CvEntry[];
-        const criteriaEntries = parsed.criteriaEntries as CriterionEntry[];
-        cachedControlPlane = {
-          profileMarkdown: compileCandidateProfileMarkdown(cvEntries, criteriaEntries),
-          scoringConfig: compileDynamicScoringConfig(criteriaEntries),
-          source: "snapshot",
-          loadedAt: Date.now(),
-        };
-        return cachedControlPlane;
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[notion-profile] Failed to parse local snapshot (${resolvedSnapshotPath}): ${msg}`);
-    }
+  const data = await fetchNotionControlPlaneData(
+    options?.clientOptions ?? { token }, cvDbId, criteriaDbId,
+  );
+  if (!data.cvEntries.some((entry) => entry.active) ||
+      !data.criteriaEntries.some((entry) => entry.active)) {
+    throw new Error("Notion CV or Matching Criteria returned no active entries");
   }
 
   cachedControlPlane = {
-    profileMarkdown: compileCandidateProfileMarkdown(DEFAULT_CV_ENTRIES, DEFAULT_CRITERIA_ENTRIES),
-    scoringConfig: compileDynamicScoringConfig(DEFAULT_CRITERIA_ENTRIES),
-    source: "default",
+    profileMarkdown: data.profileMarkdown,
+    scoringConfig: data.scoringConfig,
+    source: "notion",
     loadedAt: Date.now(),
   };
   return cachedControlPlane;
 }
-

@@ -63,13 +63,16 @@ flow:
   - node: "IF: Already in Notion?"
     desc: "isDuplicate == true?"
     true: "→ NoOp: Skip Duplicate → back to Split In Batches: 1"
-    false: "→ Read Candidate Profile"
+    false: "→ Read Candidate Profile → Notion: Read Matching Criteria → Code: Build Ollama Payload"
 
   - node: "Read Candidate Profile"
-    desc: Reads candidate_profile.md binary; fallback to hardcoded profile string
+    desc: Queries active CV rows from Notion with the existing notionApi credential
+
+  - node: "Notion: Read Matching Criteria"
+    desc: Queries active Matching Criteria rows from Notion for each new job
 
   - node: "Code: Build Ollama Payload"
-    desc: Builds systemPrompt (scoring rules + rejection criteria) + userMessage (job fields)
+    desc: Builds the system prompt from current Notion CV and criteria; on read failure sets profileError, never uses a local fallback
 
   - node: "Code: LLM Router"
     desc: "LLM call; ollama|gemini|anthropic. Provider from LLM_PROVIDER env (p12_6 version) or hardcoded (CLOUD-11-A version) — see llm_providers"
@@ -102,23 +105,14 @@ key_logic:
     review: "overall_score 50-79  → Notion Board (Review, silent)"
     discard: "overall_score < 50   → Eval Log only"
     force_zero: >
-      Read directly from the live "Code: Parse Ollama Response" node via the n8n API on
-      2026-10-05 (not from a doc assumption — see ADR-019). Programmatic (score forced to
-      0 by code, independent of what the LLM says): Crypto/Web3 (title/body keyword match),
-      Gambling/Betting (title/body keyword match), Agency/Outsourcing (company name or
-      body keyword match — epam/luxoft/capgemini/accenture/sii/infosys/cognizant/wipro/
-      tcs/outstaffing/etc.), and any red flag (LLM-reported or programmatic) that maps to
-      one of 6 CRITICAL_FLAGS tags (Crypto/Web3, Gambling/Betting, Agency/Outsourcing,
-      "Salary: Below Hard Floor", "Stack: Legacy/Non-JS", "Stack: Pure Backend").
-      NOT a hard reject (contrary to what this file said before): location. Missing a
-      Gdańsk/Tricity mention only costs a 10-point penalty (if remote/hybrid) or 20-point
-      penalty (otherwise) — "no city is a hard reject" per the live code's own comment.
-      NOT a programmatic check: the 18 000 PLN salary floor. There is no numeric salary
-      comparison in code — it is enforced only if the LLM itself emits a red flag that
-      textually matches "hard floor" (mapped to the "Salary: Below Hard Floor" CRITICAL
-      tag), i.e. it's LLM-judgment-dependent, not a guaranteed hard floor.
-      Ported verbatim (including these specifics) to n8n/evaluator/scoring.ts
-      (Jest-tested); not yet wired into the live n8n workflow.
+      Live parser embeds tested n8n/evaluator/scoring.ts. Programmatic hard rejects:
+      crypto/Web3, gambling, outsourcing, and disclosed salary below the Notion floor
+      after converting the supported currencies to monthly PLN. Non-JS languages are
+      critical only when required; a nice-to-have is not a reject. Fully remote jobs
+      worldwide have no location penalty; on-site/hybrid outside Tricity and explicitly
+      US/Canada-residence-restricted remote jobs get a 10-point penalty and a flag.
+      On Notion read failure/incomplete results, fail closed (score 0, Pipeline: Notion
+      Error) without using a local profile fallback; the decision reaches Eval Log.
 
   dedup_strategy:
     level_1_fingerprint: "FNV1a64( normalizeCompany(company) + '::' + normalizeTitle(title) )"

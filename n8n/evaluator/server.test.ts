@@ -68,7 +68,7 @@ beforeEach(() => {
   mockedGetActiveControlPlaneConfig.mockResolvedValue({
     profileMarkdown: "# Dynamic Notion Profile",
     scoringConfig: mockScoringConfig,
-    source: "default",
+    source: "notion",
     loadedAt: 1700000000000,
   });
 });
@@ -233,6 +233,17 @@ describe("POST /evaluate", () => {
       userMessage: "user",
       outputSchema: { type: "object" },
     });
+  });
+
+  it("does not call the LLM when Notion is unavailable", async () => {
+    mockedGetActiveControlPlaneConfig.mockRejectedValue(new Error("Notion unavailable"));
+
+    const { status, json } = await request("POST", "/evaluate", validBody);
+
+    expect(status).toBe(502);
+    expect(json).toEqual({ error: "Notion unavailable" });
+    expect(mockedRouteCompletion).not.toHaveBeenCalled();
+    expect(mockedEvaluateJob).not.toHaveBeenCalled();
   });
 
   it("returns 502 with the error message when every provider fails", async () => {

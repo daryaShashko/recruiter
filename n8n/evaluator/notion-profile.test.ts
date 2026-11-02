@@ -1,6 +1,3 @@
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
 import {
   DEFAULT_CV_ENTRIES,
   DEFAULT_CRITERIA_ENTRIES,
@@ -259,69 +256,21 @@ describe("notion-profile compiler & Notion API client", () => {
 
 describe("getActiveControlPlaneConfig & TTL cache", () => {
   const originalEnv = process.env;
-  let tmpDir: string;
-
   beforeEach(() => {
     invalidateControlPlaneCache();
     process.env = { ...originalEnv };
     delete process.env["NOTION_TOKEN"];
     delete process.env["NOTION_CV_DB_ID"];
     delete process.env["NOTION_CRITERIA_DB_ID"];
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "notion-profile-test-"));
   });
 
   afterEach(() => {
     invalidateControlPlaneCache();
     process.env = originalEnv;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test("falls back to default seed entries when Notion env vars and snapshot are absent", async () => {
-    const missingSnapshot = path.join(tmpDir, "missing-snapshot.json");
-    const cp = await getActiveControlPlaneConfig({ snapshotPath: missingSnapshot });
-
-    expect(cp.source).toBe("default");
-    expect(cp.profileMarkdown).toContain("# Candidate Profile & Preferences");
-    expect(cp.scoringConfig.minB2bPlnFloor).toBe(22000);
-    expect(typeof cp.loadedAt).toBe("number");
-  });
-
-  test("loads from local snapshot file when Notion env vars are absent and snapshot exists", async () => {
-    const snapshotPath = path.join(tmpDir, "snapshot.json");
-    const snapshotData = {
-      cvEntries: [
-        {
-          id: "snap-cv-1",
-          title: "Snapshot Principal Engineer",
-          section: "Role & Summary",
-          order: 1,
-          highlight: "Principal Snapshot Highlight",
-          tags: ["TypeScript"],
-          period: "2026",
-          active: true,
-        },
-      ],
-      criteriaEntries: [
-        {
-          id: "crit-salary-floor",
-          ruleName: "Hard Salary Floor",
-          category: "Salary & Contract",
-          enforcement: "Hard Gate (Code + Prompt)",
-          ruleType: "Force Reject (Score = 0)",
-          valueOrKeywords: "27000",
-          description: "Snapshot floor 27k PLN",
-          order: 1,
-          active: true,
-        },
-      ],
-    };
-    fs.writeFileSync(snapshotPath, JSON.stringify(snapshotData), "utf-8");
-
-    const cp = await getActiveControlPlaneConfig({ snapshotPath });
-
-    expect(cp.source).toBe("snapshot");
-    expect(cp.profileMarkdown).toContain("Principal Snapshot Highlight");
-    expect(cp.scoringConfig.minB2bPlnFloor).toBe(27000);
+  test("requires Notion credentials instead of falling back to local profile", async () => {
+    await expect(getActiveControlPlaneConfig()).rejects.toThrow(/Notion CV and Matching Criteria credentials/);
   });
 
   test("fetches live Notion data, caches within TTL, and refreshes after invalidateControlPlaneCache()", async () => {
@@ -399,23 +348,12 @@ describe("getActiveControlPlaneConfig & TTL cache", () => {
     expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 
-  test("falls back gracefully to snapshot/default when Notion API throws", async () => {
+  test("fails closed when Notion API throws", async () => {
     process.env["NOTION_CV_DB_ID"] = "cv_db_live";
     process.env["NOTION_CRITERIA_DB_ID"] = "crit_db_live";
-
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const mockFetch = jest.fn().mockRejectedValue(new Error("Notion 503 Service Unavailable")) as unknown as typeof fetch;
-
-    const missingSnapshot = path.join(tmpDir, "no-snapshot.json");
-    const cp = await getActiveControlPlaneConfig({
-      snapshotPath: missingSnapshot,
+    await expect(getActiveControlPlaneConfig({
       clientOptions: { token: "ntn_live_token", fetchImpl: mockFetch },
-    });
-
-    expect(cp.source).toBe("default");
-    expect(cp.profileMarkdown).toContain("# Candidate Profile & Preferences");
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+    })).rejects.toThrow("Notion 503 Service Unavailable");
   });
 });
-

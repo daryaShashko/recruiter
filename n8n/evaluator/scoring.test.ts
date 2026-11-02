@@ -66,6 +66,13 @@ describe("evaluateJob — happy path", () => {
     );
     expect(residenceRequired.overall_score).toBe(75);
     expect(residenceRequired.red_flags).toContain("Location: Remote Region Restricted");
+
+    const canadaOnly = evaluateJob(
+      rawLlm({ overall_score: 85 }),
+      makeJob({ location: "Remote (Canada only)", body: "Node.js and React." }),
+    );
+    expect(canadaOnly.overall_score).toBe(75);
+    expect(canadaOnly.red_flags).toContain("Location: Remote Region Restricted");
   });
 });
 

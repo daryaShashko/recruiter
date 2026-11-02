@@ -486,17 +486,20 @@ export function evaluateJob(
   const requiresOnsiteRelocation = !isTricity && !isRemote && jobLocationLower.length > 0;
   const remoteRegionRestricted =
     isRemote &&
-    (    /\b(?:us|usa|united states)\s+only\b|\bremote\s+(?:within|in)\s+(?:the\s+)?(?:us|usa|united states)\b/i.test(
+    (/\b(?:us|usa|united states|canada)\s+only\b|\bremote\s+(?:within|in)\s+(?:the\s+)?(?:us|usa|united states|canada)\b/i.test(
       jobLocationLower,
     ) ||
-      /\bmust\s+(?:reside|be based)\s+in\s+(?:the\s+)?(?:us|usa|united states)\b/i.test(jobBodyLower));
+      /\bmust\s+(?:reside|be based)\s+in\s+(?:the\s+)?(?:us|usa|united states|canada)\b/i.test(
+        jobBodyLower,
+      ));
 
-  // Fully remote is welcome globally unless residence is restricted to the US.
-  // Hybrid/on-site outside the Tricity and US-only remote roles require relocation.
+  // Fully remote is welcome globally unless the posting restricts residence to the US or Canada.
+  // Hybrid/on-site outside the Tricity and region-restricted remote roles incur relocation penalty.
   const needsRelocation = requiresOnsiteRelocation || remoteRegionRestricted;
-  const relocationFlag = remoteRegionRestricted && !requiresOnsiteRelocation
-    ? "Location: Remote Region Restricted"
-    : "Location: Relocation Required";
+  const relocationFlag =
+    remoteRegionRestricted && !requiresOnsiteRelocation
+      ? "Location: Remote Region Restricted"
+      : "Location: Relocation Required";
 
   let overallScore = parsed.overall_score ?? 0;
 

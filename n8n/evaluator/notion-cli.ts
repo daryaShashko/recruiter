@@ -4,8 +4,8 @@
  *
  * Commands:
  *   ts-node evaluator/notion-cli.ts provision   # Create both DBs in Notion & seed all current CV/Criteria rows
- *   ts-node evaluator/notion-cli.ts sync        # Pull active rows from Notion -> update n8n/prompts/candidate_profile.md
- *   ts-node evaluator/notion-cli.ts preview     # Compile & print current profile + dynamic scoring rules offline
+ *   ts-node evaluator/notion-cli.ts sync        # Export live Notion profile and rules to stdout (read-only)
+ *   ts-node evaluator/notion-cli.ts preview     # Compile historic seed entries offline (not production)
  *
  * Environment variables:
  *   NOTION_TOKEN            - Required for `provision` and `sync` (Notion Internal Integration Token)
@@ -29,8 +29,6 @@ import {
 
 const PROMPTS_DIR = path.resolve(__dirname, "../prompts");
 const META_FILE = path.join(PROMPTS_DIR, ".notion-control-plane.json");
-const SNAPSHOT_FILE = path.join(PROMPTS_DIR, ".notion-snapshot.json");
-const CANDIDATE_PROFILE_MD = path.join(PROMPTS_DIR, "candidate_profile.md");
 
 // Default Evaluation Log DB ID from context/ingest-workflow.yaml
 const KNOWN_EVAL_LOG_DB_ID = "36c747f7-ebec-80c8-bfd7-ed317f4a7c35";
@@ -144,29 +142,10 @@ async function runSync(): Promise<void> {
   console.log("[notion-cli] Fetching active CV & Criteria rows from Notion...");
   const data = await fetchNotionControlPlaneData({ token }, cvDbId, criteriaDbId);
 
-  fs.writeFileSync(CANDIDATE_PROFILE_MD, data.profileMarkdown, "utf-8");
-  fs.writeFileSync(
-    SNAPSHOT_FILE,
-    JSON.stringify(
-      {
-        syncedAt: new Date().toISOString(),
-        activeCvCount: data.cvEntries.filter((x) => x.active).length,
-        activeCriteriaCount: data.criteriaEntries.filter((x) => x.active).length,
-        scoringConfig: data.scoringConfig,
-        cvEntries: data.cvEntries,
-        criteriaEntries: data.criteriaEntries,
-      },
-      null,
-      2,
-    ) + "\n",
-    "utf-8",
-  );
+  console.log(data.profileMarkdown);
+  console.log("=== DYNAMIC SCORING CONFIG ===");
+  console.log(JSON.stringify(data.scoringConfig, null, 2));
 
-  console.log(`✅ Synced from Notion!`);
-  console.log(`   📄 Active CV entries       : ${data.cvEntries.filter((x) => x.active).length}/${data.cvEntries.length}`);
-  console.log(`   ⚖️ Active Criteria entries : ${data.criteriaEntries.filter((x) => x.active).length}/${data.criteriaEntries.length}`);
-  console.log(`   📝 Updated profile         : ${CANDIDATE_PROFILE_MD}`);
-  console.log(`   💾 Updated local snapshot  : ${SNAPSHOT_FILE}`);
 }
 
 function runPreview(): void {
