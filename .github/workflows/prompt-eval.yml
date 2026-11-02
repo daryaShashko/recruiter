@@ -37,7 +37,8 @@ jobs:
         run: npm ci
 
       # Ollama is unavailable in GHA → override provider with Gemini via --providers flag.
-      # maxConcurrency:1 is set in promptfooconfig.yaml; 22 tests × ~5–8 s ≈ 2–3 min total.
+      # gold_dataset.yaml contains only deterministic assertions; manual rubrics are opt-in via eval:full.
+      # maxConcurrency:1 is set in promptfooconfig.yaml; 24 tests × ~5–8 s ≈ 2–3 min total.
       - name: Run promptfoo eval
         working-directory: scraper
         env:

@@ -6,6 +6,7 @@
 # Usage:
 #   cd scraper && npm run eval:gemini        # run with Gemini / cloud provider
 #   cd scraper && npm run eval:gemini:view   # open HTML report
+#   cd scraper && npm run eval:full          # manually run semantic rubrics
 #
 # Prerequisites:
 #   - GOOGLE_API_KEY env var set (free tier: aistudio.google.com)
@@ -144,4 +145,5 @@ evaluateOptions:
   maxConcurrency: 1
 
 # ─── Test Cases ──────────────────────────────────────────
+# CI and default cloud eval are deterministic; manual rubrics use rubric_dataset.yaml.
 tests: file://gold_dataset.yaml

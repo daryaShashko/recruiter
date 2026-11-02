@@ -2,7 +2,7 @@
 # AI Recruiter — Gold Dataset for Prompt Evaluation
 # Task: P10-3
 #
-# 20 curated test cases:
+# 24 curated test cases (deterministic CI assertions; semantic rubrics in rubric_dataset.yaml):
 #   T01–T08: TRUE matches  (should return match: true)
 #   F01–F07: FALSE matches (should return match: false)
 #   E01–E05: EDGE cases    (tricky scenarios)
@@ -46,7 +46,7 @@
           const reason = JSON.parse(output).reason;
           return typeof reason === 'string'
             && /\bnode(?:\.js)?(?:\/typescript)?\b[^.;]{0,40}\bbackend role\b/i.test(reason)
-            && !/\b(?:java|python|php)\b[^.;]{0,40}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,40}\b(?:java|python|php)\b/i.test(reason);
+            && !/\b(?:java|python|php)\b[^.;,]{0,40}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;,]{0,40}\b(?:java|python|php)\b/i.test(reason);
         } catch(e) { return false; }
       weight: 1
 
@@ -271,7 +271,7 @@
           const reason = JSON.parse(output).reason;
           return typeof reason === 'string'
             && /\bjava(?:\/spring boot)?\b[^.;]{0,60}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bjava\b/i.test(reason)
-            && !/\b(?:node(?:\.js)?|typescript|javascript)\b[^.;]{0,45}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;]{0,45}\b(?:node(?:\.js)?|typescript|javascript)\b/i.test(reason);
+            && !/\b(?:node(?:\.js)?|typescript|javascript)\b[^.;,]{0,45}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;,]{0,45}\b(?:node(?:\.js)?|typescript|javascript)\b/i.test(reason);
         } catch(e) { return false; }
       weight: 1
 
@@ -416,9 +416,16 @@
           return j.overall_score >= 80;
         } catch(e) { return false; }
       weight: 3
-    - type: llm-rubric
-      value: "Reasoning must acknowledge Node.js as the primary stack despite Java legacy presence."
-      provider: google:gemini-3.1-flash-lite
+    # E01: Node.js owns the bulk of the work; reject inverted Java-primary claims.
+    - type: javascript
+      value: |
+        try {
+          const reason = JSON.parse(output).reason;
+          return typeof reason === 'string'
+            && /\b80%\s*node(?:\.js)?\b|\bnode(?:\.js)?\b[^.;]{0,60}\b(?:primary|main|core|80%)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bnode(?:\.js)?\b/i.test(reason)
+            && !/\bjava\b[^.;,]{0,40}\b(?:primary|main|core|80%)\b|\b(?:primary|main|core|80%)\b[^.;,]{0,40}\bjava\b/i.test(reason);
+        } catch(e) { return false; }
+      weight: 1
 
 - description: "E02: Java primary + Node.js secondary — Java is PRIMARY → should NOT match"
   vars:
@@ -443,9 +450,16 @@
           return j.overall_score < 50;
         } catch(e) { return false; }
       weight: 3
-    - type: llm-rubric
-      value: "Reasoning must identify Java as the primary stack, not Node.js."
-      provider: google:gemini-3.1-flash-lite
+    # E02: 70% Java is primary; a primary Node.js claim is contradictory.
+    - type: javascript
+      value: |
+        try {
+          const reason = JSON.parse(output).reason;
+          return typeof reason === 'string'
+            && /\b70%\s*java\b|\bjava\b[^.;]{0,60}\b(?:primary|main|core|70%)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bjava\b/i.test(reason)
+            && !/\bnode(?:\.js)?\b[^.;,]{0,45}\b(?:primary|main|core|70%)\b|\b(?:primary|main|core|70%)\b[^.;,]{0,45}\bnode(?:\.js)?\b/i.test(reason);
+        } catch(e) { return false; }
+      weight: 1
 
 - description: "E03: 'Senior' in company name but Junior role → should NOT match"
   vars:

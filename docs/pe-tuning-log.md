@@ -5,6 +5,36 @@
 
 ---
 
+## Prompt Evaluation CI: judge 503 (2026-11-02)
+
+**Evidence:** GitHub Actions run `41356072659` (`cd9bacc`), artifact
+`promptfoo-results-41356072659.json`: 19/22 passed. F02, E01, E02 failed only
+on `llm-rubric`; each judge error was HTTP 503 with `status: UNAVAILABLE` and
+`This model is currently experiencing high demand`. No semantic judge failure
+was recorded. The primary model returned:
+
+| Case | Score | Reason |
+|------|------:|--------|
+| T01 | 72 | Senior Node.js/TypeScript backend role; penalized for lack of primary frontend responsibilities. |
+| F02 | 0 | Java/Spring Boot is the primary technology stack; no Node.js/TypeScript migration. |
+| E01 | 88 | 80% Node.js/NestJS and React/Next.js with legacy Java migration. |
+| E02 | 0 | 70% Java/Spring Boot development, not a greenfield rewrite. |
+
+**Offline check:** deterministic assertions in `gold_dataset.yaml` accept all four
+saved reasons and reject three fabricated wrong-primary reasons per case (12/12).
+Replaying the deterministic assertions against the unchanged archived cases
+produced no failures. F05 was subsequently redefined (relocation instead of
+hard rejection), and G01/G02 were added separately; these three require a new
+cloud run for end-to-end verification.
+
+CI runs only deterministic checks. `cd scraper && npm run eval:full` manually
+runs the four semantic rubrics from `rubric_dataset.yaml` against Gemini; it
+requires `GOOGLE_API_KEY`, consumes quota, and is not a CI gate. Regex checks
+wording rather than meaning and may need adjustment if model phrasing changes.
+Live CI verification after push is pending; no new cloud eval was run for this note.
+
+---
+
 ## gemini-2.0-flash baseline
 
 **Task:** P15-1 — Gemini 2.0 Flash Primary + OpenRouter Fallback  

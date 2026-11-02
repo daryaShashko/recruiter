@@ -1,0 +1,76 @@
+# Manual-only semantic checks. CI uses deterministic assertions in gold_dataset.yaml.
+# Keep each scenario in sync with its corresponding gold case.
+- description: "T01 rubric: backend-only Node.js remains the primary stack"
+  vars:
+    title: "Senior Node.js Backend Developer"
+    company: "TechFlow Solutions"
+    location: "Remote (EU)"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/techflow-senior-nodejs-backend-dev-12345"
+    body: >-
+      We are hiring a Senior Node.js Backend Developer to join our remote-first
+      engineering team. You will design and build RESTful APIs using TypeScript,
+      Express.js, and PostgreSQL. Experience with Docker, CI/CD, and cloud
+      services (AWS/GCP) is required. Our frontend is built with React.
+      Minimum 5 years of professional experience in backend development
+      with Node.js. Fully remote position within EU timezone.
+  assert:
+    - type: llm-rubric
+      value: "Reasoning must mention Node.js or TypeScript as the primary stack."
+      provider: google:gemini-3.1-flash-lite
+
+- description: "F02 rubric: Java is the primary stack"
+  vars:
+    title: "Senior Java Developer"
+    company: "EnterpriseSoft"
+    location: "Remote"
+    salary: "24,000 – 30,000 PLN net B2B"
+    url: "https://justjoin.it/offers/enterprisesoft-senior-java-dev-55555"
+    body: >-
+      We are looking for a Senior Java Developer to join our enterprise
+      team. Main technologies: Java 17, Spring Boot, Hibernate, Kafka,
+      PostgreSQL. You will build microservices for our banking platform.
+      Some React dashboards exist, but your primary focus will be Java
+      backend development. Fully remote position. 5+ years Java required.
+  assert:
+    - type: llm-rubric
+      value: "Reasoning must identify Java as the primary stack, not JavaScript/Node.js."
+      provider: google:gemini-3.1-flash-lite
+
+- description: "E01 rubric: Node.js is primary despite legacy Java"
+  vars:
+    title: "Senior Software Engineer"
+    company: "LegacyTech"
+    location: "Remote"
+    salary: "22,000 – 28,000 PLN net B2B"
+    url: "https://justjoin.it/offers/legacytech-senior-engineer-nodejs-java-aaaa1"
+    body: >-
+      We are rebuilding our platform in Node.js and TypeScript. Primary
+      development is Node.js microservices with NestJS framework, React
+      frontend with Next.js, and PostgreSQL database. Some legacy Java
+      services exist but are actively being migrated to Node.js. You will
+      spend 80% of your time on Node.js and 20% maintaining Java services
+      during the transition. 5+ years experience, Node.js expertise required.
+  assert:
+    - type: llm-rubric
+      value: "Reasoning must acknowledge Node.js as the primary stack despite Java legacy presence."
+      provider: google:gemini-3.1-flash-lite
+
+- description: "E02 rubric: Java is primary and Node.js secondary"
+  vars:
+    title: "Senior Software Engineer (Java/Node.js)"
+    company: "HybridTech"
+    location: "Remote"
+    salary: "24,000 – 30,000 PLN net B2B"
+    url: "https://justjoin.it/offers/hybridtech-senior-java-nodejs-bbbb2"
+    body: >-
+      Our main platform is built on Java Spring Boot with Kafka event
+      streaming and PostgreSQL. We recently added a small Node.js BFF
+      (Backend-for-Frontend) layer for our React admin dashboard. Your
+      primary responsibilities will be Java microservices development (70%),
+      with occasional Node.js BFF work (30%). Java expertise is required;
+      Node.js is a nice-to-have.
+  assert:
+    - type: llm-rubric
+      value: "Reasoning must identify Java as the primary stack, not Node.js."
+      provider: google:gemini-3.1-flash-lite

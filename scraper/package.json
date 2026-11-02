@@ -13,6 +13,7 @@
     "test:nofluffjobs": "jest tests/nofluffjobs.test.ts",
     "typecheck": "tsc --noEmit",
     "eval": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig.yaml",
+    "eval:full": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml --tests ../n8n/prompts/rubric_dataset.yaml --providers google:gemini-3.1-flash-lite",
     "eval:view": "npx promptfoo view",
     "eval:gemini": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml",
     "eval:gemini:view": "npx promptfoo view",

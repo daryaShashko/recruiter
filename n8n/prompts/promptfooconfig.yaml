@@ -4,14 +4,14 @@
 # Tasks: P10-2 (config), P10-4 (JS assertions)
 #
 # Usage:
-#   cd scraper && npm run eval         # run full evaluation
+#   cd scraper && npm run eval         # deterministic evaluation (no rubric calls)
+#   cd scraper && npm run eval:full    # manually run the four semantic rubrics
 #   cd scraper && npm run eval:view    # open HTML report in browser
 #
 # Prerequisites:
 #   - Ollama running locally with llama3.1:latest pulled
 #   - npm install in /scraper (promptfoo is a devDependency)
-#   - GOOGLE_API_KEY env var set (free tier: aistudio.google.com) — for llm-rubric grading only
-#   - Note: llm-rubric assertions fail without GOOGLE_API_KEY
+#   - GOOGLE_API_KEY required only for manually invoked eval:full rubric grading
 # ─────────────────────────────────────────────────────────
 
 description: "AI Recruiter — Evaluator Prompt v1"
@@ -56,12 +56,9 @@ providers:
 
 # ─── Default Assertions (P10-4, P10-5) ────────────────────
 # Applied to EVERY test case automatically.
-# JS checks are zero-cost; llm-rubric requires GOOGLE_API_KEY.
+# JS checks add no judge calls; semantic rubrics require GOOGLE_API_KEY only in eval:full.
 #
-# Parser helper used in every assertion:
-#   p(output) — handles two cases:
-#     1. Full JSON:    output = '{"key": val}'   → extract from { to last }
-#     2. Prefill cont: output = '"key": val, ...}' → prepend { (Ollama omits the prefilled '{')
+# Assertions parse JSON directly; malformed output must fail.
 defaultTest:
   vars:
     profile: file://candidate_profile.md
@@ -143,6 +140,7 @@ evaluateOptions:
   maxConcurrency: 1
 
 # ─── Test Cases ──────────────────────────────────────────
-# Gold dataset: 22 curated test cases (8 true, 9 false, 5 edge cases)
+# CI uses deterministic assertions only; manual rubrics live in rubric_dataset.yaml.
+# Gold dataset: 24 curated test cases (8 true, 9 false, 5 edge, 2 global)
 # Source: evaluator.md criteria + real-world patterns from dry-runs
 tests: file://gold_dataset.yaml
