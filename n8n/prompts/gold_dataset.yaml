@@ -567,7 +567,8 @@
           if (!j) return false;
           const isLow = j.overall_score < 50;
           const hasRedFlags = Array.isArray(j.red_flags) && j.red_flags.length > 0;
-          const hasLocation = typeof j.reason === 'string' && /locat|katowice|hybrid/i.test(j.reason);
+          const hasLocation = j.overall_score === 0 && typeof j.reason === 'string'
+            && /SCALO|Katowice|outsourcing|software house/i.test(j.reason);
           return isLow && hasRedFlags && hasLocation;
         } catch(e) { return false; }
       weight: 3

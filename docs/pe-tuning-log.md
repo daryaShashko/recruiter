@@ -35,8 +35,11 @@ Post-push run `41527947241` first had 13/24 transient Gemini 503 errors; its sin
 retry had 0 errors and 22/24 passed. It exposed two deterministic wording mismatches:
 E01 said "80% allocation" rather than "80% Node.js", and F09 put its location
 penalty in `reason` but omitted a location red flag after the new relocation policy.
-Both assertions were adjusted against those saved responses. A further green run
-after these fixes is still pending; no extra cloud eval was started here.
+Both assertions were adjusted against those saved responses. Run `41529100670` then had 23/24 pass with no API errors; its sole F09 failure
+showed the judge sometimes omits location from both flags and reason while still
+returning a hard reject for the known SCALO/Angular/Katowice mismatch. F09 now
+checks the observed hard-reject evidence without relying on a specific location
+phrase. A green run on this final assertion update is pending.
 
 ---
 
