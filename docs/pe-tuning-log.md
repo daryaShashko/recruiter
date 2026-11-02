@@ -39,7 +39,13 @@ Both assertions were adjusted against those saved responses. Run `41529100670` t
 showed the judge sometimes omits location from both flags and reason while still
 returning a hard reject for the known SCALO/Angular/Katowice mismatch. F09 now
 checks the observed hard-reject evidence without relying on a specific location
-phrase. A green run on this final assertion update is pending.
+phrase. Subsequent archived wording variants also revealed that JavaScript reasons may say
+"Java/Spring Boot is primary" or "Node.js/TypeScript is primary". The regexes
+were narrowed to unambiguous primary-stack assertions, distinguishing a primary
+Node.js stack from an explicit primary non-JS stack and ignoring incidental
+mentions across clauses. Replay against the saved responses plus positive and
+negative examples now passes offline; live green CI on this exact regex revision
+is pending.
 
 ---
 
