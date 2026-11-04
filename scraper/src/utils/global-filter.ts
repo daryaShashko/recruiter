@@ -24,17 +24,19 @@ export type GlobalFilterReason =
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function stripHtml(html: string): string {
-  return html
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|li|h[1-6]|div)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
+  const decoded = html
     .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+
+  return decoded
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|li|h[1-6]|div)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/ *\n */g, "\n")
     .replace(/\n+/g, "\n")
@@ -75,10 +77,65 @@ export function passesAgeFilter(
  * "java" and "node" does not match "nodemailer"-like substrings in titles.
  */
 function hasJsSignal(text: string): boolean {
+  const withoutVerbReact = text.replace(
+    /\breact\s+(?:appropriately|accordingly|positively|quickly|effectively|proactively)\b/gi,
+    " ",
+  );
   return config.global.jsSignals.some((signal) => {
     const escaped = signal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(text);
+    return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(
+      withoutVerbReact,
+    );
   });
+}
+
+const optionalSectionHeader =
+  /^(?:nice(?:[- ]to[- ]have)?|good[- ]to[- ]have|bonus(?:es)?|optional(?: skills)?|preferred(?: qualifications| skills)?|desirable|additional skills)\s*:?\s*$/i;
+const requiredSectionHeader =
+  /^(?:requirements?|required(?: skills| qualifications)?|must[- ]have|essential(?: skills| requirements)?|qualifications?|what you(?:'|’)ll need|what you(?:'|’)ll bring|what we(?:'|’)re looking for|your profile)\s*:?\s*$/i;
+const descriptionRequiredSignal =
+  /\b(?:required|must[- ]have|essential|proficien(?:t|cy)|expertise|experience|strong knowledge|hands[- ]on)\b/i;
+const optionalSignal =
+  /\b(?:nice to have|good to have|optional|bonus|a plus|an advantage|preferred|desirable|not required|not mandatory|ideally)\b/i;
+const primaryNonJsLanguage =
+  /(^|[^a-z0-9])(?:java|c#|c sharp|\.net|dotnet)($|[^a-z0-9])/i;
+
+function hasDescriptionJsSignal(
+  description: string,
+  requireExplicitRequirement: boolean,
+): boolean {
+  let inOptionalSection = false;
+  let inRequiredSection = false;
+  const segments = description.split(/(?<=[.!?])\s+|\n+/);
+
+  for (const segment of segments) {
+    const text = segment.trim();
+    if (!text) {
+      continue;
+    }
+    if (optionalSectionHeader.test(text)) {
+      inOptionalSection = true;
+      inRequiredSection = false;
+      continue;
+    }
+    if (requiredSectionHeader.test(text)) {
+      inOptionalSection = false;
+      inRequiredSection = true;
+      continue;
+    }
+    if (inOptionalSection || optionalSignal.test(text)) {
+      continue;
+    }
+    if (
+      hasJsSignal(text) &&
+      (!requireExplicitRequirement ||
+        inRequiredSection ||
+        descriptionRequiredSignal.test(text))
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Classifies a posting; `now` is injectable for deterministic tests. */
@@ -105,8 +162,13 @@ export function evaluateGlobalFilter(
   ) {
     return "too-old";
   }
-  const stackText = [input.title, ...(input.tags ?? []), description].join(" ");
-  if (!hasJsSignal(stackText)) {
+  const titleAndTags = [input.title, ...(input.tags ?? [])].join(" ");
+  const hasDirectSignal = hasJsSignal(titleAndTags);
+  const primaryLanguageRole = primaryNonJsLanguage.test(input.title);
+  if (
+    !hasDirectSignal &&
+    !hasDescriptionJsSignal(description, primaryLanguageRole)
+  ) {
     return "no-js-signal";
   }
   if (containsAny(description, config.global.legalBlockers)) {

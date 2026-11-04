@@ -44,6 +44,63 @@ describe('evaluateGlobalFilter', () => {
     ).toBe('no-js-signal');
   });
 
+  it('ignores optional JavaScript mentions', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Software Engineer',
+        description: 'JavaScript is a nice to have, not a requirement.',
+      }, NOW),
+    ).toBe('no-js-signal');
+  });
+
+  it('ignores technologies listed under an optional section', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Java Engineer',
+        description: 'Requirements:\nJava and Spring.\nNice to have:\nJavaScript, React',
+      }, NOW),
+    ).toBe('no-js-signal');
+  });
+
+  it('does not match the verb "react" as the React framework', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Engagement Manager',
+        description: 'Have situational awareness and react appropriately in group settings.',
+      }, NOW),
+    ).toBe('no-js-signal');
+  });
+
+  it('requires explicit JS/TS relevance for Java and C# primary roles', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Java Engineer',
+        description: 'JavaScript is a plus.',
+      }, NOW),
+    ).toBe('no-js-signal');
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior C# Engineer',
+        description: 'React is preferred.',
+      }, NOW),
+    ).toBe('no-js-signal');
+  });
+
+  it('keeps Java primary roles when TypeScript is explicitly required', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Java Engineer',
+        description: 'Requirements:\nJava and TypeScript.',
+      }, NOW),
+    ).toBe('ok');
+  });
+
   it('accepts JS signal from tags only', () => {
     expect(
       evaluateGlobalFilter({ ...base, description: '', tags: ['TypeScript'] }, NOW),
@@ -77,5 +134,20 @@ describe('parseDate', () => {
 describe('stripHtml', () => {
   it('removes tags and decodes basic entities', () => {
     expect(stripHtml('<p>A &amp; B</p><ul><li>React</li></ul>')).toBe('A & B\nReact');
+  });
+
+  it('strips HTML-escaped tags before stack matching', () => {
+    const description = stripHtml(
+      '&lt;p data-path-to-node="2"&gt;Campaign planning&lt;/p&gt;',
+    );
+
+    expect(description).toBe('Campaign planning');
+    expect(
+      evaluateGlobalFilter({
+        title: 'Principal Campaign Manager',
+        description,
+        publishedAt: daysAgo(3),
+      }, NOW),
+    ).toBe('no-js-signal');
   });
 });

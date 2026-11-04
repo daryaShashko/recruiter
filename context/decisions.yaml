@@ -754,6 +754,7 @@ decisions:
       - "Official or aggregator-intended public APIs/feeds — low ban and ToS risk"
       - "Covers the highest-priority regions (Nordics, CH, ATS for UK/NL/EU/US remote) first"
       - "Shared pre-filter keeps daily volume within free Gemini/n8n limits"
+      - "The shared filter ignores optional-only JS/TS mentions and HTML attributes, and requires explicit JS/TS evidence for Java/C#/.NET primary roles"
     consequences:
       positive:
         - "First non-Polish sources; Nordic startups, Swiss roles with salary, curated ATS companies"
@@ -770,6 +771,10 @@ decisions:
       scraper/src/utils/global-filter.ts, scraper/src/scrapers/{thehub,swissdevjobs,ats}.ts,
       unit tests in scraper/tests/, context/interfaces.yaml, context/modules/scraper.yaml,
       docs/notion-schema.md. Production n8n / Notion changes are separate, user-approved steps.
+      Filter regressions found during live ATS review are covered: escaped HTML
+      attributes no longer count as stack signals, natural-language "react
+      appropriately" is not the React framework, and optional-only stack mentions
+      do not qualify Java/C#/.NET primary-role postings.
 
   ADR-021:
     title: "Global sources batch 2 — adzuna (free tier), ATS/feed sources deferred"
