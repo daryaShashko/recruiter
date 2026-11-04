@@ -46,6 +46,20 @@ function containsAny(haystack: string, needles: readonly string[]): boolean {
 }
 
 /**
+ * Cheap title-only check usable on list-endpoint data, before spending a
+ * request on a per-job detail fetch. Sources with expensive detail calls
+ * (one HTTP request per job) should call this first to cut volume, then run
+ * the full evaluateGlobalFilter() once the detail is fetched.
+ */
+export function passesTitleFilter(title: string): boolean {
+  const padded = ` ${title.toLowerCase()} `;
+  if (containsAny(padded, config.global.rejectTitleSignals)) {
+    return false;
+  }
+  return containsAny(padded, config.global.seniorTitleSignals);
+}
+
+/**
  * Matches a JS stack signal as a whole word, so "javascript" does not match
  * "java" and "node" does not match "nodemailer"-like substrings in titles.
  */
