@@ -81,7 +81,11 @@ export const config = {
     requestDelayMs: 300,
     // Per-request timeout (ms)
     requestTimeoutMs: 20_000,
-    // Stack signal: at least one must appear in title, tags, or description
+    // Stack signal: at least one must appear in title, tags, or description.
+    // Deliberately excludes role words like "fullstack"/"frontend" — those
+    // are language-agnostic (a C#/Java "fullstack" role matches them too,
+    // as found live against SwissDevJobs) and would defeat the point of
+    // this filter. Only actual JS/TS technology names count.
     jsSignals: [
       "javascript",
       "typescript",
@@ -94,11 +98,9 @@ export const config = {
       "nestjs",
       "vue",
       "angular",
-      "full-stack",
-      "fullstack",
-      "full stack",
-      "frontend",
-      "front-end",
+      "svelte",
+      "express.js",
+      "expressjs",
     ],
     // Title must contain at least one of these
     seniorTitleSignals: [
@@ -151,6 +153,19 @@ export const config = {
     },
     swissdevjobs: {
       feedUrl: "https://swissdevjobs.ch/job_feed.xml",
+    },
+    // ADR-021. Free tier: 25 calls on Pending Activation. Keys are optional:
+    // the adzuna scraper returns [] when they are missing.
+    adzuna: {
+      apiBaseUrl: "https://api.adzuna.com/v1/api",
+      appId: process.env.ADZUNA_APP_ID || "",
+      appKey: process.env.ADZUNA_APP_KEY || "",
+      // Countries with a Tier 1 relocation/remote fit for an EU citizen
+      countries: ["gb", "de", "nl", "at", "ch"],
+      // One search call per country: each call spends free-tier quota
+      resultsPerPage: 50,
+      query: "typescript react",
+      maxDaysOld: 14,
     },
     // Curated company slugs — slugs verified 2026-11-04 (non-empty public board)
     ats: {
