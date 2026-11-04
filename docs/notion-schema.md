@@ -1,5 +1,9 @@
 # Notion Database Schema: AI Recruiter Board
 
+The source options below describe the required local schema. They are not
+automatically applied to the live Notion database; provision new Select options
+before enabling the corresponding scraper sources in production.
+
 ## Database Name
 `AI Recruiter Board`
 
@@ -159,4 +163,3 @@ The Notion Create Page node for Evaluation Log (`Notion: Log to Eval Log`) is pl
 - `npm run notion:provision` — creates the `🎛️ AI Recruiter — CV & Criteria Control Plane` page and both databases in Notion, seeding all 12 CV rows and 13 Criteria rows.
 - `npm run notion:sync` — fetches active rows from Notion and updates `n8n/prompts/candidate_profile.md` + local snapshot `n8n/prompts/.notion-snapshot.json`.
 - `npm run notion:preview` — prints the compiled Markdown profile and `DynamicScoringConfig` offline.
-
