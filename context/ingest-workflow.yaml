@@ -49,7 +49,7 @@ flow:
   - node: "Switch: Route by Source"
     desc: Routes on $json.source
     outputs:
-      0_justjoin: "→ Notion: Find Existing URL"
+      0_justjoin_and_global_sources: "justjoin, thehub, swissdevjobs, adzuna, workable, recruitee, personio, greenhouse, lever, ashby → Notion: Find Existing URL"
       1_nofluffjobs: "→ Notion: Find Existing URL"
       2_manual: "→ Notion: Find Existing URL"
       3_fallback: "→ Code: Unknown Source → Notion: Find Existing URL"
