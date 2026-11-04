@@ -771,6 +771,56 @@ decisions:
       unit tests in scraper/tests/, context/interfaces.yaml, context/modules/scraper.yaml,
       docs/notion-schema.md. Production n8n / Notion changes are separate, user-approved steps.
 
+  ADR-021:
+    title: "Global sources batch 2 — adzuna (free tier), ATS/feed sources deferred"
+    status: accepted
+    date: "2026-11-04"
+    context: >
+      ADR-020 batch 1 left the ATS and SwissDevJobs modules as placeholders.
+      Live checks on 2026-11-04 (read-only GET) found: Workable widget v1, Recruitee
+      offers API, Personio XML feed, Arbeitnow, JobTech SE and RemoteOK return 200
+      without credentials. NAV stilling-feed needs a rotating public bearer token.
+      Teamtailor RSS works, but the list page has no JSON-LD (only detail pages do).
+      Adzuna needs a free key; the free tier is 25 calls in total (Pending
+      Activation), paid tier is GBP 8/month, and the project rule is no paid
+      services by default.
+      Rejected in this batch: SmartRecruiters (api.smartrecruiters.com/robots.txt
+      has Disallow: / for all bots except LinkedInBot), Getro VC boards (robots.txt
+      asks to contact api@getro.com; the data path is an undocumented Next.js route;
+      several boards do not resolve). Consider/a16z: no public JSON endpoint found.
+      Earlier research claims that NAV needs no key and that Teamtailor list pages
+      carry JSON-LD were wrong and are corrected here.
+    decision: >
+      Add JobOffer.source 'adzuna' and scraper/src/scrapers/adzuna.ts. It calls
+      /v1/api/jobs/{gb,de,nl,at,ch}/search/1 with what_and, max_days_old=14 and
+      results_per_page=50, and runs the shared pre-filter. Keys come from
+      ADZUNA_APP_ID / ADZUNA_APP_KEY in .env; without them the scraper returns [].
+      Adzuna descriptions are ~500-char snippets, so the LLM sees the snippet only;
+      the apply link is Adzuna's redirect_url. Free-tier budget: one run costs
+      len(countries) calls, so the daily cron must stay under the remaining quota
+      or the user must switch tiers (decision required, not made here).
+      The ATS (Workable, Recruitee, Personio), SwissDevJobs, and API boards
+      (Arbeitnow, JobTech SE, RemoteOK, Teamtailor detail, NAV) are NOT implemented
+      in this ADR; each gets its own slice.
+    rationale:
+      - "Adzuna is the only remaining candidate that needs a key and is fast to use"
+      - "Shared pre-filter keeps LLM quota bounded; live run: 52 of 198 kept"
+      - "Missing keys degrade to [] instead of failing the whole pipeline"
+    consequences:
+      positive:
+        - "UK, DE, NL, AT, CH coverage with salary data on many postings"
+      negative:
+        - "Free tier is 25 calls total; one run spends 5. A daily run exhausts it in days"
+        - "Aggregator: many listings come from recruitment agencies"
+        - "Snippet-only descriptions reduce LLM evaluation quality"
+        - "Adzuna ToS: redirect links must be kept, not stripped"
+    implementation: >
+      scraper/src/scrapers/adzuna.ts, scraper/src/config.ts (global.adzuna),
+      scraper/src/index.ts, scraper/src/types.ts, scraper/tests/adzuna.unit.test.ts.
+      Live check 2026-11-04: 1 run over 5 countries, 198 listings, 52 kept.
+      Pending: context/interfaces.yaml, context/modules/scraper.yaml, docs/notion-schema.md
+      (Source select option 'adzuna').
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

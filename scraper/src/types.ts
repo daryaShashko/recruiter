@@ -23,7 +23,8 @@ export interface JobOffer {
     | 'swissdevjobs'
     | 'greenhouse'
     | 'lever'
-    | 'ashby';
+    | 'ashby'
+    | 'adzuna';
   /** Location string (city or "Remote") */
   location?: string;
   /** Salary range string if available */

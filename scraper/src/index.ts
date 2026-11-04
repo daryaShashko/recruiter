@@ -5,6 +5,7 @@ import { scrapeNoFluffJobs } from "./scrapers/nofluffjobs";
 import { scrapeTheHub } from "./scrapers/thehub";
 import { scrapeSwissDevJobs } from "./scrapers/swissdevjobs";
 import { scrapeAts } from "./scrapers/ats";
+import { scrapeAdzuna } from "./scrapers/adzuna";
 import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
 import { closeBrowser } from "./utils/browser";
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     { name: "TheHub", run: scrapeTheHub },
     { name: "SwissDevJobs", run: scrapeSwissDevJobs },
     { name: "ATS", run: scrapeAts },
+    { name: "Adzuna", run: scrapeAdzuna },
   ];
 
   const results = await Promise.allSettled(scrapers.map((s) => s.run()));
