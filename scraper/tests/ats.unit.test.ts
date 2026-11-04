@@ -4,6 +4,9 @@ import {
   normalizeRecruitee,
   normalizeWorkable,
   parsePersonioXml,
+  RawAshbyJob,
+  RawGreenhouseJob,
+  RawLeverPosting,
   RawPersonioPosition,
   RawRecruiteeOffer,
   RawWorkableJob,
@@ -27,6 +30,11 @@ jest.mock("../src/config", () => ({
         workable: ["workable-co"],
         recruitee: ["recruitee-co"],
         personio: ["personio-co"],
+      },
+      ats: {
+        greenhouse: ["greenhouse-co"],
+        lever: ["lever-co"],
+        ashby: ["ashby-co"],
       },
     },
   },
@@ -66,6 +74,50 @@ function recruiteeOffer(
   };
 }
 
+function greenhouseJob(
+  overrides: Partial<RawGreenhouseJob> = {},
+): RawGreenhouseJob {
+  return {
+    id: 23,
+    title: "Senior TypeScript Engineer",
+    company_name: "Greenhouse Co",
+    absolute_url: "https://boards.greenhouse.io/greenhouse-co/jobs/23",
+    content: "<p>Building products with TypeScript and React.</p>",
+    first_published: recentDate,
+    location: { name: "Remote" },
+    departments: [{ name: "Engineering" }],
+    ...overrides,
+  };
+}
+
+function leverPosting(
+  overrides: Partial<RawLeverPosting> = {},
+): RawLeverPosting {
+  return {
+    id: "lever-id",
+    text: "Senior TypeScript Engineer",
+    hostedUrl: "https://jobs.lever.co/lever-co/lever-id",
+    createdAt: new Date(recentDate).getTime(),
+    descriptionPlain: "Building products with TypeScript and React.",
+    categories: { location: "Remote", team: "Engineering" },
+    ...overrides,
+  };
+}
+
+function ashbyJob(overrides: Partial<RawAshbyJob> = {}): RawAshbyJob {
+  return {
+    id: "ashby-id",
+    title: "Senior TypeScript Engineer",
+    jobUrl: "https://jobs.ashbyhq.com/ashby-co/ashby-id",
+    publishedAt: recentDate,
+    descriptionPlain: "Building products with TypeScript and React.",
+    location: "Remote",
+    isRemote: true,
+    department: "Engineering",
+    ...overrides,
+  };
+}
+
 function personioXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
   <workzag-jobs>
@@ -97,13 +149,18 @@ afterEach(() => {
 });
 
 describe("scrapeAts", () => {
-  it("normalizes matching jobs from all three ATS feeds", async () => {
+  it("normalizes matching jobs from all six ATS families", async () => {
     mockedAxios.get
       .mockResolvedValueOnce({
         data: { name: "Workable Co", jobs: [workableJob()] },
       })
       .mockResolvedValueOnce({ data: { offers: [recruiteeOffer()] } })
       .mockResolvedValueOnce({ data: personioXml() })
+      .mockResolvedValueOnce({ data: { jobs: [greenhouseJob()] } })
+      .mockResolvedValueOnce({ data: [leverPosting()] })
+      .mockResolvedValueOnce({
+        data: { jobs: [ashbyJob()] },
+      })
       .mockResolvedValueOnce({
         data: {
           description: "<p>Build with TypeScript and React.</p>",
@@ -117,16 +174,26 @@ describe("scrapeAts", () => {
       "workable",
       "recruitee",
       "personio",
+      "greenhouse",
+      "lever",
+      "ashby",
     ]);
     expect(offers.map((offer) => offer.id)).toEqual([
       "workable_workable-co_ABCD1234",
       "recruitee_recruitee-co_17",
       "personio_personio-co_123",
+      "greenhouse_greenhouse-co_23",
+      "lever_lever-co_lever-id",
+      "ashby_ashby-co_ashby-id",
     ]);
     expect(offers[0].body).toContain("TypeScript");
     expect(offers[1].company).toBe("Recruitee Co");
     expect(offers[2].location).toBe("Munich");
-    expect(mockedAxios.get).toHaveBeenCalledTimes(4);
+    expect(offers[3].location).toBe("Remote");
+    expect(offers[3].company).toBe("Greenhouse Co");
+    expect(offers[4].location).toBe("Remote");
+    expect(offers[5].location).toBe("Remote");
+    expect(mockedAxios.get).toHaveBeenCalledTimes(7);
   });
 
   it("returns no jobs for empty feeds", async () => {
@@ -135,7 +202,10 @@ describe("scrapeAts", () => {
       .mockResolvedValueOnce({ data: { offers: [] } })
       .mockResolvedValueOnce({
         data: '<?xml version="1.0"?><workzag-jobs></workzag-jobs>',
-      });
+      })
+      .mockResolvedValueOnce({ data: { jobs: [] } })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: { jobs: [] } });
 
     await expect(scrapeAts()).resolves.toEqual([]);
   });
@@ -146,7 +216,10 @@ describe("scrapeAts", () => {
       .mockResolvedValueOnce({ data: "<html>blocked</html>" })
       .mockResolvedValueOnce({
         data: "<workzag-jobs><position><name>No ID</name></position></workzag-jobs>",
-      });
+      })
+      .mockResolvedValueOnce({ data: { jobs: { broken: true } } })
+      .mockResolvedValueOnce({ data: { broken: true } })
+      .mockResolvedValueOnce({ data: { jobs: { broken: true } } });
 
     await expect(scrapeAts()).resolves.toEqual([]);
   });
@@ -155,13 +228,34 @@ describe("scrapeAts", () => {
     mockedAxios.get
       .mockRejectedValueOnce(new Error("timeout"))
       .mockResolvedValueOnce({ data: { offers: [recruiteeOffer()] } })
-      .mockResolvedValueOnce({ data: personioXml() });
+      .mockResolvedValueOnce({ data: personioXml() })
+      .mockResolvedValueOnce({ data: { jobs: [greenhouseJob()] } })
+      .mockResolvedValueOnce({ data: [leverPosting()] })
+      .mockResolvedValueOnce({ data: { jobs: [ashbyJob()] } });
 
     const offers = await scrapeAts();
     expect(offers.map((offer) => offer.source)).toEqual([
       "recruitee",
       "personio",
+      "greenhouse",
+      "lever",
+      "ashby",
     ]);
+  });
+
+  it("isolates timeouts from Greenhouse, Lever, and Ashby boards", async () => {
+    mockedAxios.get
+      .mockResolvedValueOnce({ data: { name: "Workable Co", jobs: [] } })
+      .mockResolvedValueOnce({ data: { offers: [] } })
+      .mockResolvedValueOnce({
+        data: '<?xml version="1.0"?><workzag-jobs></workzag-jobs>',
+      })
+      .mockRejectedValueOnce(new Error("Greenhouse timeout"))
+      .mockRejectedValueOnce(new Error("Lever timeout"))
+      .mockRejectedValueOnce(new Error("Ashby timeout"));
+
+    await expect(scrapeAts()).resolves.toEqual([]);
+    expect(mockedAxios.get).toHaveBeenCalledTimes(6);
   });
 
   it("filters junior and stale postings", async () => {
@@ -179,11 +273,64 @@ describe("scrapeAts", () => {
       .mockResolvedValueOnce({ data: { offers: [] } })
       .mockResolvedValueOnce({
         data: '<?xml version="1.0"?><workzag-jobs></workzag-jobs>',
-      });
+      })
+      .mockResolvedValueOnce({ data: { jobs: [] } })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: { jobs: [] } });
 
     await expect(scrapeAts()).resolves.toEqual([]);
     // Junior and stale postings are both removed before detail requests.
-    expect(mockedAxios.get).toHaveBeenCalledTimes(3);
+    expect(mockedAxios.get).toHaveBeenCalledTimes(6);
+  });
+
+  it("filters unqualified postings across Greenhouse, Lever, and Ashby", async () => {
+    mockedAxios.get
+      .mockResolvedValueOnce({ data: { name: "Workable Co", jobs: [] } })
+      .mockResolvedValueOnce({ data: { offers: [] } })
+      .mockResolvedValueOnce({
+        data: '<?xml version="1.0"?><workzag-jobs></workzag-jobs>',
+      })
+      .mockResolvedValueOnce({
+        data: {
+          jobs: [
+            greenhouseJob({ title: "Junior TypeScript Engineer" }),
+            greenhouseJob({
+              id: 24,
+              title: "Senior Java Engineer",
+              content: "JavaScript is a plus.",
+            }),
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          leverPosting({ text: "Junior TypeScript Engineer" }),
+          leverPosting({
+            id: "java-role",
+            text: "Senior Java Engineer",
+            descriptionPlain: "JavaScript is a plus.",
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        data: {
+          jobs: [
+            ashbyJob({ title: "Junior TypeScript Engineer" }),
+            ashbyJob({
+              id: "java-role",
+              title: "Senior Java Engineer",
+              descriptionPlain: "JavaScript is a plus.",
+            }),
+            ashbyJob({
+              id: "unlisted",
+              title: "Senior TypeScript Engineer",
+              isListed: false,
+            }),
+          ],
+        },
+      });
+
+    await expect(scrapeAts()).resolves.toEqual([]);
   });
 });
 

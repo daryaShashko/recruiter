@@ -13,6 +13,7 @@ import {
 } from "../utils/global-filter";
 
 const { workable, recruitee, personio } = config.global.atsFeeds;
+const { greenhouse, lever, ashby } = config.global.ats;
 const timeout = config.global.requestTimeoutMs;
 
 export interface RawWorkableJob {
@@ -58,6 +59,48 @@ export interface RawPersonioPosition {
   descriptions: string[];
 }
 
+export interface RawGreenhouseJob {
+  id: number;
+  title: string;
+  company_name?: string;
+  absolute_url?: string;
+  content?: string;
+  first_published?: string;
+  updated_at?: string;
+  location?: { name?: string };
+  departments?: { name?: string }[];
+}
+
+export interface RawLeverPosting {
+  id: string;
+  text: string;
+  hostedUrl?: string;
+  createdAt?: number | string;
+  descriptionPlain?: string;
+  descriptionBodyPlain?: string;
+  description?: string;
+  categories?: {
+    location?: string;
+    team?: string;
+    department?: string;
+    commitment?: string;
+  };
+}
+
+export interface RawAshbyJob {
+  id: string;
+  title: string;
+  jobUrl?: string;
+  publishedAt?: string;
+  descriptionHtml?: string;
+  descriptionPlain?: string;
+  location?: string;
+  isRemote?: boolean;
+  isListed?: boolean;
+  department?: string;
+  team?: string;
+}
+
 interface WorkableWidget {
   name?: string;
   jobs?: RawWorkableJob[];
@@ -69,6 +112,84 @@ interface RecruiteeResponse {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function readGreenhouseJob(value: unknown): RawGreenhouseJob | undefined {
+  if (!isRecord(value) || typeof value.id !== "number" || typeof value.title !== "string") {
+    return undefined;
+  }
+  const location = isRecord(value.location)
+    ? { name: optionalString(value.location.name) }
+    : undefined;
+  const departments = Array.isArray(value.departments)
+    ? value.departments
+        .filter(isRecord)
+        .map((department) => ({ name: optionalString(department.name) }))
+    : undefined;
+
+  return {
+    id: value.id,
+    title: value.title,
+    company_name: optionalString(value.company_name),
+    absolute_url: optionalString(value.absolute_url),
+    content: optionalString(value.content),
+    first_published: optionalString(value.first_published),
+    updated_at: optionalString(value.updated_at),
+    location,
+    departments,
+  };
+}
+
+function readLeverPosting(value: unknown): RawLeverPosting | undefined {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.text !== "string") {
+    return undefined;
+  }
+  const categories = isRecord(value.categories)
+    ? {
+        location: optionalString(value.categories.location),
+        team: optionalString(value.categories.team),
+        department: optionalString(value.categories.department),
+        commitment: optionalString(value.categories.commitment),
+      }
+    : undefined;
+
+  return {
+    id: value.id,
+    text: value.text,
+    hostedUrl: optionalString(value.hostedUrl),
+    createdAt:
+      typeof value.createdAt === "number" || typeof value.createdAt === "string"
+        ? value.createdAt
+        : undefined,
+    descriptionPlain: optionalString(value.descriptionPlain),
+    descriptionBodyPlain: optionalString(value.descriptionBodyPlain),
+    description: optionalString(value.description),
+    categories,
+  };
+}
+
+function readAshbyJob(value: unknown): RawAshbyJob | undefined {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.title !== "string") {
+    return undefined;
+  }
+
+  return {
+    id: value.id,
+    title: value.title,
+    jobUrl: optionalString(value.jobUrl),
+    publishedAt: optionalString(value.publishedAt),
+    descriptionHtml: optionalString(value.descriptionHtml),
+    descriptionPlain: optionalString(value.descriptionPlain),
+    location: optionalString(value.location),
+    isRemote: typeof value.isRemote === "boolean" ? value.isRemote : undefined,
+    isListed: typeof value.isListed === "boolean" ? value.isListed : undefined,
+    department: optionalString(value.department),
+    team: optionalString(value.team),
+  };
 }
 
 function getArray<T>(
@@ -220,6 +341,58 @@ export function normalizePersonio(
   };
 }
 
+export function normalizeGreenhouse(
+  slug: string,
+  job: RawGreenhouseJob,
+): JobOffer {
+  return {
+    id: `greenhouse_${slug}_${job.id}`,
+    title: job.title,
+    company: job.company_name ?? slug,
+    url: job.absolute_url ?? `https://boards.greenhouse.io/${slug}/jobs/${job.id}`,
+    body: stripHtml(job.content ?? "") || job.title,
+    source: "greenhouse",
+    location: job.location?.name ?? "Unknown",
+    scrapedAt: new Date().toISOString(),
+  };
+}
+
+export function normalizeLever(
+  slug: string,
+  posting: RawLeverPosting,
+): JobOffer {
+  const body =
+    stripHtml(
+      posting.descriptionPlain ??
+        posting.descriptionBodyPlain ??
+        posting.description ??
+        "",
+    ) || posting.text;
+  return {
+    id: `lever_${slug}_${posting.id}`,
+    title: posting.text,
+    company: slug,
+    url: posting.hostedUrl ?? `https://jobs.lever.co/${slug}/${posting.id}`,
+    body,
+    source: "lever",
+    location: posting.categories?.location ?? "Unknown",
+    scrapedAt: new Date().toISOString(),
+  };
+}
+
+export function normalizeAshby(slug: string, job: RawAshbyJob): JobOffer {
+  return {
+    id: `ashby_${slug}_${job.id}`,
+    title: job.title,
+    company: slug,
+    url: job.jobUrl ?? `https://jobs.ashbyhq.com/${slug}/${job.id}`,
+    body: stripHtml(job.descriptionPlain ?? job.descriptionHtml ?? "") || job.title,
+    source: "ashby",
+    location: job.location || (job.isRemote ? "Remote" : "Unknown"),
+    scrapedAt: new Date().toISOString(),
+  };
+}
+
 function passesFilter(
   title: string,
   description: string,
@@ -351,6 +524,112 @@ async function scrapePersonioSlug(slug: string): Promise<JobOffer[]> {
   return kept;
 }
 
+async function scrapeGreenhouseSlug(slug: string): Promise<JobOffer[]> {
+  const response = await axios.get<unknown>(
+    `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs?content=true`,
+    { timeout },
+  );
+  const jobs = getArray<unknown>(response.data, "jobs");
+  const reasons: GlobalFilterReason[] = [];
+  const kept: JobOffer[] = [];
+
+  for (const rawJob of jobs) {
+    const job = readGreenhouseJob(rawJob);
+    if (!job) {
+      continue;
+    }
+    if (!passesTitleFilter(job.title)) {
+      continue;
+    }
+    const reason = passesFilter(
+      job.title,
+      job.content ?? "",
+      job.first_published ?? job.updated_at,
+    );
+    reasons.push(reason);
+    if (reason === "ok") {
+      kept.push(normalizeGreenhouse(slug, job));
+    }
+  }
+
+  logFilterStats(`ATS:greenhouse:${slug}`, reasons);
+  return kept;
+}
+
+async function scrapeLeverSlug(slug: string): Promise<JobOffer[]> {
+  const response = await axios.get<unknown>(
+    `https://api.lever.co/v0/postings/${encodeURIComponent(slug)}?mode=json`,
+    { timeout },
+  );
+  if (!Array.isArray(response.data)) {
+    throw new Error("Unexpected API response: expected an array of postings");
+  }
+
+  const reasons: GlobalFilterReason[] = [];
+  const kept: JobOffer[] = [];
+  for (const rawPosting of response.data) {
+    const posting = readLeverPosting(rawPosting);
+    if (!posting) {
+      continue;
+    }
+    if (!passesTitleFilter(posting.text)) {
+      continue;
+    }
+    const description =
+      posting.descriptionPlain ??
+      posting.descriptionBodyPlain ??
+      posting.description ??
+      "";
+    const reason = passesFilter(
+      posting.text,
+      description,
+      posting.createdAt,
+    );
+    reasons.push(reason);
+    if (reason === "ok") {
+      kept.push(normalizeLever(slug, posting));
+    }
+  }
+
+  logFilterStats(`ATS:lever:${slug}`, reasons);
+  return kept;
+}
+
+async function scrapeAshbySlug(slug: string): Promise<JobOffer[]> {
+  const response = await axios.get<unknown>(
+    `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`,
+    { timeout },
+  );
+  const jobs = getArray<unknown>(response.data, "jobs");
+  const reasons: GlobalFilterReason[] = [];
+  const kept: JobOffer[] = [];
+
+  for (const rawJob of jobs) {
+    const job = readAshbyJob(rawJob);
+    if (!job) {
+      continue;
+    }
+    if (job.isListed === false) {
+      continue;
+    }
+    if (!passesTitleFilter(job.title)) {
+      continue;
+    }
+    const reason = passesFilter(
+      job.title,
+      job.descriptionPlain ?? job.descriptionHtml ?? "",
+      job.publishedAt,
+    );
+    reasons.push(reason);
+    if (reason === "ok") {
+      kept.push(normalizeAshby(slug, job));
+    }
+  }
+
+  logFilterStats(`ATS:ashby:${slug}`, reasons);
+  return kept;
+}
+
 async function scrapeSlugs(
   family: string,
   slugs: readonly string[],
@@ -370,17 +649,32 @@ async function scrapeSlugs(
 
 export async function scrapeAts(): Promise<JobOffer[]> {
   try {
-    const [workableOffers, recruiteeOffers, personioOffers] = await Promise.all([
+    const [
+      workableOffers,
+      recruiteeOffers,
+      personioOffers,
+      greenhouseOffers,
+      leverOffers,
+      ashbyOffers,
+    ] = await Promise.all([
       scrapeSlugs("workable", workable, scrapeWorkableSlug),
       scrapeSlugs("recruitee", recruitee, scrapeRecruiteeSlug),
       scrapeSlugs("personio", personio, scrapePersonioSlug),
+      scrapeSlugs("greenhouse", greenhouse, scrapeGreenhouseSlug),
+      scrapeSlugs("lever", lever, scrapeLeverSlug),
+      scrapeSlugs("ashby", ashby, scrapeAshbySlug),
     ]);
     const offers = [
       ...workableOffers,
       ...recruiteeOffers,
       ...personioOffers,
+      ...greenhouseOffers,
+      ...leverOffers,
+      ...ashbyOffers,
     ];
-    console.log(`[ATS] ${offers.length} offers from Workable, Recruitee, Personio`);
+    console.log(
+      `[ATS] ${offers.length} offers from Workable, Recruitee, Personio, Greenhouse, Lever, Ashby`,
+    );
     return offers;
   } catch (error) {
     console.error("[ATS] Scraper failed:", error);

@@ -62,22 +62,34 @@ files:
       1: "config validation failed OR webhook send failed"
 
   src/scrapers/ats.ts:
-    exports: [scrapeAts, parsePersonioXml, normalizeWorkable, normalizeRecruitee, normalizePersonio]
+    exports:
+      - scrapeAts
+      - parsePersonioXml
+      - normalizeWorkable
+      - normalizeRecruitee
+      - normalizePersonio
+      - normalizeGreenhouse
+      - normalizeLever
+      - normalizeAshby
     signature: "() => Promise<JobOffer[]>"
-    families: [workable, recruitee, personio]
+    families: [workable, recruitee, personio, greenhouse, lever, ashby]
     configured_slugs:
       workable: [grecotel, eurobank]
       recruitee: [channable]
       personio: [tado, clark]
+      greenhouse: "See config.global.ats.greenhouse"
+      lever: "See config.global.ats.lever"
+      ashby: "See config.global.ats.ashby"
     method: >
       Workable widget v1 list plus v2 detail for senior-title candidates;
-      Recruitee public offers JSON; Personio public XML feed. Per-slug failures
-      are logged and isolated. All outputs pass the shared global pre-filter.
+      Recruitee public offers JSON; Personio public XML feed; Greenhouse public
+      job-board API with descriptions; Lever public postings API; Ashby public
+      job-board API. Per-slug failures are logged and isolated. All outputs pass
+      the shared global pre-filter.
     status: implemented
     known_gaps:
-      - "Only a small set of non-empty company slugs has been verified; expand by live validation"
-      - "Live run on 2026-11-04 found 0 postings passing the shared profile filter; these slugs validate API shapes, not useful coverage"
-      - "Greenhouse / Lever / Ashby public-board families remain configured in config.global.ats but are not yet implemented in ats.ts"
+      - "Company slugs are manually curated and can become stale; remove boards that return no current postings"
+      - "The pre-filter checks stack, seniority, age and legal blockers, not exact occupation; the LLM still decides role fit"
       - "Production Notion Source select and n8n routing still need operator approval/update"
 
   src/scrapers/adzuna.ts:

@@ -54,6 +54,16 @@ describe('evaluateGlobalFilter', () => {
     ).toBe('no-js-signal');
   });
 
+  it('keeps required JS/TS signals beside optional technologies', () => {
+    expect(
+      evaluateGlobalFilter({
+        ...base,
+        title: 'Senior Software Engineer',
+        description: 'TypeScript is required; React is a plus.',
+      }, NOW),
+    ).toBe('ok');
+  });
+
   it('ignores technologies listed under an optional section', () => {
     expect(
       evaluateGlobalFilter({

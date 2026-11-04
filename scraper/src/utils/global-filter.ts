@@ -106,7 +106,7 @@ function hasDescriptionJsSignal(
 ): boolean {
   let inOptionalSection = false;
   let inRequiredSection = false;
-  const segments = description.split(/(?<=[.!?])\s+|\n+/);
+  const segments = description.split(/(?<=[.!?;])\s+|\n+/);
 
   for (const segment of segments) {
     const text = segment.trim();

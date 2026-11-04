@@ -775,6 +775,15 @@ decisions:
       attributes no longer count as stack signals, natural-language "react
       appropriately" is not the React framework, and optional-only stack mentions
       do not qualify Java/C#/.NET primary-role postings.
+      Final read-only smoke on 2026-11-04 made 45 public GET requests with no
+      failures and returned 169 filter-qualified offers: Greenhouse 152, Lever
+      1, Ashby 16; Workable, Recruitee and Personio returned 0. A previous run
+      had one Lever/Swile timeout, which was isolated. Separate live relevance
+      checks found software-engineering matches at Greenhouse boards (including
+      MongoDB, Grafana Labs, Deliveroo and Cloudflare), Matillion on Lever, and
+      Lovable on Ashby. Five boards that returned no postings were removed from
+      the configured slug lists. These are pre-filter results, not downstream
+      LLM matches.
 
   ADR-021:
     title: "Global sources batch 2 — adzuna (free tier), ATS/feed sources deferred"

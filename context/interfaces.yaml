@@ -37,6 +37,7 @@ interfaces:
       source:
         type: "'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual' | 'thehub' | 'swissdevjobs' | 'greenhouse' | 'lever' | 'ashby' | 'adzuna' | 'workable' | 'recruitee' | 'personio'"
         required: true
+        note: "Greenhouse, Lever and Ashby are normalized by scraper/src/scrapers/ats.ts; the JobOffer shape is unchanged"
       location:
         type: string
         required: false

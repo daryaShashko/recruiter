@@ -4,6 +4,10 @@ The source options below describe the required local schema. They are not
 automatically applied to the live Notion database; provision new Select options
 before enabling the corresponding scraper sources in production.
 
+`greenhouse`, `lever`, and `ashby` are emitted by the local public-board scraper
+alongside the Workable, Recruitee, and Personio feeds. This documentation does
+not update the production Notion Select options or n8n source routing.
+
 ## Database Name
 `AI Recruiter Board`
 
