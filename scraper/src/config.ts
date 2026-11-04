@@ -72,6 +72,137 @@ export const config = {
     rejectLevels: ["junior", "mid", "regular", "intern", "trainee"],
   },
 
+  // ADR-020: global sources batch 1. Location is not pre-filtered here —
+  // the LLM evaluator applies remote/relocation rules.
+  global: {
+    // Drop postings older than this (by publish date)
+    maxAgeDays: 60,
+    // Polite delay between sequential requests to the same host (ms)
+    requestDelayMs: 300,
+    // Per-request timeout (ms)
+    requestTimeoutMs: 20_000,
+    // Stack signal: at least one must appear in title, tags, or description
+    jsSignals: [
+      "javascript",
+      "typescript",
+      "node.js",
+      "nodejs",
+      "node",
+      "react",
+      "next.js",
+      "nextjs",
+      "nestjs",
+      "vue",
+      "angular",
+      "full-stack",
+      "fullstack",
+      "full stack",
+      "frontend",
+      "front-end",
+    ],
+    // Title must contain at least one of these
+    seniorTitleSignals: [
+      "senior",
+      "sr.",
+      "sr ",
+      "lead",
+      "principal",
+      "staff",
+      "architect",
+      "head of",
+      "founding",
+    ],
+    // Title must not contain any of these
+    rejectTitleSignals: [
+      "junior",
+      "intern",
+      "internship",
+      "trainee",
+      "graduate",
+      "working student",
+      "werkstudent",
+      "apprentice",
+    ],
+    // Hard legal blockers for an EU citizen (description, case-insensitive)
+    legalBlockers: [
+      "us citizen only",
+      "us citizens only",
+      "u.s. citizens only",
+      "must be a us citizen",
+      "must be a u.s. citizen",
+      "security clearance",
+      "active clearance",
+      "itar",
+    ],
+    thehub: {
+      apiBaseUrl: "https://api.thehub.io",
+      siteBaseUrl: "https://thehub.io",
+      countries: ["DK", "SE", "NO", "FI"],
+      // Safety cap on list pages per country (15 jobs per page)
+      maxPagesPerCountry: 30,
+      // Only these TheHub jobRole values are fetched in detail
+      jobRoles: [
+        "fullstackdeveloper",
+        "frontenddeveloper",
+        "backenddeveloper",
+        "engineer",
+        "cxo",
+      ],
+    },
+    swissdevjobs: {
+      feedUrl: "https://swissdevjobs.ch/job_feed.xml",
+    },
+    // Curated company slugs — slugs verified 2026-11-04 (non-empty public board)
+    ats: {
+      greenhouse: [
+        "gitlab",
+        "vercel",
+        "netlify",
+        "contentful",
+        "typeform",
+        "remote",
+        "cloudflare",
+        "datadog",
+        "elastic",
+        "mongodb",
+        "grafanalabs",
+        "adyen",
+        "n26",
+        "trivago",
+        "getyourguide",
+        "hellofresh",
+        "wolt",
+        "mentimeter",
+        "monzo",
+        "wise",
+        "deliveroo",
+        "cleo",
+        "gocardless",
+        "intercom",
+        "storyblok",
+        "algolia",
+        "airtable",
+        "figma",
+      ],
+      lever: ["spotify", "matillion", "contentsquare", "swile"],
+      ashby: [
+        "linear",
+        "posthog",
+        "supabase",
+        "resend",
+        "n8n",
+        "ramp",
+        "lovable",
+        "synthesia",
+        "elevenlabs",
+        "incident",
+        "attio",
+        "clerk",
+        "knock",
+      ],
+    },
+  },
+
   playwright: {
     headless: process.env.HEADLESS !== "false",
     // Viewport mimics a common desktop resolution

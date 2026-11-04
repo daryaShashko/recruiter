@@ -2,6 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { scrapeJustJoin } from "./scrapers/justjoin";
 import { scrapeNoFluffJobs } from "./scrapers/nofluffjobs";
+import { scrapeTheHub } from "./scrapers/thehub";
+import { scrapeSwissDevJobs } from "./scrapers/swissdevjobs";
+import { scrapeAts } from "./scrapers/ats";
 import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
 import { closeBrowser } from "./utils/browser";
@@ -64,15 +67,23 @@ async function main(): Promise<void> {
     }
   }
 
-  const results = await Promise.allSettled([
-    scrapeJustJoin(),
-    scrapeNoFluffJobs(),
-  ]);
+  const scrapers: ReadonlyArray<{
+    name: string;
+    run: () => Promise<JobOffer[]>;
+  }> = [
+    { name: "JustJoin", run: scrapeJustJoin },
+    { name: "NoFluffJobs", run: scrapeNoFluffJobs },
+    { name: "TheHub", run: scrapeTheHub },
+    { name: "SwissDevJobs", run: scrapeSwissDevJobs },
+    { name: "ATS", run: scrapeAts },
+  ];
+
+  const results = await Promise.allSettled(scrapers.map((s) => s.run()));
 
   const allOffers: JobOffer[] = [];
 
   results.forEach((result, index) => {
-    const scraperName = index === 0 ? "JustJoin" : "NoFluffJobs";
+    const scraperName = scrapers[index].name;
     if (result.status === "fulfilled") {
       console.log(`[${scraperName}] Collected ${result.value.length} offers`);
       allOffers.push(...result.value);

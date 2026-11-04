@@ -14,7 +14,16 @@ export interface JobOffer {
   /** Full job description text */
   body: string;
   /** Source board identifier */
-  source: 'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual';
+  source:
+    | 'justjoin'
+    | 'nofluffjobs'
+    | 'linkedin'
+    | 'manual'
+    | 'thehub'
+    | 'swissdevjobs'
+    | 'greenhouse'
+    | 'lever'
+    | 'ashby';
   /** Location string (city or "Remote") */
   location?: string;
   /** Salary range string if available */

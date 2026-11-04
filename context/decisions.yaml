@@ -722,6 +722,55 @@ decisions:
                  scraper/src/debug-urls.ts, scraper/src/scrape-one.ts, playwright dependency
       No changes to: ingest.json, interfaces.yaml, types.ts (source='manual' already present)
 
+  ADR-020:
+    title: "Global sources batch 1 — thehub, swissdevjobs, greenhouse, lever, ashby"
+    status: accepted
+    date: "2026-11-04"
+    context: >
+      The pipeline only searched Poland (JustJoin, NoFluffJobs). The candidate is an EU
+      (Polish) citizen and wants global offers: Nordics, UK, CH, NL, EU remote, US remote
+      via B2B. Research on 2026-11-04 (read-only GET checks) confirmed that these sources
+      expose public, unauthenticated, machine-readable job data:
+      TheHub (api.thehub.io/v2/jobs + /jobs/single/{id}, Nordic startups, has
+      expirationDate), SwissDevJobs (job_feed.xml, salary almost always present),
+      Greenhouse / Lever / Ashby public job-board APIs (official, per-company, full text).
+      Median posting age was 5-92 days; sampled apply pages returned 200 with apply forms.
+      robots.txt did not disallow the used paths (Ashby robots.txt returned Unauthorized).
+      Rejected for now: LinkedIn (ToS forbids automation), TokyoDev / startup.jobs /
+      EU-Startups (403 bot protection), JapanDev / Welcome to the Jungle (Algolia keys
+      not public), Solid.jobs (no search API found), DevITJobs (mostly agencies — batch 2),
+      Remotive / Himalayas (low volume / apply pages 403 — later).
+    decision: >
+      Extend JobOffer.source with 'thehub' | 'swissdevjobs' | 'greenhouse' | 'lever' |
+      'ashby'. Add one scraper module per source family (thehub.ts, swissdevjobs.ts,
+      ats.ts for the three ATS APIs driven by a curated company list in config.ts).
+      All new scrapers share a pre-filter in scraper/src/utils/global-filter.ts:
+      senior-level title, JS/TS stack signal, posting age <= 60 days, not expired, and
+      no hard legal blocker (US citizen only, security clearance). Location is NOT
+      pre-filtered: remote-anywhere and relocation offers go to the LLM, which applies
+      the 2026-11 location rules. The pre-filter exists to protect free LLM quota.
+      No other JobOffer / WebhookPayload / EvaluationResult field changes.
+    rationale:
+      - "Official or aggregator-intended public APIs/feeds — low ban and ToS risk"
+      - "Covers the highest-priority regions (Nordics, CH, ATS for UK/NL/EU/US remote) first"
+      - "Shared pre-filter keeps daily volume within free Gemini/n8n limits"
+    consequences:
+      positive:
+        - "First non-Polish sources; Nordic startups, Swiss roles with salary, curated ATS companies"
+      negative:
+        - "n8n Switch: Route by Source sends unknown sources to the fallback branch until
+           it is extended (fallback still reaches Notion, but logs 'Unknown Source')"
+        - "Notion Source select must get the 5 new options, otherwise page create may fail"
+        - "Live evaluator must run the 2026-11 location/currency rules, otherwise foreign
+           offers score 0 for 'Wrong location'"
+        - "ATS coverage depends on a hand-maintained company slug list"
+        - "TheHub needs one detail request per job (rate-limited with a delay)"
+    implementation: >
+      scraper/src/types.ts, scraper/src/config.ts, scraper/src/index.ts,
+      scraper/src/utils/global-filter.ts, scraper/src/scrapers/{thehub,swissdevjobs,ats}.ts,
+      unit tests in scraper/tests/, context/interfaces.yaml, context/modules/scraper.yaml,
+      docs/notion-schema.md. Production n8n / Notion changes are separate, user-approved steps.
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.
