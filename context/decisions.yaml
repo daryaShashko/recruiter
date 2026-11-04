@@ -818,8 +818,56 @@ decisions:
       scraper/src/scrapers/adzuna.ts, scraper/src/config.ts (global.adzuna),
       scraper/src/index.ts, scraper/src/types.ts, scraper/tests/adzuna.unit.test.ts.
       Live check 2026-11-04: 1 run over 5 countries, 198 listings, 52 kept.
-      Pending: context/interfaces.yaml, context/modules/scraper.yaml, docs/notion-schema.md
-      (Source select option 'adzuna').
+      Local interface and schema documentation synced. Production Notion Source
+      select and n8n source routing remain operator tasks.
+
+  ADR-022:
+    title: "Public ATS feeds — Workable, Recruitee, and Personio"
+    status: accepted
+    date: "2026-11-04"
+    context: >
+      ADR-021 deferred ATS sources to a separate implementation slice. Live
+      read-only checks on 2026-11-04 confirmed populated public boards for
+      Workable (grecotel: 84 jobs, eurobank: 3), Recruitee (channable: 12),
+      and Personio (tado: 2, clark: 3). The tested APIs need no authentication.
+      Several initially proposed slugs returned 404 or empty boards, so the
+      implementation uses only the verified slugs. Workable's widget list
+      lacks full descriptions; the scraper fetches v2 details only for titles
+      that pass the cheap senior-level filter. Recruitee provides descriptions
+      in its offers response. Personio publishes an XML feed with CDATA job
+      description sections. ATS postings remain subject to the shared global
+      pre-filter and downstream LLM location evaluation.
+    decision: >
+      Implement the Workable, Recruitee, and Personio families in
+      scraper/src/scrapers/ats.ts, configured via config.global.atsFeeds.
+      Extend JobOffer.source with 'workable' | 'recruitee' | 'personio'.
+      Scraper failures are isolated per company slug; no credentials or
+      external services are introduced. Do not include SmartRecruiters
+      (robots.txt disallows all bots except LinkedInBot) or Getro (robots.txt
+      requests API access by contacting Getro) in this decision.
+      This updates the scraper and local schema documentation only. Production
+      Notion Source select options and n8n routing remain a separate, explicit
+      operator task and must be completed before enabling these sources in a
+      production webhook run.
+    rationale:
+      - "Uses unauthenticated ATS endpoints and only slugs confirmed live"
+      - "Per-family normalization and a shared pre-filter keep the JobOffer contract stable"
+      - "Failure isolation prevents one company board from stopping other source families"
+    consequences:
+      positive:
+        - "Adds direct EU employer coverage and full descriptions where available"
+        - "No added dependency or API credential"
+      negative:
+        - "Company slugs are manually curated and can become stale"
+        - "Workable needs a detail request per senior-title candidate"
+        - "Personio XML feeds and ATS APIs are public but not guaranteed stable"
+        - "Production Notion schema and n8n source routing are not changed here"
+    implementation: >
+      scraper/src/scrapers/ats.ts, scraper/src/config.ts (global.atsFeeds),
+      scraper/src/types.ts, scraper/src/index.ts, scraper/tests/ats.unit.test.ts,
+      context/interfaces.yaml, context/modules/scraper.yaml, docs/notion-schema.md.
+      Live verification: 2026-11-04; synthetic tests cover parsing, filtering,
+      empty/malformed responses, and per-source failures.
 
 # ============================================================
 # SYNC RULE

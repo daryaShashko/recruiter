@@ -167,6 +167,13 @@ export const config = {
       query: "typescript react",
       maxDaysOld: 14,
     },
+    // ADR-022: Workable / Recruitee / Personio slugs, verified live 2026-11-04
+    // as non-empty public boards. Other slugs tried returned 0 jobs or 404.
+    atsFeeds: {
+      workable: ["grecotel", "eurobank"],
+      recruitee: ["channable"],
+      personio: ["tado", "clark"],
+    },
     // Curated company slugs — slugs verified 2026-11-04 (non-empty public board)
     ats: {
       greenhouse: [

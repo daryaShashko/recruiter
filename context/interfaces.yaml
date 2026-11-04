@@ -35,7 +35,7 @@ interfaces:
         fallback: "Use title if API doesn't return description (scrapers do this)"
         note: "Truncate to ~1500 chars before sending to Ollama (8k context window)"
       source:
-        type: "'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual' | 'thehub' | 'swissdevjobs' | 'greenhouse' | 'lever' | 'ashby' | 'adzuna'"
+        type: "'justjoin' | 'nofluffjobs' | 'linkedin' | 'manual' | 'thehub' | 'swissdevjobs' | 'greenhouse' | 'lever' | 'ashby' | 'adzuna' | 'workable' | 'recruitee' | 'personio'"
         required: true
       location:
         type: string

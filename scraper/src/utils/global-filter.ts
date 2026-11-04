@@ -59,6 +59,17 @@ export function passesTitleFilter(title: string): boolean {
   return containsAny(padded, config.global.seniorTitleSignals);
 }
 
+/** Cheap freshness check for list endpoints that expose publish dates. */
+export function passesAgeFilter(
+  publishedAt: Date | undefined,
+  now: Date = new Date(),
+): boolean {
+  return (
+    !publishedAt ||
+    now.getTime() - publishedAt.getTime() <= config.global.maxAgeDays * DAY_MS
+  );
+}
+
 /**
  * Matches a JS stack signal as a whole word, so "javascript" does not match
  * "java" and "node" does not match "nodemailer"-like substrings in titles.

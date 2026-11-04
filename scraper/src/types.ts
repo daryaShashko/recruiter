@@ -24,7 +24,10 @@ export interface JobOffer {
     | 'greenhouse'
     | 'lever'
     | 'ashby'
-    | 'adzuna';
+    | 'adzuna'
+    | 'workable'
+    | 'recruitee'
+    | 'personio';
   /** Location string (city or "Remote") */
   location?: string;
   /** Salary range string if available */

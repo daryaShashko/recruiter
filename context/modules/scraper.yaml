@@ -54,12 +54,49 @@ files:
 
   src/index.ts:
     exports: [] # side-effect entry point
-    pattern: "Promise.allSettled([scrapeJustJoin(), scrapeNoFluffJobs()])"
+    pattern: "Promise.allSettled() over all configured scraper functions"
     dedup: "deduplicateOffers() — by id using Set<string>"
     error_handling: "each scraper failure is logged, others continue"
     exit_codes:
       0: "success"
       1: "config validation failed OR webhook send failed"
+
+  src/scrapers/ats.ts:
+    exports: [scrapeAts, parsePersonioXml, normalizeWorkable, normalizeRecruitee, normalizePersonio]
+    signature: "() => Promise<JobOffer[]>"
+    families: [workable, recruitee, personio]
+    configured_slugs:
+      workable: [grecotel, eurobank]
+      recruitee: [channable]
+      personio: [tado, clark]
+    method: >
+      Workable widget v1 list plus v2 detail for senior-title candidates;
+      Recruitee public offers JSON; Personio public XML feed. Per-slug failures
+      are logged and isolated. All outputs pass the shared global pre-filter.
+    status: implemented
+    known_gaps:
+      - "Only a small set of non-empty company slugs has been verified; expand by live validation"
+      - "Live run on 2026-11-04 found 0 postings passing the shared profile filter; these slugs validate API shapes, not useful coverage"
+      - "Greenhouse / Lever / Ashby public-board families remain configured in config.global.ats but are not yet implemented in ats.ts"
+      - "Production Notion Source select and n8n routing still need operator approval/update"
+
+  src/scrapers/adzuna.ts:
+    exports: [scrapeAdzuna, normalizeAdzunaJob]
+    signature: "() => Promise<JobOffer[]>"
+    status: implemented
+    note: "ADR-021; free-tier credentials required; one run uses five API calls"
+
+  src/scrapers/thehub.ts:
+    exports: [scrapeTheHub]
+    signature: "() => Promise<JobOffer[]>"
+    status: implemented
+    note: "ADR-020; per-job detail requests are paced"
+
+  src/scrapers/swissdevjobs.ts:
+    exports: [scrapeSwissDevJobs, parseFeed, normalizeJob]
+    signature: "() => Promise<JobOffer[]>"
+    status: implemented
+    note: "ADR-020; public XML feed"
 
   src/sender.ts:
     exports: [sendToWebhook]

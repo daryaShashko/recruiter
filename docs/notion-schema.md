@@ -13,7 +13,7 @@ Kanban view grouped by `Status`
 | `Title` | Title | Job title (e.g. "Senior Node.js Developer") |
 | `Company` | Text | Company name |
 | `URL` | URL | Direct link to job posting — **used for deduplication** |
-| `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual`, `thehub`, `swissdevjobs`, `greenhouse`, `lever`, `ashby`, `adzuna` |
+| `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual`, `thehub`, `swissdevjobs`, `greenhouse`, `lever`, `ashby`, `adzuna`, `workable`, `recruitee`, `personio` |
 | `Match Reason` | Text | LLM explanation (reason breakdown from Ollama) |
 | `Salary` | Text | Salary range string (e.g. "15,000–20,000 PLN B2B") |
 | `Status` | Select | `Hot Match`, `Review`, `Applied`, `Rejected` |
@@ -102,7 +102,7 @@ Table view, sorted by `Evaluated At` descending
 | `Company` | Text | Company name |
 | `Fingerprint` | Text | FNV-1a 64-bit hash of `normalized_company::normalized_title` — primary dedup key, cross-platform |
 | `URL` | URL | Direct link to job posting |
-| `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual`, `thehub`, `swissdevjobs`, `greenhouse`, `lever`, `ashby`, `adzuna` |
+| `Source` | Select | `justjoin`, `nofluffjobs`, `linkedin`, `manual`, `thehub`, `swissdevjobs`, `greenhouse`, `lever`, `ashby`, `adzuna`, `workable`, `recruitee`, `personio` |
 | `Match` | Checkbox | true = match (overall_score >= 50), false = reject (overall_score < 50) |
 | `Reason` | Text | LLM reason (verbatim, 1 sentence) |
 | `Score` | Number | Composite weighted score (0-100) from LLM |
@@ -159,5 +159,4 @@ The Notion Create Page node for Evaluation Log (`Notion: Log to Eval Log`) is pl
 - `npm run notion:provision` — creates the `🎛️ AI Recruiter — CV & Criteria Control Plane` page and both databases in Notion, seeding all 12 CV rows and 13 Criteria rows.
 - `npm run notion:sync` — fetches active rows from Notion and updates `n8n/prompts/candidate_profile.md` + local snapshot `n8n/prompts/.notion-snapshot.json`.
 - `npm run notion:preview` — prints the compiled Markdown profile and `DynamicScoringConfig` offline.
-
 
