@@ -65,7 +65,6 @@ const CRITICAL_FLAGS = [
   "Industry: Gambling/Betting",
   "Industry: Agency/Outsourcing",
   "Salary: Below Hard Floor",
-  "Stack: Legacy/Non-JS",
 ];
 
 const OUTSOURCING_KEYWORDS = [
@@ -135,8 +134,12 @@ function mentionsNonJsLanguage(text: string): boolean {
   );
 }
 
-/** True when `text` contains `keyword` as a distinct word (handles plurals, prevents "defi" matching "defining"). */
+/** True when `text` contains `keyword` as a distinct word (handles plurals, prevents "defi" matching "defining", ignores "cryptography"). */
 function matchesKeywordWordBoundary(text: string, keyword: string): boolean {
+  if (keyword === "crypto" && /\bcryptograph(?:y|ic|ical)?\b/i.test(text)) {
+    const stripped = text.replace(/\bcryptograph(?:y|ic|ical)?\b/gi, "");
+    return /\bcrypto(?:currency|currencies)?\b/i.test(stripped);
+  }
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`\\b${escaped}(?:s|es)?\\b`, "i");
   return pattern.test(text);
@@ -516,13 +519,14 @@ export function evaluateJob(
   }
 
   const isAgency =
-    outsourcingKeywords.some((k) => jobCompanyLower.includes(k)) ||
+    outsourcingKeywords.some((k) => matchesKeywordWordBoundary(jobCompanyLower, k)) ||
     jobBodyLower.includes("outsourcing agency") ||
     jobBodyLower.includes("outstaffing") ||
     jobBodyLower.includes("outsourcing company") ||
     jobBodyLower.includes("body leasing") ||
     jobBodyLower.includes("staff augmentation") ||
-    jobBodyLower.includes("for our client");
+    jobBodyLower.includes("working for our client") ||
+    jobBodyLower.includes("on behalf of our client");
   if (isAgency) {
     if (!redFlags.includes("Industry: Agency/Outsourcing")) redFlags.push("Industry: Agency/Outsourcing");
     overallScore = 0;
@@ -604,6 +608,10 @@ export function evaluateJob(
   }
 
   const uniqueRedFlags = Array.from(new Set(redFlags));
+  // If the stack contains non-JS technologies, route to Review (cap at 75) rather than hard-rejecting to 0
+  if (uniqueRedFlags.includes("Stack: Legacy/Non-JS") && overallScore >= 80) {
+    overallScore = 75;
+  }
   if (uniqueRedFlags.some((f) => CRITICAL_FLAGS.includes(f))) {
     overallScore = 0;
   }

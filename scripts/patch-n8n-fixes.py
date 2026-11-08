@@ -26,113 +26,92 @@ for node in nodes:
     if node.get("name") == "Code: Parse Ollama Response":
         js = node["parameters"]["jsCode"]
         
-        # Add helper function if not present
+        # A. Remove Stack: Legacy/Non-JS from CRITICAL_FLAGS
+        js = js.replace(
+            '"Stack: Legacy/Non-JS",\n];',
+            '];'
+        )
+        js = js.replace(
+            '"Stack: Legacy/Non-JS",\n];',
+            '];'
+        )
+        
+        # B. Ensure helper matchesKeywordWordBoundary ignores cryptography
         helper_fn = """function matchesKeywordWordBoundary(text, keyword) {
+    if (keyword === "crypto" && /\\bcryptograph(?:y|ic|ical)?\\b/i.test(text)) {
+        const stripped = text.replace(/\\bcryptograph(?:y|ic|ical)?\\b/gi, "");
+        return /\\bcrypto(?:currency|currencies)?\\b/i.test(stripped);
+    }
     const escaped = keyword.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
     const pattern = new RegExp(`\\\\b${escaped}(?:s|es)?\\\\b`, "i");
     return pattern.test(text);
 }
 """
-        if "matchesKeywordWordBoundary" not in js:
-            # Place after mentionsNonJsLanguage or at top of evaluateJob
+        if "function matchesKeywordWordBoundary" in js:
+            # Replace existing helper with updated one
+            import re
+            js = re.sub(
+                r"function matchesKeywordWordBoundary\([^)]*\)\s*\{[^}]*\}",
+                helper_fn.strip(),
+                js
+            )
+        else:
             js = js.replace(
                 "function mentionsNonJsLanguage(text) {",
                 helper_fn + "\nfunction mentionsNonJsLanguage(text) {"
             )
-            
-            # Replace isCrypto check
-            js = js.replace(
-                "const isCrypto = cryptoKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));",
-                "const isCrypto = cryptoKeywords.some((k) => matchesKeywordWordBoundary(jobTitleLower, k) || matchesKeywordWordBoundary(jobBodyLower, k));"
-            )
-            
-            # Replace isGambling check
-            js = js.replace(
-                "const isGambling = gamblingKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));",
-                "const isGambling = gamblingKeywords.some((k) => matchesKeywordWordBoundary(jobTitleLower, k) || matchesKeywordWordBoundary(jobBodyLower, k));"
-            )
-            node["parameters"]["jsCode"] = js
-            print("Patched Code: Parse Ollama Response successfully")
-        else:
-            print("Code: Parse Ollama Response already has matchesKeywordWordBoundary")
 
-# 3. Patch Code: Prepare Digest
-new_digest_code = """let totalReceived = 0;
-try {
-  totalReceived = $('Code: Normalize Jobs').all().length;
-} catch (e) {}
+        # C. Replace isAgency check
+        old_agency = 'jobBodyLower.includes("for our client")'
+        new_agency = 'jobBodyLower.includes("working for our client") || jobBodyLower.includes("on behalf of our client")'
+        if old_agency in js:
+            js = js.replace(old_agency, new_agency)
 
-let duplicatesCount = 0;
-let dupRun = 0;
-while (true) {
-  try {
-    const items = $('Code: Check Duplicate').all(0, dupRun);
-    if (!items || items.length === 0) break;
-    for (const item of items) {
-      if (item && item.json && item.json.isDuplicate === true) duplicatesCount++;
-    }
-    dupRun++;
-  } catch (e) {
-    break;
+        # D. Add cap at 75 for Stack: Legacy/Non-JS if overallScore >= 80
+        cap_code = """  const uniqueRedFlags = Array.from(new Set(redFlags));
+  if (uniqueRedFlags.includes("Stack: Legacy/Non-JS") && overallScore >= 80) {
+    overallScore = 75;
   }
+  if (uniqueRedFlags.some((f) => CRITICAL_FLAGS.includes(f))) {"""
+        if 'if (uniqueRedFlags.includes("Stack: Legacy/Non-JS") && overallScore >= 80)' not in js:
+            js = js.replace(
+                'const uniqueRedFlags = Array.from(new Set(redFlags));\n    if (uniqueRedFlags.some((f) => CRITICAL_FLAGS.includes(f))) {',
+                cap_code
+            )
+
+        node["parameters"]["jsCode"] = js
+        print("Patched Code: Parse Ollama Response with non-JS review policy & crypto refinement")
+
+# 3. Patch Code: Check Duplicate
+check_dup_code = """const resp = $input.first().json;
+const job = $('Split In Batches: 1').item.json;
+
+const results = Array.isArray(resp.results) ? resp.results : [];
+let isDuplicate = false;
+
+for (const match of results) {
+  const score = match?.properties?.Score?.number;
+  // If previously scored 0 or null from an error or failed batch, allow clean re-evaluation
+  if (score === 0 || score === null || score === undefined) {
+    continue;
+  }
+  isDuplicate = true;
+  break;
 }
 
-let evaluatedJobs = [];
-let evalRun = 0;
-while (true) {
-  try {
-    const items = $('Code: Parse Ollama Response').all(0, evalRun);
-    if (!items || items.length === 0) break;
-    for (const item of items) {
-      if (item && item.json) evaluatedJobs.push(item.json);
-    }
-    evalRun++;
-  } catch (e) {
-    break;
-  }
+if (isDuplicate) {
+  console.log(`[Dedup] SKIP "${job.title}" @ ${job.company}`);
+} else {
+  console.log(`[Dedup] NEW "${job.title}" @ ${job.company} — fp: ${job.fingerprint}`);
 }
 
-const hotMatches = evaluatedJobs.filter(j => (j.overall_score || 0) >= 80);
-const reviews = evaluatedJobs.filter(j => (j.overall_score || 0) >= 50 && (j.overall_score || 0) < 80);
-const rejected = evaluatedJobs.filter(j => (j.overall_score || 0) < 50);
-
-const dateStr = new Date().toLocaleDateString('ru-RU', { timeZone: 'Europe/Warsaw' });
-const timeStr = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' });
-
-const text = `🏁 *AI Recruiter — Дайджест прогона*
-📅 _${dateStr} ${timeStr}_
-───────────────────────────
-📥 *Получено от скрейпера:* ${totalReceived}
-♻️ *Дубликаты в базе Notion:* ${duplicatesCount}
-🤖 *Оценено нейросетью:* ${evaluatedJobs.length}
-───────────────────────────
-🔥 *Горячие (Score >= 80):* ${hotMatches.length}
-👉 _отправлены в тему «Горячий мэтч»_
-
-📋 *На ревью (Score 50–79):* ${reviews.length}
-👉 _отправлены в тему «На ревью»_
-
-❌ *Отклонено (Score < 50):* ${rejected.length}
-───────────────────────────
-${reviews.length > 0 ? `💡 *Внимание:* в теме «На ревью» вас ждут ${reviews.length} вакансий для проверки!` : `✨ Все подходящие вакансии разобраны!`}`;
-
-return [{
-  json: {
-    totalReceived,
-    duplicatesCount,
-    evaluatedCount: evaluatedJobs.length,
-    hotCount: hotMatches.length,
-    reviewCount: reviews.length,
-    rejectedCount: rejected.length,
-    digestText: text
-  }
-}];
+return [{ json: { ...job, isDuplicate } }];
 """
 
 for node in nodes:
-    if node.get("name") == "Code: Prepare Digest":
-        node["parameters"]["jsCode"] = new_digest_code
-        print("Patched Code: Prepare Digest successfully")
+    if node.get("name") == "Code: Check Duplicate":
+        node["parameters"]["jsCode"] = check_dup_code
+        print("Patched Code: Check Duplicate successfully")
 
 # 4. Upload updated workflow
 payload = {
