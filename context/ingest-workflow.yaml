@@ -43,7 +43,7 @@ flow:
 
   - node: "Split In Batches: 1"
     desc: Loops one job at a time
-    done_output: "→ NoOp: All Done"
+    done_output: "→ NoOp: All Done → Code: Prepare Digest → Telegram: Send Digest"
     item_output: "→ Switch: Route by Source"
 
   - node: "Switch: Route by Source"
@@ -90,13 +90,16 @@ flow:
 
   - node: "IF: Score >= 80?1"
     desc: "overall_score >= 80?"
-    true: "→ Notion: Create Page (Hot Match) → Telegram: Send Alert → Notion: Update Log with TG Info → loop"
+    true: "→ Notion: Create Page (Hot Match) → Telegram: Send Alert (Topic 2: Горячий мэтч) → Notion: Update Log with TG Info → loop"
     false: "→ IF: Score >= 50?2"
 
   - node: "IF: Score >= 50?2"
     desc: "overall_score >= 50?"
-    true: "→ Notion: Create Page (Review) → loop"
+    true: "→ Notion: Create Page (Review) → Telegram: Send Review Alert (Topic 3: На ревью) → loop"
     false: "→ NoOp: Discard Non-Match → loop"
+
+  - node: "NoOp: All Done"
+    desc: "Triggered when all batches complete → Code: Prepare Digest → Telegram: Send Digest (Topic 4: Дайджест)"
 
 # ─── KEY BUSINESS LOGIC ────────────────────────────────────
 key_logic:
