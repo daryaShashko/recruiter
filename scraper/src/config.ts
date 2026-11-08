@@ -240,7 +240,7 @@ export const config = {
     retryDelay: 1_000,
     // Number of job offers per webhook request.
     // Default is intentionally high to avoid spawning many parallel n8n executions.
-    batchSize: Number(process.env.WEBHOOK_BATCH_SIZE || 250),
+    batchSize: Number(process.env.WEBHOOK_BATCH_SIZE || 1000),
   },
 } as const;
 

@@ -135,6 +135,13 @@ function mentionsNonJsLanguage(text: string): boolean {
   );
 }
 
+/** True when `text` contains `keyword` as a distinct word (handles plurals, prevents "defi" matching "defining"). */
+function matchesKeywordWordBoundary(text: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`\\b${escaped}(?:s|es)?\\b`, "i");
+  return pattern.test(text);
+}
+
 /** Predefined clean taxonomy tags mapper — ported verbatim from the live node. */
 function mapToStandardTag(rawTag: unknown): string {
   let tag: unknown = rawTag;
@@ -579,14 +586,18 @@ export function evaluateJob(
     overallScore = Math.max(50, Math.round(techStackMatch * 0.55 + seniorityMatch * 0.35 - locationPenalty));
   }
 
-  const isCrypto = cryptoKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
+  const isCrypto = cryptoKeywords.some(
+    (k) => matchesKeywordWordBoundary(jobTitleLower, k) || matchesKeywordWordBoundary(jobBodyLower, k),
+  );
   if (isCrypto) {
     if (!redFlags.includes("Industry: Crypto/Web3")) redFlags.push("Industry: Crypto/Web3");
     overallScore = 0;
     techStackMatch = 0;
   }
 
-  const isGambling = gamblingKeywords.some((k) => jobTitleLower.includes(k) || jobBodyLower.includes(k));
+  const isGambling = gamblingKeywords.some(
+    (k) => matchesKeywordWordBoundary(jobTitleLower, k) || matchesKeywordWordBoundary(jobBodyLower, k),
+  );
   if (isGambling) {
     if (!redFlags.includes("Industry: Gambling/Betting")) redFlags.push("Industry: Gambling/Betting");
     overallScore = 0;

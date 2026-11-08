@@ -138,6 +138,27 @@ describe("evaluateJob — programmatic hard-reject rules", () => {
     expect(result.red_flags).toContain("Industry: Crypto/Web3");
   });
 
+  it("does not false-positive on words containing 'defi' (defining, define, definition)", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 92, tech_stack_match: 95, seniority_match: 95 }),
+      makeJob({
+        title: "Staff Platform Engineer",
+        body: "We are in a defining moment of our journey. Help us define architecture and the definition of done.",
+      }),
+    );
+    expect(result.overall_score).toBe(92);
+    expect(result.red_flags).not.toContain("Industry: Crypto/Web3");
+  });
+
+  it("force-zeroes actual DeFi jobs", () => {
+    const result = evaluateJob(
+      rawLlm({ overall_score: 90, tech_stack_match: 90 }),
+      makeJob({ body: "Experience building DeFi protocols and smart contracts." }),
+    );
+    expect(result.overall_score).toBe(0);
+    expect(result.red_flags).toContain("Industry: Crypto/Web3");
+  });
+
   it("force-zeroes gambling/betting jobs", () => {
     const result = evaluateJob(rawLlm({ overall_score: 90 }), makeJob({ body: "Join our sports-betting platform." }));
     expect(result.overall_score).toBe(0);
