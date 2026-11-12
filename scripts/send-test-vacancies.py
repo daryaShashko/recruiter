@@ -57,7 +57,7 @@ def main():
             "salary": "28 000 - 34 000 PLN B2B",
             "location": "Remote",
             "source": "nofluffjobs",
-            "url": "https://nofluffjobs.com/pl/job/lead-fullstack-developer-backend-focused-api-bff-upvanta-remote",
+            "url": "https://nofluffjobs.com/job/lead-fullstack-developer-backend-focused-api-bff-upvanta-remote",
             "score": 90,
             "reason": "Отличный баланс BFF архитектуры и Node.js/TypeScript, полностью удаленный формат, высокая ставка.",
             "page_id": "11111111222233334444555566667711"
@@ -135,7 +135,7 @@ _{hm['reason']}_"""
             "salary": "20 000 - 26 000 PLN B2B",
             "location": "Remote",
             "source": "nofluffjobs",
-            "url": "https://nofluffjobs.com/pl/job/fullstack-developer-with-java-and-javascript-f-m-x-sii-polska-remote",
+            "url": "https://nofluffjobs.com/job/fullstack-developer-with-java-and-javascript-f-m-x-sii-polska-remote",
             "score": 64,
             "reason": "Аутсорсинговая компания и требование Java в стеке (требует ручной валидации).",
             "flags": "Agency/Outsourcing, Java required",
