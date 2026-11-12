@@ -7,6 +7,11 @@ on:
         description: "n8n API Key"
         required: true
         type: string
+      script_name:
+        description: "Script to run"
+        required: false
+        default: "scripts/patch-n8n-hitl-review.py"
+        type: string
 
 jobs:
   patch:
@@ -21,9 +26,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run n8n HITL patch
+      - name: Run script
         env:
           N8N_API_KEY: ${{ github.event.inputs.n8n_api_key }}
           N8N_BASE_URL: "https://n8n-recruiter.duckdns.org"
         run: |
-          python3 scripts/patch-n8n-hitl-review.py
+          python3 ${{ github.event.inputs.script_name }}
