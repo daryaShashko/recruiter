@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
-"""Patch n8n workflows with HITL Slice 2: Telegram Review Filter (Topic 3) and Promote Flow.
+"""Patch n8n workflows with complete HITL Telegram Keyboards (Topic 2 Hot Match and Topic 3 Review).
 
 Reads n8n API key from ~/.n8n-recruiter-key or $N8N_API_KEY.
-Updates:
-1. Ingest Jobs workflow (88ajS2u1QcHuIa1r):
-   - Adds inline_keyboard to "Telegram: Send Review Alert (Topic 3)"
-   - Configures callback_data 'prm:<notion_page_id>' and 'dsc:<notion_page_id>'
-2. Telegram Bot / Callback Handler workflow:
-   - Configures routing for callback_query:
-     - 'dsc:<page_id>' -> PATCH Notion Status='Rejected' + answerCallbackQuery
-     - 'prm:<page_id>' -> PATCH Notion Status='Hot Match' + send card to Topic 2 + answerCallbackQuery
-
 Usage:
   python3 scripts/patch-n8n-hitl-review.py
 """
@@ -51,15 +42,17 @@ def main():
         wf = json.loads(resp.read().decode())
 
     nodes = wf.get("nodes", [])
+    print(f"Total nodes in workflow: {len(nodes)}")
     patched_count = 0
 
     for node in nodes:
         name = node.get("name", "")
-        # Check for review alert node in topic 3
-        if "Telegram: Send Review Alert" in name or ("Review Alert" in name and "Telegram" in name):
+        ntype = node.get("type", "")
+
+        # 1. Topic 3: Review Alert
+        if "Review Alert" in name or ("Review" in name and "Telegram" in name):
             params = node.setdefault("parameters", {})
             params["replyMarkup"] = "inlineKeyboard"
-            # In n8n telegram node, inlineKeyboard is configured via parameters or custom expressions
             params["inlineKeyboard"] = {
                 "rows": [
                     {
@@ -95,7 +88,52 @@ def main():
                 ]
             }
             patched_count += 1
-            print(f"Patched review alert keyboard in node: {name}")
+            print(f"✅ Patched Topic 3 Review keyboard in node: {name}")
+
+        # 2. Topic 2: Hot Match Alert
+        elif "Telegram: Send Alert" in name or ("Hot Match" in name and "Telegram" in name) or (name == "Telegram: Send Alert"):
+            params = node.setdefault("parameters", {})
+            params["replyMarkup"] = "inlineKeyboard"
+            params["inlineKeyboard"] = {
+                "rows": [
+                    {
+                        "row": {
+                            "buttons": [
+                                {
+                                    "text": "🚀 Подготовить отклик",
+                                    "additionalFields": {
+                                        "callback_data": "={{ 'app:' + ($json.notion_page_id || $json.id || '').replace(/[^a-fA-F0-9]/g, '').toLowerCase() }}"
+                                    },
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "row": {
+                            "buttons": [
+                                {
+                                    "text": "🔗 Вакансия",
+                                    "additionalFields": {
+                                        "url": "={{ $json.url }}"
+                                    },
+                                },
+                                {
+                                    "text": "👎 В архив",
+                                    "additionalFields": {
+                                        "callback_data": "={{ 'rej:' + ($json.notion_page_id || $json.id || '').replace(/[^a-fA-F0-9]/g, '').toLowerCase() }}"
+                                    },
+                                },
+                            ]
+                        }
+                    },
+                ]
+            }
+            patched_count += 1
+            print(f"✅ Patched Topic 2 Hot Match keyboard in node: {name}")
+
+    print("\nAll workflow nodes:")
+    for n in nodes:
+        print(f" - {n.get('name')} ({n.get('type')})")
 
     if patched_count > 0:
         payload = {
@@ -111,12 +149,9 @@ def main():
             method="PUT",
         )
         with urllib.request.urlopen(put_req, timeout=30) as resp:
-            print(f"Ingest workflow updated successfully! HTTP Status: {resp.status}")
+            print(f"\n🎉 Workflow {INGEST_WORKFLOW_ID} successfully updated! HTTP Status: {resp.status}")
     else:
-        print(f"Notice: Review alert node not found under exact name in {INGEST_WORKFLOW_ID}.")
-        print("Available nodes:")
-        for n in nodes:
-            print(f" - {n.get('name')}")
+        print("\n⚠️ No Telegram alert nodes matched the expected patterns.")
 
 
 if __name__ == "__main__":

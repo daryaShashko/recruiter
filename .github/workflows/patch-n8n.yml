@@ -1,0 +1,29 @@
+name: Patch n8n Workflows
+
+on:
+  workflow_dispatch:
+    inputs:
+      n8n_api_key:
+        description: "n8n API Key"
+        required: true
+        type: string
+
+jobs:
+  patch:
+    name: Patch n8n Workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run n8n HITL patch
+        env:
+          N8N_API_KEY: ${{ github.event.inputs.n8n_api_key }}
+          N8N_BASE_URL: "https://n8n-recruiter.duckdns.org"
+        run: |
+          python3 scripts/patch-n8n-hitl-review.py
