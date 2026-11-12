@@ -30,5 +30,7 @@ jobs:
         env:
           N8N_API_KEY: ${{ github.event.inputs.n8n_api_key }}
           N8N_BASE_URL: "https://n8n-recruiter.duckdns.org"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python3 ${{ github.event.inputs.script_name }}
