@@ -67,7 +67,7 @@ export interface RawNoFluffPosting {
   id: string; // includes location suffix: "job-title-company-City-N" — NOT unique across locations!
   name: string; // COMPANY name (not the job title)
   title: string; // job title (plain string)
-  url: string; // URL slug only — prepend: /pl/praca/
+  url: string; // URL slug only — prepend: /pl/job/
   reference: string; // UNIQUE job reference — same value across all location variants
   posted: number; // Unix timestamp in MILLISECONDS
   renewed?: number;
@@ -237,7 +237,7 @@ export function normalizePosting(posting: RawNoFluffPosting): JobOffer {
     id: `nofluffjobs_${posting.reference}`, // use reference for stable unique ID
     title: posting.title,
     company: posting.name,
-    url: `${NOFLUFFJOBS_BASE_URL}/pl/praca/${posting.url}`,
+    url: `${NOFLUFFJOBS_BASE_URL}/pl/job/${posting.url.replace(/^\/+/, '')}`,
     body: buildBody(posting),
     source: "nofluffjobs",
     location: extractLocation(posting),
