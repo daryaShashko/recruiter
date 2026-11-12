@@ -17,6 +17,9 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "-1004357080568")
 
 
+SUPERGROUP_CHAT_ID = "-1004357080568"
+
+
 def send_message(payload):
     if not BOT_TOKEN:
         sys.exit("Error: TELEGRAM_BOT_TOKEN environment variable is not set")
@@ -38,6 +41,7 @@ def send_message(payload):
         print(f"❌ Telegram Error 400 details: {err_msg}")
         print("Payload:", json.dumps(payload, indent=2))
         raise
+
 
 
 def main():
@@ -88,7 +92,7 @@ def main():
 _{hm['reason']}_"""
 
         payload = {
-            "chat_id": CHAT_ID,
+            "chat_id": SUPERGROUP_CHAT_ID,
             "message_thread_id": 2,
             "text": text,
             "parse_mode": "Markdown",
@@ -170,7 +174,7 @@ _{hm['reason']}_"""
 ⚠️ *Red Flags:* {rv['flags']}"""
 
         payload = {
-            "chat_id": CHAT_ID,
+            "chat_id": SUPERGROUP_CHAT_ID,
             "message_thread_id": 3,
             "text": text,
             "parse_mode": "Markdown",
