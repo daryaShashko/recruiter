@@ -20,7 +20,7 @@ CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "-1004357080568")
 SUPERGROUP_CHAT_ID = "-1004357080568"
 
 
-def send_message(payload):
+def send_message(payload, max_retries=3):
     if not BOT_TOKEN:
         sys.exit("Error: TELEGRAM_BOT_TOKEN environment variable is not set")
 
@@ -31,51 +31,32 @@ def send_message(payload):
         headers={"Content-Type": "application/json"},
         method="POST"
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            res = json.loads(resp.read().decode())
-            print(f"✅ Sent message to thread {payload.get('message_thread_id')}: ID {res.get('result', {}).get('message_id')}")
-            return res
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode()
-        print(f"❌ Telegram Error 400 details: {err_msg}")
-        print("Payload:", json.dumps(payload, indent=2))
-        raise
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                res = json.loads(resp.read().decode())
+                print(f"✅ Sent message to thread {payload.get('message_thread_id')}: ID {res.get('result', {}).get('message_id')}")
+                return res
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode()
+            print(f"❌ Telegram Error 400 details: {err_msg}")
+            print("Payload:", json.dumps(payload, indent=2))
+            raise
+        except Exception as e:
+            print(f"⚠️ Network error (attempt {attempt}/{max_retries}): {e}")
+            if attempt == max_retries:
+                raise
+            time.sleep(2)
+
 
 
 
 def main():
     print(f"Sending test vacancies to Telegram Chat {CHAT_ID}...")
 
-    # --- TOPIC 2: HOT MATCH (2 VACANCIES) ---
-    hot_matches = [
-        {
-            "title": "Senior Fullstack Engineer (Node.js/React)",
-            "company": "FinTech Pay Ltd.",
-            "company_url": "https://fintechpay.example.com",
-            "dossier": "B2B FinTech платформа мгновенных платежей и необанкинга для европейского рынка. Продуктовая компания, 200+ сотрудников.",
-            "salary": "26 000 - 32 000 PLN B2B",
-            "location": "Remote (Poland)",
-            "source": "justjoin.it",
-            "url": "https://justjoin.it/offers/fintech-pay-fullstack",
-            "score": 92,
-            "reason": "Идеальное попадание в стек TypeScript/Node.js/React, высокая вилка, продуктовый FinTech.",
-            "page_id": "11111111222233334444555566667701"
-        },
-        {
-            "title": "Lead Backend Developer (TypeScript / Distributed Systems)",
-            "company": "CloudScale Systems",
-            "company_url": None,  # Test Google search fallback
-            "dossier": "B2B Cloud SaaS решение для мониторинга и оптимизации cloud-инфраструктуры в AWS и GCP. Продукт, масштаб 80+ человек.",
-            "salary": "30 000 - 36 000 PLN B2B",
-            "location": "Remote (EU)",
-            "source": "nofluffjobs.com",
-            "url": "https://nofluffjobs.com/job/cloudscale-lead-backend",
-            "score": 88,
-            "reason": "Сильная распределенная архитектура, оптимизация облачных затрат, отличная вилка B2B.",
-            "page_id": "11111111222233334444555566667702"
-        }
-    ]
+    # --- TOPIC 2: HOT MATCH (already sent ID 147, 148) ---
+    hot_matches = []
+
 
     for hm in hot_matches:
         comp_link = f"[🌐 Сайт компании]({hm['company_url']})" if hm['company_url'] else f"[🔍 Найти в Google](https://www.google.com/search?q={urllib.parse.quote(hm['company'] + ' software')})"
@@ -111,36 +92,8 @@ _{hm['reason']}_"""
         send_message(payload)
         time.sleep(1)
 
-    # --- TOPIC 3: REVIEW (3 VACANCIES) ---
+    # --- TOPIC 3: REVIEW (VACANCY 3) ---
     reviews = [
-        {
-            "title": "Senior Node.js Developer",
-            "company": "HealthTech Global",
-            "company_url": "https://healthtech.example.com",
-            "dossier": "Европейский телемедицинский продукт для клиник и страховых компаний. 120+ сотрудников.",
-            "salary": "22 000 - 28 000 PLN B2B",
-            "location": "Remote (Tricity / Poland)",
-            "source": "justjoin.it",
-            "url": "https://justjoin.it/offers/healthtech-senior-nodejs",
-            "score": 74,
-            "reason": "Хороший стек Node.js/PostgreSQL, но в требованиях упомянут GraphQL как nice-to-have.",
-            "flags": "GraphQL nice-to-have",
-            "page_id": "11111111222233334444555566667703"
-        },
-        {
-            "title": "Backend Engineer (TypeScript / GraphQL)",
-            "company": "E-Commerce Engine",
-            "company_url": None,  # Test Google search fallback
-            "dossier": "SaaS движок для B2B оптовой торговли и аналитики логистических цепочек. 50+ разработчиков.",
-            "salary": "20 000 - 25 000 PLN B2B",
-            "location": "Remote",
-            "source": "thehub.io",
-            "url": "https://thehub.io/jobs/ecommerce-engine-backend",
-            "score": 68,
-            "reason": "Продуктовая компания, чистый TypeScript, вилка на нижней границе ожиданий.",
-            "flags": "Salary: Lower range boundary",
-            "page_id": "11111111222233334444555566667704"
-        },
         {
             "title": "Senior Software Engineer (Node.js/Next.js)",
             "company": "EdTech Innovate",
