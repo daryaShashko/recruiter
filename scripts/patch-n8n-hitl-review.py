@@ -37,14 +37,16 @@ def main():
 
     nodes = wf.get("nodes", [])
 
-    for node in nodes:
-        name = node.get("name", "")
-        if "Telegram" in name:
-            print("=" * 60)
-            print(f"NODE: {name} (type: {node.get('type')})")
-            print("PARAMETERS:")
-            print(json.dumps(node.get("parameters", {}), indent=2))
-            print("=" * 60)
+    print("CONNECTIONS TO TELEGRAM NODES:")
+    connections = wf.get("connections", {})
+    for src, targets in connections.items():
+        for target_type, target_conns in targets.items():
+            for conn_group in target_conns:
+                for c in conn_group:
+                    node_name = c.get("node", "")
+                    if "Telegram" in node_name:
+                        print(f"{src} -> {node_name}")
+
 
 
 if __name__ == "__main__":
