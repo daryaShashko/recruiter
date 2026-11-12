@@ -2,6 +2,7 @@ import axios from "axios";
 import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
 import { normalizeCompanyUrl } from "../utils/company";
+import { parseDate, passesAgeFilter } from "../utils/global-filter";
 
 export {
   buildCompanySearchUrl,
@@ -190,6 +191,9 @@ export function matchesNFJPreFilter(posting: RawNoFluffPosting): boolean {
   );
 
   if (!isRemote && !hasGdansk) return false;
+
+  // Freshness gate (maxAgeDays, 60)
+  if (!passesAgeFilter(parseDate(posting.posted))) return false;
 
   // Seniority gate: reject explicit junior/mid/intern levels
   const levels = posting.seniority.map((s) => s.toLowerCase());

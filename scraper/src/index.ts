@@ -10,6 +10,7 @@ import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
 import { closeBrowser } from "./utils/browser";
 import { enrichMissingSalaries } from "./utils/salary-enricher";
+import { filterValidLinks } from "./utils/link-check";
 import { JobOffer } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "true";
@@ -94,7 +95,7 @@ async function main(): Promise<void> {
     }
   });
 
-  const deduplicated = deduplicateOffers(allOffers);
+  const deduplicated = await filterValidLinks(deduplicateOffers(allOffers));
   const { offers: enrichedOffers, enrichedCount } =
     enrichMissingSalaries(deduplicated);
   console.log(

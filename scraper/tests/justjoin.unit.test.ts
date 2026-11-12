@@ -21,7 +21,7 @@ function makeOffer(overrides: Partial<RawJustJoinOffer> = {}): RawJustJoinOffer 
     experienceLevel: 'senior',
     city: '',
     companyName: 'Test Co',
-    publishedAt: '2024-01-01T00:00:00Z',
+    publishedAt: new Date().toISOString(),
     locations: [],
     employmentTypes: [],
     requiredSkills: [],
@@ -236,6 +236,14 @@ describe('matchesPreFilter', () => {
 
   it('allows remote + unknown level', () => {
     expect(matchesPreFilter(makeOffer({ workplaceType: 'remote', experienceLevel: 'unknown' }))).toBe(true);
+  });
+
+  it('rejects postings older than maxAgeDays', () => {
+    expect(
+      matchesPreFilter(
+        makeOffer({ workplaceType: 'remote', publishedAt: '2024-01-01T00:00:00Z' }),
+      ),
+    ).toBe(false);
   });
 
   it('allows remote + empty experienceLevel string', () => {
