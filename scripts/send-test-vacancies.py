@@ -28,10 +28,16 @@ def send_message(payload):
         headers={"Content-Type": "application/json"},
         method="POST"
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        res = json.loads(resp.read().decode())
-        print(f"✅ Sent message to thread {payload.get('message_thread_id')}: ID {res.get('result', {}).get('message_id')}")
-        return res
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            res = json.loads(resp.read().decode())
+            print(f"✅ Sent message to thread {payload.get('message_thread_id')}: ID {res.get('result', {}).get('message_id')}")
+            return res
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode()
+        print(f"❌ Telegram Error 400 details: {err_msg}")
+        print("Payload:", json.dumps(payload, indent=2))
+        raise
 
 
 def main():
