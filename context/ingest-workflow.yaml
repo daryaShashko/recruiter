@@ -146,12 +146,67 @@ key_logic:
       Checked 2026-09-27 (and re-confirmed 2026-10-05) with scripts/inspect-n8n.py against
       the cloud n8n: Ingest Jobs is active, 27 nodes; scripts/check-n8n-drift.py now runs
       this check automatically (daily GH Action) instead of only on manual request.
-    output_schema: "{ overall_score, tech_stack_match, seniority_match, red_flags[], reason, url }"
+    output_schema: "{ overall_score, tech_stack_match, seniority_match, red_flags[], reason, url, company_dossier }"
 
   telegram_alert:
-    trigger: "Hot Match (score >= 80) only"
-    format: "Title, company, salary, location, source, URL, reason + inline keyboard: Correct / Should Match / Should Reject"
-    retry: "maxTries=3, waitBetweenTries=3000ms"
+    topic_2_hot_match:
+      thread_id: 2
+      trigger: "Hot Match (score >= 80) or Promoted from Topic 3"
+      format: >
+        🔥 <b>{{ $json.title }}</b> @ <b>{{ $json.company }}</b>
+        💰 {{ $json.salary || 'Зарплата не указана' }} | 📍 {{ $json.location }} | 🌐 {{ $json.source }}
+        🔗 <a href="{{ $json.url }}">Вакансия</a>
+
+        🏢 <b>О компании:</b>
+        {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+        {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('<a href="' + $json.companyMeta.companyUrl + '">🌐 Сайт компании</a>') : ('<a href="https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + '">🔍 Найти в Google</a>') }}
+
+        🎯 Мэтч: {{ $json.overall_score }}/100 (Стек: {{ $json.tech_stack_match }}, Сеньорность: {{ $json.seniority_match }})
+        💡 {{ $json.reason }}
+      inline_keyboard: >
+        Row 1: [ 🚀 Подготовить отклик ] (callback_data: app:<page_id>)
+        Row 2: [ 🔗 Вакансия ] (url: $json.url) | [ 👎 В архив ] (callback_data: rej:<page_id>)
+      callback_actions:
+        app: >
+          (ADR-026, HITL Slice 3) In-thread fulfillment:
+          1. Send cv.pdf via sendDocument (reply_to_message_id = card message_id).
+          2. Send sendMessage with copy-ready <code> LinkedIn pitch (60-80w) + Cover Letter (130-180w).
+          3. Patch Notion page Status -> 'Applied'.
+        rej: >
+          (ADR-027, HITL Slice 4) Open reject reasons menu in Topic 2:
+          Replaces keyboard with tags: [ 💸 Зарплата ] (rfb:sal:id), [ 🏢 Аутсорс ] (rfb:out:id),
+          [ 💀 Легаси ] (rfb:leg:id), [ 📍 Локация ] (rfb:loc:id), [ 📉 Грейд ] (rfb:jun:id), [ ❌ Без причины ] (dsc:id).
+        rfb: >
+          (ADR-027, HITL Slice 4) Feedback submission:
+          1. Replace keyboard with '❌ Отклонено: <Reason Label>'.
+          2. Patch Notion AI Recruiter Board: Status -> 'Rejected'.
+          3. Patch Notion Evaluation Log: Human Verdict -> 'Wrong – Should Reject', Reason -> '<Reason Label>'.
+          4. When 3+ rejections accumulate per company/technology, synthesize draft rule in Matching Criteria & Guardrails (Active: false).
+      retry: "maxTries=3, waitBetweenTries=3000ms"
+
+    topic_3_review:
+      thread_id: 3
+      trigger: "Review (score 50-79) (ADR-025, HITL Slice 2)"
+      format: >
+        👀 <b>[На ревью] {{ $json.title }}</b> @ <b>{{ $json.company }}</b>
+        💰 {{ $json.salary || 'Зарплата не указана' }} | 📍 {{ $json.location }} | 🌐 {{ $json.source }}
+        🔗 <a href="{{ $json.url }}">Вакансия</a>
+
+        🏢 <b>О компании:</b>
+        {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+        {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('<a href="' + $json.companyMeta.companyUrl + '">🌐 Сайт компании</a>') : ('<a href="https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + '">🔍 Найти в Google</a>') }}
+
+        🎯 Мэтч: {{ $json.overall_score }}/100 (Стек: {{ $json.tech_stack_match }}, Сеньорность: {{ $json.seniority_match }})
+        💡 {{ $json.reason }}
+      inline_keyboard: >
+        Row 1: [ 👍 Берём в Hot Match ] (callback_data: prm:<page_id>) | [ 👎 В архив ] (callback_data: dsc:<page_id>)
+        Row 2: [ 🔗 Вакансия ] (url: $json.url)
+      callback_actions:
+        prm: >
+          Notion page Status -> 'Hot Match'; answerCallbackQuery; Topic 3 markup -> '✅ Перенесено в Горячий мэтч';
+          re-send alert into Topic 2 with Topic 2 Hot Match keyboard.
+        dsc: >
+          Notion page Status -> 'Rejected'; answerCallbackQuery; Topic 3 markup -> '❌ Отклонено пользователем'.
 
   notion_databases:
     eval_log: "DB 36c747f7-ebec-80c8-bfd7-ed317f4a7c35 — every job logged here"

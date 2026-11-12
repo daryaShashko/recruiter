@@ -1,6 +1,14 @@
 import axios from "axios";
-import { JobOffer } from "../types";
+import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
+import { normalizeCompanyUrl } from "../utils/company";
+
+export {
+  buildCompanySearchUrl,
+  getCompanySearchUrl,
+  getCompanyUrl,
+  normalizeCompanyUrl,
+} from "../types";
 
 const NOFLUFFJOBS_BASE_URL = "https://nofluffjobs.com";
 // 2025-05: POST /api/search/posting (XHR-intercepted) — same endpoint as today.
@@ -70,6 +78,16 @@ export interface RawNoFluffPosting {
   salary?: RawNFJSalary;
   fullyRemote: boolean; // posting-level flag — use location.fullyRemote instead (more reliable)
   tiles?: { values: RawNFJTileValue[] };
+  companySize?: string | number;
+  company_size?: string | number;
+  companyUrl?: string;
+  company_url?: string;
+  company?: {
+    size?: string | number;
+    url?: string;
+  };
+  advertiserType?: string;
+  industry?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -184,7 +202,37 @@ export function matchesNFJPreFilter(posting: RawNoFluffPosting): boolean {
   return true;
 }
 
-function normalizePosting(posting: RawNoFluffPosting): JobOffer {
+export function normalizePosting(posting: RawNoFluffPosting): JobOffer {
+  const rawSize =
+    posting.companySize ?? posting.company_size ?? posting.company?.size;
+  const rawUrl =
+    posting.companyUrl ?? posting.company_url ?? posting.company?.url;
+  const size =
+    rawSize !== undefined && rawSize !== null && String(rawSize).trim().length > 0
+      ? String(rawSize).trim()
+      : undefined;
+  const companyUrl = normalizeCompanyUrl(
+    typeof rawUrl === "string" ? rawUrl : undefined,
+  );
+  const advertiserType =
+    typeof posting.advertiserType === "string" && posting.advertiserType.trim().length > 0
+      ? posting.advertiserType.trim()
+      : undefined;
+  const industry =
+    typeof posting.industry === "string" && posting.industry.trim().length > 0
+      ? posting.industry.trim()
+      : undefined;
+
+  const companyMeta: CompanyMetadata | undefined =
+    size || companyUrl || advertiserType || industry
+      ? {
+          ...(size ? { size } : {}),
+          ...(companyUrl ? { companyUrl } : {}),
+          ...(advertiserType ? { advertiserType } : {}),
+          ...(industry ? { industry } : {}),
+        }
+      : undefined;
+
   return {
     id: `nofluffjobs_${posting.reference}`, // use reference for stable unique ID
     title: posting.title,
@@ -195,6 +243,7 @@ function normalizePosting(posting: RawNoFluffPosting): JobOffer {
     location: extractLocation(posting),
     salary: extractSalary(posting.salary),
     tags: extractTags(posting),
+    ...(companyMeta ? { companyMeta } : {}),
     scrapedAt: new Date().toISOString(),
   };
 }
@@ -223,6 +272,43 @@ export function deduplicateByReference(
           (l.city.toLowerCase().includes("gdańsk") ||
             l.city.toLowerCase().includes("gdansk")),
       );
+
+    // Merge company metadata across location variants if one had it and other didn't
+    const size =
+      posting.companySize ??
+      posting.company_size ??
+      posting.company?.size ??
+      existing.companySize ??
+      existing.company_size ??
+      existing.company?.size;
+    const url =
+      posting.companyUrl ??
+      posting.company_url ??
+      posting.company?.url ??
+      existing.companyUrl ??
+      existing.company_url ??
+      existing.company?.url;
+    const advertiserType =
+      posting.advertiserType ?? existing.advertiserType;
+    const industry =
+      posting.industry ?? existing.industry;
+
+    if (size !== undefined) {
+      posting.companySize = size;
+      existing.companySize = size;
+    }
+    if (url !== undefined) {
+      posting.companyUrl = url;
+      existing.companyUrl = url;
+    }
+    if (advertiserType !== undefined) {
+      posting.advertiserType = advertiserType;
+      existing.advertiserType = advertiserType;
+    }
+    if (industry !== undefined) {
+      posting.industry = industry;
+      existing.industry = industry;
+    }
 
     // Prefer remote variant
     if (posting.location.fullyRemote && !existing.location.fullyRemote) {

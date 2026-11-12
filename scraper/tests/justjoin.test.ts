@@ -4,7 +4,10 @@ import { JobOffer } from '../src/types';
 // NOTE: This is a live integration test. It requires network access
 // and a working Playwright setup. Run with: npm run test:justjoin
 
-describe('JustJoin Scraper', () => {
+const RUN_INTEGRATION = process.env.RUN_INTEGRATION === '1';
+const describeIntegration = RUN_INTEGRATION ? describe : describe.skip;
+
+describeIntegration('JustJoin Scraper', () => {
   let offers: JobOffer[];
 
   beforeAll(async () => {

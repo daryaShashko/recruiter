@@ -49,7 +49,7 @@ files:
       sender.batchSize: 25 # override via WEBHOOK_BATCH_SIZE
 
   src/types.ts:
-    exports: [JobOffer, WebhookPayload, EvaluationResult]
+    exports: [JobOffer, CompanyMetadata, WebhookPayload, EvaluationResult, buildCompanySearchUrl, getCompanySearchUrl, getCompanyUrl, normalizeCompanyUrl]
     note: "See context/interfaces.yaml for full field definitions"
 
   src/index.ts:
@@ -209,6 +209,12 @@ files:
       (e.g. JustJoin undisclosed), searches offers scraped from other platforms
       (e.g. NoFluffJobs) for the same normalized company and matching job title,
       filling salary as "{salary} (via {source})".
+
+  src/utils/company.ts:
+    exports: [buildCompanySearchUrl, getCompanySearchUrl, getCompanyUrl, normalizeCompanyUrl]
+    purpose: >
+      Company URL resolution and Google search fallback generator when direct company
+      website is absent or unavailable.
 
   src/debug-urls.ts:
     exports: [] # debug script, not imported elsewhere

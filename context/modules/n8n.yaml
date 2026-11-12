@@ -90,7 +90,7 @@ workflows:
           normalizeCompany (strip legal forms) → normalizeTitle (strip seniority) →
           fingerprint = FNV1a64(compNorm::titleNorm).hex16 →
           dedupFilter = {OR: [Fingerprint equals fp, URL equals urlNorm, URL equals url]}
-        output_fields: "id, title, company, url, urlNorm, fingerprint, dedupFilter, body, source, location, salary, scrapedAt"
+        output_fields: "id, title, company, url, urlNorm, fingerprint, dedupFilter, body, source, location, salary, scrapedAt, companyMeta"
       - name: Code Dedup Batch
         type: n8n-nodes-base.code
         language: JavaScript
@@ -211,11 +211,29 @@ workflows:
     status: created_inactive # Phase P14 — planned P5, deferred, now formally scoped
     verified: "Checked 2026-09-27 with scripts/inspect-n8n.py against the cloud n8n: workflow 'Telegram Bot' exists, active=false, 14 nodes, 1 Telegram Trigger. The /check command (P14) is not verified."
     phase: P14
-    adr: ADR-018
+    adr: "ADR-018, ADR-025, ADR-026, ADR-027"
+    hitl_workflow:
+      feature: "Telegram Review Filter, Promotion Flow, Application Delivery & Feedback Loop (HITL Slices 1-4)"
+      callback_protocol: "prm:<page_id_32>, dsc:<page_id_32>, app:<page_id_32>, rej:<page_id_32>, rfb:<code_3>:<page_id_32>"
+      notion_transitions:
+        prm: "Status -> Hot Match, send card to Topic 2"
+        dsc: "Status -> Rejected, replace keyboard with ❌ Отклонено"
+        app: "Status -> Applied, send cv.pdf and copy-ready pitch & cover letter to thread"
+        rej: "Display reject reasons menu (sal, out, leg, loc, jun)"
+        rfb: "Status -> Rejected, Evaluation Log -> Human Verdict='Wrong – Should Reject', trigger 3+ pattern synthesis"
     nodes_sequence:
       - name: Telegram Trigger
         type: n8n-nodes-base.telegramTrigger
-        config: "listens for messages matching /check <url>"
+        config: "listens for messages (/check <url>, text replies) and callback_query events (prm, dsc, app, rej, rfb)"
+      - name: Switch: Route by Telegram Event
+        type: n8n-nodes-base.switch
+        routes:
+          0: "message (/check) -> Parse Command -> Ingest"
+          1: "callback_query: prm -> Notion Status='Hot Match' -> Telegram Topic 2 Alert"
+          2: "callback_query: dsc -> Notion Status='Rejected' -> Telegram Edit Markup"
+          3: "callback_query: app -> Application Delivery (cv.pdf + pitch + letter) -> Notion Status='Applied'"
+          4: "callback_query: rej -> Telegram Edit Markup (Reject Reasons Menu)"
+          5: "callback_query: rfb -> Notion Status='Rejected' + Evaluation Log Verdict -> Pattern Analyzer"
       - name: Parse Command
         type: n8n-nodes-base.code
         logic: "extract URL from '/check https://...' message"
@@ -360,6 +378,10 @@ telegram_alert_format: |
   💰 {{ $json.salary || 'No salary info' }}
   📍 {{ $json.source }} | {{ $json.location }}
   🔗 {{ $json.url }}
+
+  🏢 *О компании:*
+  {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+  {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('[🌐 Сайт компании](' + $json.companyMeta.companyUrl + ')') : ('[🔍 Найти в Google](https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + ')') }}
 
   _{{ $json.reason }}_
 

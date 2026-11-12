@@ -49,6 +49,11 @@ export const EVALUATOR_OUTPUT_SCHEMA = {
       type: "string",
       description: "Original job offer URL.",
     },
+    company_dossier: {
+      type: "string",
+      description:
+        "1-2 concise sentences in Russian: product, business model (B2B/B2C), and company scale without hallucination.",
+    },
   },
   required: [
     "overall_score",
@@ -57,9 +62,12 @@ export const EVALUATOR_OUTPUT_SCHEMA = {
     "red_flags",
     "reason",
     "url",
+    "company_dossier",
   ],
   additionalProperties: false,
 } as const;
+
+export const EVALUATOR_OUTPUT_SCHEMA_WITH_DOSSIER = EVALUATOR_OUTPUT_SCHEMA;
 
 interface PromptTemplateEntry {
   readonly role: string;

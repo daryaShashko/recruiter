@@ -1,6 +1,14 @@
 import axios from "axios";
-import { JobOffer } from "../types";
+import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
+import { normalizeCompanyUrl } from "../utils/company";
+
+export {
+  buildCompanySearchUrl,
+  getCompanySearchUrl,
+  getCompanyUrl,
+  normalizeCompanyUrl,
+} from "../types";
 
 const JUSTJOIN_BASE_URL = "https://justjoin.it";
 // Verified via DevTools — 2025-05; verified reachable via plain HTTP (no
@@ -52,6 +60,16 @@ export interface RawJustJoinOffer {
   employmentTypes: RawEmploymentType[];
   requiredSkills: RawSkill[];
   niceToHaveSkills: RawSkill[];
+  companySize?: string | number;
+  company_size?: string | number;
+  companyUrl?: string;
+  company_url?: string;
+  company?: {
+    size?: string | number;
+    url?: string;
+  };
+  advertiserType?: string;
+  industry?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -181,6 +199,34 @@ export function matchesPreFilter(offer: RawJustJoinOffer): boolean {
 }
 
 export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
+  const rawSize = raw.companySize ?? raw.company_size ?? raw.company?.size;
+  const rawUrl = raw.companyUrl ?? raw.company_url ?? raw.company?.url;
+  const size =
+    rawSize !== undefined && rawSize !== null && String(rawSize).trim().length > 0
+      ? String(rawSize).trim()
+      : undefined;
+  const companyUrl = normalizeCompanyUrl(
+    typeof rawUrl === "string" ? rawUrl : undefined,
+  );
+  const advertiserType =
+    typeof raw.advertiserType === "string" && raw.advertiserType.trim().length > 0
+      ? raw.advertiserType.trim()
+      : undefined;
+  const industry =
+    typeof raw.industry === "string" && raw.industry.trim().length > 0
+      ? raw.industry.trim()
+      : undefined;
+
+  const companyMeta: CompanyMetadata | undefined =
+    size || companyUrl || advertiserType || industry
+      ? {
+          ...(size ? { size } : {}),
+          ...(companyUrl ? { companyUrl } : {}),
+          ...(advertiserType ? { advertiserType } : {}),
+          ...(industry ? { industry } : {}),
+        }
+      : undefined;
+
   return {
     id: `justjoin_${raw.slug}`,
     title: raw.title,
@@ -194,6 +240,7 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
       ...(raw.requiredSkills?.map((s) => s.name.toLowerCase()) ?? []),
       ...(raw.niceToHaveSkills?.map((s) => s.name.toLowerCase()) ?? []),
     ],
+    ...(companyMeta ? { companyMeta } : {}),
     scrapedAt: new Date().toISOString(),
   };
 }

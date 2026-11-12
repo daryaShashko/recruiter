@@ -48,13 +48,10 @@ for node in nodes:
 }
 """
         if "function matchesKeywordWordBoundary" in js:
-            # Replace existing helper with updated one
-            import re
-            js = re.sub(
-                r"function matchesKeywordWordBoundary\([^)]*\)\s*\{[^}]*\}",
-                helper_fn.strip(),
-                js
-            )
+            idx1 = js.find("function matchesKeywordWordBoundary")
+            idx2 = js.find("function mentionsNonJsLanguage")
+            if idx1 != -1 and idx2 != -1:
+                js = js[:idx1] + helper_fn.strip() + "\n\n" + js[idx2:]
         else:
             js = js.replace(
                 "function mentionsNonJsLanguage(text) {",

@@ -27,11 +27,26 @@ commands, and identifiers in English.
   consults `docs/agent-learning/LESSONS.md` selectively; do not load that lesson index
   for ordinary tasks. Do not add tool-specific agent or subagent definitions without an
   intentional, demonstrated need.
+- **Candidate CV and profile source of truth**: The Notion `Candidate CV & Experience` database
+  (accessed live via `notion-profile` or offline via `n8n/prompts/.notion-snapshot.json` /
+  `DEFAULT_CV_ENTRIES`) is the **sole source of truth** for candidate profile, experience
+  bullets, and skills.
+- **Prohibition of manual CV duplicates**: No manual local CV files (strictly eliminating master-cv.yaml; Notion is sole source of truth). Never
+  create, maintain, or read duplicate manual CV files. All generator modules
+  (scraper/src/generator/) and AI agents must load candidate data strictly through
+  `notion-loader.ts` (or `notion-profile.ts` / `.notion-snapshot.json` offline fallback).
 
 ## Project rules
 
 - Pipeline: TypeScript scraper (`scraper/`) → n8n webhook → LLM evaluation → Notion →
-  Telegram. No paid services by default.
+  Telegram, plus local Application Generator (scraper/src/generator/): ATS CV PDF +
+  Cover Letter + Email Apply package. No paid services by default.
+- Candidate CV data: Notion `Candidate CV & Experience` database is the single source of
+  truth for both evaluation criteria and ATS CV generation. No manual `master-cv.yaml`
+  or static CV duplicates.
+- Application submission channels: Channel 1 (Email Apply) is active/implemented with
+  local dry-run packaging; subsequent channels (Greenhouse, Lever, Workable, JustJoin IT
+  ATS web forms) are scheduled in later roadmap stages.
 - LLM calls in n8n run in the `Code: LLM Router` node, whose code is inline in the
   workflow export, not in the repository. Two scripts have rewritten it:
   `scripts/p12_6_llm_router.py` (selects the provider via `$env.LLM_PROVIDER`, `fetch`

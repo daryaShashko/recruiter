@@ -6,19 +6,19 @@ This profile is dynamically compiled from the Notion Control Plane (Candidate CV
 
 ## 1. Professional Background & Stack
 
-- **Role / Seniority**: Senior Full-Stack Engineer / Senior Frontend Engineer with Backend ambitions. Strictly NO Junior, Mid-level, or Regular positions.
-- **Recent Experience (2026 (Last 6 mos)) — 🔥 Current Project (Last 6 Months — Fill in your new experience here!)**: Active recent 6-month project experience: update this row in Notion with your new stack, domain, responsibilities, and what makes a vacancy exciting for you now.
-- **Primary Tech Stack**: JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL.
-- **Secondary Stack / Familiarity**: Docker, REST APIs, AWS, Azure DevOps, CI/CD (Jenkins, Bamboo, GitHub Actions), Firebase, Redis (basic), MongoDB, MySQL.
-- **AI & Tools**: GitHub Copilot, Cursor, Claude Code, Promptfoo, n8n, GenAI-assisted development & LLM evaluation pipelines (actively uses AI for modernization, evaluation harnesses, and productivity).
+- **Role / Seniority**: Senior Full-Stack & Product Engineer | Tech Stream Lead with 10 years of commercial experience in the JS/TS ecosystem, combining deep React/Next.js frontend expertise with scalable Node.js/NestJS and Python backend delivery. Strictly NO Junior, Mid-level, or Regular positions.
+- **Recent Experience (July 2026 – Present) — FinTech Investment Platform / EPAM Systems — Senior Product Engineer & UI Stream Lead**: Operate as a Product / Forward-Deployed Engineer on an AI-integrated investment platform (TypeScript, React, Python, AI stack), owning ambiguous feature scopes end-to-end from direct customer discovery to production release. Stepped in to lead a 6-engineer technical stream following a critical customer design-alignment escalation; partnered with the Chief Designer to architect and deliver a Shared UI Component Library that unblocked parallel feature teams, while leading backlog slicing, refinement, and sprint demos.
+- **Primary Tech Stack**: JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, Python (working knowledge), HTML5, CSS3, SCSS.
+- **Secondary Stack / Familiarity**: Docker, REST APIs, Microfrontends, AWS, Azure DevOps, CI/CD (GitHub Actions, Jenkins, Bamboo), Firebase, Redis, MongoDB, MySQL, Redux.
+- **AI & Tools**: Architected an end-to-end TypeScript and Node.js data ingestion and LLM evaluation pipeline using Playwright, Notion REST API, n8n, and Promptfoo over a curated Golden Dataset, governed by a spec-driven multi-agent development workflow (Claude Code, Cursor, GitHub Copilot) with deterministic pre-ranking guardrails.
 - **Languages**: English: Professional (fluent reading/writing, professional speaking). Russian: Native. Polish: Intermediate (job postings in Polish are acceptable, but fluent spoken Polish must NOT be a hard requirement).
 
 ---
 
 ## 2. Target Role & Leadership Ambitions
 
-- **Core Full-Stack Balance (FE / BE Ratio)**: Ideal role is Full-Stack (50/50 to 70/30 in favor of Frontend) or Node.js/TS Backend-heavy where Senior JS/TS skills apply. Leverage elite Frontend expertise while actively contributing to and growing in Node.js/NestJS backend & AI engineering.
-- **Leadership, Management & Hands-On Ratio (Tech Lead / Team Lead)**: Strong communication skills; actively wants more responsibility, leadership, and management duties (Tech Lead / Team Lead roles). Preferred hands-on coding ratio is 50% to 70% (NO 100% people management without coding, and NO zero-impact pure coder role).
+- **Core Full-Stack Balance (FE / BE Ratio)**: Ideal role is Full-Stack (50/50 to 70/30 in favor of Frontend), Product Engineer, or Node.js/TS Backend-heavy where Senior JS/TS skills apply. Leverage elite Frontend & UI architecture expertise while actively contributing to Node.js/NestJS/Python backend & AI engineering.
+- **Leadership, Management & Hands-On Ratio (Tech Lead / Team Lead)**: Strong communication and stakeholder management skills; actively leads technical streams (up to 6 engineers), customer demos, and escalations (Tech Lead / Team Lead / Product Engineer roles). Preferred hands-on coding ratio is 50% to 70% (NO 100% people management without coding, and NO zero-impact pure coder role).
 
 ---
 
@@ -66,7 +66,7 @@ The AI recruiter assistant must automatically discard a vacancy if it meets any 
 
 ## 7. Key Achievements (For Context & Matching)
 
-- **Backend Migration: Java to Node.js & MySQL to PostgreSQL**: Migrated core backend from Java to Node.js & MySQL to PostgreSQL (handled a 4-month intense backend feature delivery track).
-- **Legacy Modernization (-15% Operational Cost)**: Reduced operational costs by 15% through legacy modernization and GenAI-assisted refactoring.
-- **Frontend Team Leadership (Team of 4 Developers)**: Led a team of 4 frontend developers (MIS-Clinic, 2019–2021) and designed greenfield project architecture (Frontend & API integration) from scratch.
-- **First Mobile Medical App in Belarus (React Native)**: Developed the first mobile medical application in Belarus using React Native.
+- **J&J / EPAM Systems — Key Full-Stack Engineer (September 2022 – July 2026)**: Transitioned to a Full-Stack role and led the high-impact migration of core platform functionality from a legacy Java backend to Node.js alongside a database migration from MySQL to PostgreSQL, preceded by deep legacy codebase investigation and architectural refactoring. Designed and drove the team-wide workflow for transitioning Frontend engineers into Full-Stack development.
+- **J&J / EPAM Systems — Analytics & AI Agents (September 2022 – July 2026)**: Acted as the primary Knowledge Keeper and technical consultant for the platform's charting and analytics service, driving sprint scoping, backlog refinement, and multi-stage technical estimations (50% / 80% / 100% confidence gates). Introduced Clean Code documentation and integrated custom AI agents trained on project standards to assist the engineering team.
+- **Wolters Kluwer / EPAM Systems — Senior Frontend Engineer (October 2021 – September 2022)**: Engineered scalable product features using React and Redux within a complex enterprise microfrontend architecture, proposed and integrated a standardized Prettier/ESLint configuration adopted company-wide, mentored junior developers, and resolved technical debt across legacy AngularJS/React modules with WCAG a11y compliance.
+- **MIS-Clinic / EPAM Systems — Frontend Team Lead & Resource Manager (February 2019 – October 2021)**: Managed a team of 4 frontend developers (conducting performance reviews, technical interviews, onboarding, and guiding Middle-to-Senior transitions), designed greenfield project architecture from scratch, configured CI/CD pipelines in Jenkins with Firebase widget deployment, and previously delivered Belarus's first React Native mobile medical app (Aibolit, 2018–2019) and custom component libraries (SAP, 2016–2018).

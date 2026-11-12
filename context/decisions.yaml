@@ -886,6 +886,173 @@ decisions:
       public responses, but the current five boards yielded zero qualifying
       offers under the age/seniority/stack filters.
 
+  ADR-023:
+    title: "Application submission channels — Channel 1 (Email Apply) active and ATS web-forms (subsequent stages)"
+    status: accepted
+    date: "2026-11-10"
+    context: >
+      The recruiter system includes a Personalized Application Generator (scraper/src/generator/)
+      that produces tailored, ATS-compliant PDF CVs, customized Cover Letters, and application packages.
+      A structured multi-channel application strategy is required to define how generated applications
+      are submitted to employers, maintaining strict isolation, zero unexpected network side-effects,
+      and $0 cost. Multiple channels exist in the recruitment domain: direct email apply, ATS job board
+      web forms (Greenhouse, Lever, Workable), and regional job portal quick-apply forms (JustJoin IT).
+    decision: >
+      Adopt a phased multi-channel application architecture:
+      1. Channel 1 (Email Apply): Implemented as the first active channel. Assembles a complete
+         offline/local application package (to, subject, body, and attached PDF CV path) encapsulated
+         in an EmailPackage manifest. Tested and verified in dry-run mode without sending real emails.
+      2. Channels 2+ (ATS Web Forms & Portal Quick-Apply): Scheduled as subsequent roadmap stages
+         (Phase 16.4). These channels include automated Playwright form filling for Greenhouse,
+         Lever, Workable, and JustJoin IT application modals.
+      3. Safety & Cost Invariant: Application generation and dry-run packaging must remain 100% offline
+         and local ($0 cost). No external outbound network requests (SMTP, Resend, or form submission)
+         may occur during generation or dry-run testing.
+    rationale:
+      - "Email Apply requires zero browser interaction with third-party web forms and has minimal failure surface"
+      - "Bundling to a structured manifest (email_package.json) enables inspection before sending"
+      - "Scheduling complex ATS form fillers (Greenhouse/Lever/Workable/JustJoin) as subsequent roadmap stages
+         prevents scope explosion while delivering immediate end-to-end value"
+      - "Aligns with project constraint: $0/month cost and zero unsolicited network sends during tests"
+    consequences:
+      positive:
+        - "Immediate end-to-end application package generation ready for review"
+        - "Clean channel abstraction (EmailPackage metadata channel: 'email_apply') ready for polymorphic channel expansion"
+        - "Full compliance with dry-run and integrity mode constraints"
+      negative:
+        - "ATS web forms still require manual submission until subsequent roadmap stages are implemented"
+        - "Email extraction from JD requires fallback heuristic when vacancy text lacks explicit hr/apply email"
+    implementation: >
+      scraper/src/generator/email-package.ts, scraper/src/generator/types.ts,
+      scraper/src/generator/cli.ts, output/applications/, context/roadmap.yaml (Phase 16),
+      PROJECT.md, docs/architecture.md.
+
+  ADR-024:
+    title: "Company metadata extraction and alert company dossier block (HITL Slice 1)"
+    status: accepted
+    date: "2026-11-12"
+    context: >
+      Candidates reviewing job alerts need rapid context regarding hiring companies (scale,
+      website, product, business model). JustJoin.it and NoFluffJobs API responses include
+      company metadata (companySize, companyUrl) that was previously discarded. Vacancies
+      lacking direct URLs or from other sources lacked a standardized fallback to search
+      for the company. Alerts and LLM evaluation lacked structured company background.
+    decision: >
+      1. Extend JobOffer with optional companyMeta: CompanyMetadata (size, companyUrl,
+         advertiserType, industry) in scraper/src/types.ts.
+      2. Extract companySize (normalized to string size) and companyUrl in JustJoin and
+         NoFluffJobs scrapers with safe optional handling.
+      3. Implement Google search fallback generator (https://www.google.com/search?q=${companyName + ' software'})
+         for offers lacking direct company websites.
+      4. Extend LLM Evaluator specification and templates with company_dossier (1-2 Russian
+         sentences: product, business model B2B/B2C, company scale) grounded strictly in JD
+         if unknown without hallucinations.
+      5. Fix Telegram alert template in context/ingest-workflow.yaml with block «🏢 О компании»
+         displaying company_dossier and direct website or Google search fallback.
+    rationale:
+      - "Instant employer context in alerts eliminates manual company research"
+      - "Zero API cost ($0 invariant preserved)"
+      - "100% backward compatible: companyMeta is optional"
+    consequences:
+      positive:
+        - "Immediate visibility into company profile, scale, and direct URL in Telegram alerts"
+        - "Seamless fallback to Google search when direct company URL is absent"
+      negative:
+        - "Minor increase (~30-50 tokens) in LLM output per evaluated job"
+    implementation: >
+      scraper/src/types.ts, scraper/src/utils/company.ts, scraper/src/scrapers/justjoin.ts,
+      scraper/src/scrapers/nofluffjobs.ts, n8n/prompts/evaluator.md,
+      n8n/prompts/evaluator-template.json, n8n/evaluator/prompt-builder.ts,
+      n8n/evaluator/scoring.ts, docs/adr/ADR-024-company-metadata-and-dossier.md,
+      context/interfaces.yaml, context/ingest-workflow.yaml, context/modules/scraper.yaml,
+      context/modules/n8n.yaml.
+
+  ADR-025:
+    title: "HITL Telegram Review Filter and Hot Match Promotion Flow (Slice 2)"
+    status: accepted
+    date: "2026-11-12"
+    context: >
+      Vacancies scoring 50-79 were previously saved to Notion without interactive screening in Telegram.
+      Candidates need a rapid 1-tap review mechanism in Telegram Topic 3 («На ревью») to promote
+      promising vacancies to Topic 2 («Горячий мэтч») or discard them to archive, updating Notion statuses in real time.
+    decision: >
+      Adopt compact callback protocol (<=64 bytes) using 32-char hex page IDs:
+      prm:<page_id> (promote), dsc:<page_id> (discard), app:<page_id> (apply), rej:<page_id> (reject).
+      Topic 3 receives review alert with [ 👍 Берём в Hot Match ], [ 👎 В архив ], [ 🔗 Вакансия ].
+      Clicking 'prm' updates Notion Status to 'Hot Match', replaces Topic 3 markup with confirmation,
+      and forwards the full job card to Topic 2 with [ 🚀 Подготовить отклик ].
+      Clicking 'dsc' updates Notion Status to 'Rejected' and marks message as dismissed.
+    consequences:
+      positive:
+        - "Immediate 1-tap triage in Telegram Topic 3 with real-time Notion status updates"
+        - "Clean separation between Topic 3 (quick review) and Topic 2 (command post)"
+        - "Guaranteed protocol compliance under Telegram 64-byte callback limit"
+      negative:
+        - "Requires n8n callback_query router to handle inline button events"
+    implementation: >
+      scraper/src/utils/telegram.ts, scraper/src/types.ts, scraper/tests/telegram-hitl.unit.test.ts,
+      docs/adr/ADR-025-hitl-telegram-review-and-promote-flow.md, context/ingest-workflow.yaml,
+      context/modules/n8n.yaml, scripts/patch-n8n-hitl-review.py.
+
+  ADR-026:
+    title: "Telegram In-Thread Application Delivery (HITL Slice 3)"
+    status: accepted
+    date: "2026-11-12"
+    context: >
+      Applying to approved vacancies requires manual file system searches for the latest CV PDF,
+      writing personalized LinkedIn outreach pitches, drafting cover letters, and updating Notion to Applied.
+      The candidate needs instant in-thread delivery in Telegram Topic 2 triggered by [ 🚀 Подготовить отклик ] (app:<page_id>).
+    decision: >
+      Implement zero-token deterministic in-thread delivery:
+      1. LinkedIn pitch generator (scraper/src/generator/cover-letter.ts) strictly 60-80 words, no clichés.
+      2. Fast base gold cv.pdf caching (<0.2s delivery) in scraper/src/generator/cv-renderer.ts.
+      3. Application bundle service (scraper/src/generator/telegram-delivery.ts) generating Telegram sendDocument
+         and copy-ready monospaced text for LinkedIn and Cover Letter, transitioning Notion Status to 'Applied'.
+    consequences:
+      positive:
+        - "1-tap application asset delivery directly to Telegram thread"
+        - "1-click copy-ready format for outreach message and cover letter"
+        - "100% offline, deterministic, $0 paid API cost"
+        - "Instant Notion Kanban sync to Applied"
+      negative:
+        - "Customized per-job CV modifications require background Chromium rendering if bullets change"
+    implementation: >
+      scraper/src/generator/cover-letter.ts, scraper/src/generator/cv-renderer.ts,
+      scraper/src/generator/telegram-delivery.ts, scraper/src/generator/types.ts,
+      scraper/tests/generator/telegram-delivery.unit.test.ts,
+      docs/adr/ADR-026-telegram-hitl-application-delivery.md,
+      context/ingest-workflow.yaml, context/modules/n8n.yaml.
+
+  ADR-027:
+    title: "Telegram Feedback Loop and Dynamic Rule Synthesis (HITL Slice 4)"
+    status: accepted
+    date: "2026-11-12"
+    context: >
+      Discarding or rejecting vacancies in Telegram previously lacked qualitative feedback.
+      The candidate needs a 1-tap rejection reason menu in Telegram Topic 2, recording human verdicts
+      into Notion Evaluation Log, capturing optional text reply comments, and synthesizing draft filter rules
+      when 3+ rejections accumulate around the same employer or technology.
+    decision: >
+      Implement complete feedback loop:
+      1. Reject reasons menu (scraper/src/utils/telegram.ts) with tags:
+         [ 💸 Зарплата ] (rfb:sal:id), [ 🏢 Аутсорс ] (rfb:out:id), [ 💀 Легаси ] (rfb:leg:id),
+         [ 📍 Локация ] (rfb:loc:id), [ 📉 Грейд ] (rfb:jun:id), [ ❌ Без причины ] (dsc:id).
+      2. Record Human Verdict = 'Wrong – Should Reject' in Notion Evaluation Log.
+      3. Pattern analysis engine (scraper/src/feedback/feedback-analyzer.ts) detects 3+ rejections,
+         creates draft rules (Active: false) for Matching Criteria & Guardrails, and emits Telegram activation proposal.
+    consequences:
+      positive:
+        - "Zero-friction 1-tap feedback capture in Telegram Topic 2"
+        - "Automatic synthesis of draft guardrails in Notion"
+        - "Safe draft state (Active: false) prevents accidental over-filtering until approved"
+      negative:
+        - "Requires callback_query routing for rfb:* events"
+    implementation: >
+      scraper/src/utils/telegram.ts, scraper/src/feedback/feedback-analyzer.ts,
+      scraper/src/types.ts, scraper/tests/feedback-loop.unit.test.ts,
+      docs/adr/ADR-027-telegram-feedback-loop-and-rule-synthesis.md,
+      context/ingest-workflow.yaml, context/modules/n8n.yaml.
+
 # ============================================================
 # SYNC RULE
 # When Architect makes a new decision → add ADR here.

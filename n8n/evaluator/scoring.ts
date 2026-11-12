@@ -21,6 +21,13 @@
 
 import type { DynamicScoringConfig } from "./notion-profile";
 
+export interface CompanyMetadata {
+  readonly size?: string;
+  readonly companyUrl?: string;
+  readonly advertiserType?: string;
+  readonly industry?: string;
+}
+
 export interface JobForScoring {
   readonly id: string;
   readonly title?: string;
@@ -32,6 +39,7 @@ export interface JobForScoring {
   readonly body?: string;
   readonly scrapedAt?: string;
   readonly fingerprint?: string;
+  readonly companyMeta?: CompanyMetadata;
 }
 
 export interface EvaluationResult {
@@ -50,6 +58,8 @@ export interface EvaluationResult {
   readonly red_flags: string[];
   readonly reason: string;
   readonly match: boolean;
+  readonly company_dossier?: string;
+  readonly companyMeta?: CompanyMetadata;
 }
 
 interface RawLlmEvaluation {
@@ -58,6 +68,7 @@ interface RawLlmEvaluation {
   seniority_match?: number;
   red_flags?: unknown[];
   reason?: string;
+  company_dossier?: string;
 }
 
 const CRITICAL_FLAGS = [
@@ -277,6 +288,7 @@ function baseFields(job: JobForScoring) {
     salary: job.salary,
     scrapedAt: job.scrapedAt,
     fingerprint: job.fingerprint ?? "",
+    ...(job.companyMeta ? { companyMeta: job.companyMeta } : {}),
   };
 }
 
@@ -295,6 +307,7 @@ function fallbackResult(job: JobForScoring, reason: string): EvaluationResult {
     red_flags: [isLlmError ? "Pipeline: LLM Error" : "Pipeline: Parse Error"],
     reason: `Error: ${reason}`,
     match: false,
+    company_dossier: undefined,
   };
 }
 
@@ -626,5 +639,6 @@ export function evaluateJob(
     red_flags: uniqueRedFlags,
     reason: parsed.reason ?? "No reason provided",
     match: finalScore >= 50,
+    company_dossier: parsed.company_dossier?.trim() || undefined,
   };
 }

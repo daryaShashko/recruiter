@@ -38,7 +38,7 @@ Kanban view grouped by `Status`
 |---|---|
 | `Hot Match` | Strongly matched vacancy (score >= 80) — alerts sent to Telegram |
 | `Review` | Marginally matched vacancy (score 50-79) — review list in Notion |
-| `Applied` | Application submitted |
+| `Applied` | Application submitted via Channel 1 (Email Apply; bundles ATS CV PDF + Cover Letter + email_package.json) or subsequent ATS web-form channels (Greenhouse, Lever, Workable, JustJoin IT) |
 | `Rejected` | Decided not to apply |
 
 ## Deduplication Strategy
@@ -160,7 +160,67 @@ The Notion Create Page node for Evaluation Log (`Notion: Log to Eval Log`) is pl
 
 > **Module:** [`n8n/evaluator/notion-profile.ts`](../n8n/evaluator/notion-profile.ts) + CLI [`n8n/evaluator/notion-cli.ts`](../n8n/evaluator/notion-cli.ts)
 >
-> **Purpose:** Let the candidate edit their structured CV (`Candidate CV & Experience`) and evaluation rules (`Matching Criteria & Guardrails`) in Notion in real time, compiling active rows (`Active = ✅`) into both `n8n/prompts/candidate_profile.md` (`{{profile}}`) and `DynamicScoringConfig` for [`n8n/evaluator/scoring.ts`](../n8n/evaluator/scoring.ts).
+> **Architectural Status:** Notion (`Candidate CV & Experience` database) is the **sole source of truth** for candidate profile, experience bullets, and skills across the entire recruiter workspace (evaluator, matching, and application generator).
+>
+> **Strict Prohibition:** No manual offline CV duplicate files (eliminating master-cv.yaml and hardcoded resumes; Notion is sole source of truth). All generator modules (scraper/src/generator/) and evaluation scripts must source candidate data directly from Notion via notion-loader.ts / [`n8n/evaluator/notion-profile.ts`](../n8n/evaluator/notion-profile.ts), or through the local snapshot `n8n/prompts/.notion-snapshot.json` in offline mode.
+
+---
+
+### Database 3: Candidate CV & Experience (Master CV)
+
+> **Icon:** `📄`  
+> **Purpose:** Authoritative repository for candidate experience bullets, achievements, skills, and background.  
+> Each bullet has a unique identifier and stack tags to support zero-hallucination verbatim injection and deterministic pre-ranking.
+
+#### Properties
+
+| Property | Type | Options / Notes |
+|---|---|---|
+| `Title` | Title | Job title, role summary, or achievement headline (e.g. "Senior Full-Stack / Senior Frontend Engineer...") |
+| `Section` | Select | `Role & Summary`, `Recent Experience (Last 6m)`, `Primary Stack`, `Secondary Stack`, `AI & Tools`, `Languages`, `Target Role & Leadership`, `Key Achievement` |
+| `Highlight / Summary` | Text (rich_text) | Exact bullet text or summary statement. Used for zero-hallucination verbatim injection into ATS CV and prompt compilation |
+| `Tech Tags` | Multi-select | Associated technologies/skills used by Pre-Ranker tag matching (e.g. `TypeScript`, `React`, `Node.js`, `Architecture`) |
+| `Period` | Text (rich_text) | Date range or tenure descriptor (e.g. "2019–2021", "2026 (Last 6 mos)", "Daily Production") |
+| `Order` | Number | Sort sequence (ascending) for profile and CV ordering |
+| `Active` | Checkbox | Toggle active status (`true` = included in compiled profile and ATS CV generation; `false` = archived) |
+
+#### Child Blocks (Details)
+Optional paragraph blocks on each page store extended technical context, architecture decisions, and metrics for LLM matching prompts without cluttering tabular view.
+
+---
+
+### Database 4: Matching Criteria & Guardrails
+
+> **Icon:** `⚖️`  
+> **Purpose:** Real-time candidate evaluation preferences, salary floors, location boundaries, and red flag keywords.
+
+#### Properties
+
+| Property | Type | Options / Notes |
+|---|---|---|
+| `Rule Name` | Title | Rule name (e.g. "Hard Salary Floor", "NO Crypto / Web3") |
+| `Category` | Select | `Salary & Contract`, `Location & Work Style`, `Hard Reject (Red Flag)`, `Scoring Guideline`, `Target Domain` |
+| `Enforcement` | Select | `Hard Gate (Code + Prompt)`, `Prompt Rule (LLM Only)` |
+| `Rule Type` | Select | `Force Reject (Score = 0)`, `Discard (Score < 50)`, `Review Cap (Score 50-79)`, `Hot Match Boost (Score >= 80)`, `Target / Preference` |
+| `Value / Keywords` | Text (rich_text) | Numeric values or pipe-separated keywords for deterministic code checks |
+| `Rule Description (For Prompt)` | Text (rich_text) | Verbatim prompt instruction compiled into candidate profile prompt |
+| `Order` | Number | Sort sequence (ascending) |
+| `Active` | Checkbox | Toggle active status (`true` = enforced; `false` = ignored) |
+
+---
+
+### Offline Snapshot & Caching Strategy
+
+To support 100% offline generation, CI testing, and dry-run flows without network access:
+1. **Live Synchronization**: `npm run notion:sync` fetches active rows from Notion and writes:
+   - `n8n/prompts/candidate_profile.md` (rendered Markdown profile for LLM prompt)
+   - `n8n/prompts/.notion-snapshot.json` (exact JSON dump of active CV and Criteria entries)
+2. **Offline Fallback Hierarchy**:
+   - Generator module notion-loader.ts (scraper/src/generator/) checks:
+     1. Live Notion API (if `NOTION_TOKEN`, `NOTION_CV_DB_ID` are set and `offlineOnly` is false)
+     2. Local snapshot file `n8n/prompts/.notion-snapshot.json`
+     3. Built-in seed data `DEFAULT_CV_ENTRIES` in `n8n/evaluator/notion-profile.ts`
+   - This ensures 0 network calls during offline tests while strictly maintaining Notion as the sole authoring origin.
 
 ### Commands (run from `n8n/`)
 

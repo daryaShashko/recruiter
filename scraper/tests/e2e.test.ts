@@ -39,7 +39,10 @@ const SAMPLE_OFFER: JobOffer = {
 };
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
-describe('sendToWebhook — E2E with local mock server', () => {
+const RUN_INTEGRATION = process.env.RUN_INTEGRATION === '1';
+const describeIntegration = RUN_INTEGRATION ? describe : describe.skip;
+
+describeIntegration('sendToWebhook — E2E with local mock server', () => {
   let server: http.Server;
 
   beforeAll(

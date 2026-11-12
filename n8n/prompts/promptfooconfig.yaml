@@ -45,6 +45,7 @@ providers:
               red_flags,
               reason,
               url,
+              company_dossier,
             ]
           properties:
             overall_score: { type: number, minimum: 0, maximum: 100 }
@@ -53,6 +54,7 @@ providers:
             red_flags: { type: array, items: { type: string } }
             reason: { type: string }
             url: { type: string }
+            company_dossier: { type: string }
 
 # ─── Default Assertions (P10-4, P10-5) ────────────────────
 # Applied to EVERY test case automatically.
@@ -83,7 +85,8 @@ defaultTest:
             && typeof j.seniority_match === 'number' && j.seniority_match >= 0 && j.seniority_match <= 100
             && Array.isArray(j.red_flags) && j.red_flags.every(x => typeof x === 'string')
             && typeof j.reason === 'string' && j.reason.length > 0
-            && typeof j.url === 'string' && j.url.length > 0;
+            && typeof j.url === 'string' && j.url.length > 0
+            && typeof j.company_dossier === 'string' && j.company_dossier.length > 0;
         } catch(e) { return false; }
       weight: 2
 

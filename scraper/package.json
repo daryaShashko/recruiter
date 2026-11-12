@@ -9,8 +9,10 @@
     "scrape:dry": "DRY_RUN=true ts-node src/index.ts",
     "scrape:watch": "HEADLESS=false DRY_RUN=true ts-node src/index.ts",
     "test": "jest",
-    "test:justjoin": "jest tests/justjoin.test.ts",
-    "test:nofluffjobs": "jest tests/nofluffjobs.test.ts",
+    "test:integration": "RUN_INTEGRATION=1 jest tests/justjoin.test.ts tests/nofluffjobs.test.ts tests/e2e.test.ts",
+    "test:justjoin": "RUN_INTEGRATION=1 jest tests/justjoin.test.ts",
+    "test:nofluffjobs": "RUN_INTEGRATION=1 jest tests/nofluffjobs.test.ts",
+    "test:e2e": "RUN_INTEGRATION=1 jest tests/e2e.test.ts",
     "typecheck": "tsc --noEmit",
     "eval": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig.yaml",
     "eval:full": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml --tests ../n8n/prompts/rubric_dataset.yaml --providers google:gemini-3.1-flash-lite",
@@ -18,7 +20,11 @@
     "eval:gemini": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml",
     "eval:gemini:view": "npx promptfoo view",
     "eval:smoke": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-smoke.yaml",
-    "check": "ts-node src/check-manual.ts"
+    "check": "ts-node src/check-manual.ts",
+    "generate:cv": "ts-node src/generator/cli.ts --target cv --dry-run",
+    "generate:letter": "ts-node src/generator/cli.ts --target letter --dry-run",
+    "apply:dry": "ts-node src/generator/cli.ts --dry-run",
+    "demo:hitl": "ts-node src/demo-hitl.ts"
   },
   "dependencies": {
     "axios": "^1.7.2",

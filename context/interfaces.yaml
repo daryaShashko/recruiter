@@ -47,11 +47,39 @@ interfaces:
         required: false
         format: "'{from}–{to} {currency}'"
         examples: ["15000–20000 PLN", "120–160 EUR/day (B2B)"]
+      companyMeta:
+        type: CompanyMetadata
+        required: false
+        description: "Hiring company metadata (size, companyUrl, advertiserType, industry)"
+        fields:
+          size: { type: string, required: false, examples: ["10-50", "200+"] }
+          companyUrl: { type: string, required: false, note: "Direct company website URL. When missing, fallback Google search URL is generated." }
+          advertiserType: { type: string, required: false, note: "e.g. direct, agency" }
+          industry: { type: string, required: false }
       scrapedAt:
         type: string
         required: true
         format: ISO 8601
         set_at: normalization time in scraper
+
+  CompanyMetadata:
+    file: scraper/src/types.ts
+    description: "Metadata about the hiring company extracted from scraper API or external lookups"
+    fields:
+      size:
+        type: string
+        required: false
+        examples: ["10-50", "200+"]
+      companyUrl:
+        type: string
+        required: false
+        note: "Direct website URL of company"
+      advertiserType:
+        type: string
+        required: false
+      industry:
+        type: string
+        required: false
 
   WebhookPayload:
     file: scraper/src/types.ts
@@ -95,6 +123,12 @@ interfaces:
           required: true,
           note: "echoed from user message for traceability",
         }
+      company_dossier:
+        {
+          type: string,
+          required: false,
+          note: "1–2 sentences in Russian: product, B2B/B2C model, company scale. Grounded strictly in JD if unknown.",
+        }
     n8n_output_fields:
       note: "Code: Parse Ollama Response merges LLM output with job fields and adds derived fields"
       match: { type: boolean, derived: "overall_score >= 50" }
@@ -105,12 +139,14 @@ interfaces:
       reason: { type: string }
       url: { type: string }
       fingerprint: { type: string }
+      company_dossier: { type: string }
+      companyMeta: { type: CompanyMetadata, required: false }
     routing:
       gte_80: "Telegram alert + Notion Board (Hot Match)"
       50_to_79: "Notion Board only (Review)"
       lt_50: "Evaluation Log only (Discard)"
     critical_notes:
-      - "LLM MUST return ONLY the 6-field JSON — no markdown, no explanation outside JSON"
+      - "LLM MUST return ONLY the 7-field JSON — no markdown, no explanation outside JSON"
       - "Structured output enforced via format:{JSON Schema} in Ollama (P13-1; passthrough.format: in promptfoo)"
       - "Parse: JSON.parse(raw) directly — no dual-format parser (removed in P13-3)"
       - "If parsing fails: fallback to overall_score=0, match=false, red_flags=['Pipeline: Parse Error']"
@@ -186,6 +222,155 @@ interfaces:
       - "Fingerprint field must exist in Notion DB for fingerprint to be saved — add manually as Text property"
       - "Must log both match:true AND match:false decisions"
       - "Human Verdict defaults to Pending — updated via Telegram feedback or manual review"
+
+  # ── Notion Candidate CV & Experience (Database 3 / Master CV) ───
+  CandidateCvRecord:
+    file: "Notion Candidate CV & Experience DB (Notion page schema + CvEntry in n8n/evaluator/notion-profile.ts & scraper/src/generator/types.ts)"
+    description: >
+      Represents one row in the Notion Candidate CV & Experience database.
+      Sole source of truth for candidate profile, experience bullets, and skills.
+      Prohibits manual duplicate files (strictly no master-cv.yaml; Notion is sole source of truth).
+    fields:
+      Title:
+        type: string (Notion Title)
+        required: true
+        note: "Job title, role summary, or achievement headline"
+      Section:
+        type: select (Notion Select)
+        required: true
+        values:
+          [
+            "Role & Summary",
+            "Recent Experience (Last 6m)",
+            "Primary Stack",
+            "Secondary Stack",
+            "AI & Tools",
+            "Languages",
+            "Target Role & Leadership",
+            "Key Achievement",
+          ]
+      Highlight / Summary:
+        type: string (Notion Rich Text)
+        required: true
+        note: "Exact bullet text or summary. Injected verbatim into ATS CV (zero-hallucination invariant)"
+      Tech Tags:
+        type: multi-select (Notion Multi-select)
+        required: true
+        note: "Tech keywords used by Pre-Ranker tag matching (e.g. TypeScript, React, Node.js)"
+      Period:
+        type: string (Notion Rich Text)
+        required: true
+        note: "Tenure or timeline string (e.g. 2019–2021, Core Profile)"
+      Order:
+        type: number (Notion Number)
+        required: true
+        note: "Display and ranking sort order (ascending)"
+      Active:
+        type: boolean (Notion Checkbox)
+        required: true
+        note: "true = included in profile and ATS CV; false = archived"
+    critical_notes:
+      - "SOLE SOURCE OF TRUTH: All candidate experience, skills, and CV bullets originate from this Notion database"
+      - "STRICT PROHIBITION: No manual local CV files (eliminating master-cv.yaml, cv.yaml, etc.; Notion is sole source of truth)"
+      - "Offline Fallback: Local snapshot n8n/prompts/.notion-snapshot.json or DEFAULT_CV_ENTRIES in notion-profile.ts"
+      - "Consumed by: scraper/src/generator/notion-loader.ts converting rows into CandidateCvData"
+
+  # ── CandidateCvData (In-memory Generator Contract) ───────
+  CandidateCvData:
+    file: "CandidateCvData (scraper/src/generator/types.ts)"
+    description: "Structured in-memory candidate CV data loaded from Notion for ATS CV and Cover Letter generation"
+    fields:
+      contacts:
+        type: "CandidateContacts"
+        required: true
+        fields:
+          name: { type: string, required: true }
+          location: { type: string, required: true }
+          phone: { type: string, required: true }
+          email: { type: string, required: true }
+          linkedIn: { type: string, required: true }
+          github: { type: string, required: true }
+      summary:
+        type: string
+        required: true
+        note: "Compiled candidate professional summary"
+      bullets:
+        type: "CandidateBullet[]"
+        required: true
+        fields:
+          id: { type: string, required: true, note: "Stable unique ID from Notion page or seed" }
+          title: { type: string, required: true }
+          section: { type: string, required: true }
+          highlight: { type: string, required: true, note: "Verbatim bullet text" }
+          tags: { type: "string[]", required: true, note: "Stack tags for tag-matching" }
+          period: { type: string, required: false }
+          order: { type: number, required: true }
+      skills:
+        type: "Record<string, string[]>"
+        required: true
+        note: "5 canonical categories: Core Languages & Frameworks, State & Databases, Architecture & Infra, Testing & Quality, AI Tooling & Productivity"
+      rodoClause:
+        type: "{ pl: string, en: string }"
+        required: true
+        note: "Standard Polish GDPR/RODO clause for application footer"
+
+  # ── Application Channels & EmailPackage (Generator Contract) ───
+  ApplicationChannel:
+    file: "CandidateCvData (scraper/src/generator/types.ts)"
+    description: "Supported application submission channels across the recruiter pipeline"
+    channel_status:
+      email_apply:
+        channel_number: 1
+        status: "active / implemented"
+        description: "Direct email application packaging (subject, body, PDF attachment)"
+      greenhouse:
+        channel_number: 2
+        status: "scheduled (subsequent stage)"
+        description: "Greenhouse ATS web-form automation"
+      lever:
+        channel_number: 3
+        status: "scheduled (subsequent stage)"
+        description: "Lever ATS web-form automation"
+      workable:
+        channel_number: 4
+        status: "scheduled (subsequent stage)"
+        description: "Workable ATS web-form automation"
+      justjoin:
+        channel_number: 5
+        status: "scheduled (subsequent stage)"
+        description: "JustJoin IT 1-click apply web-form automation"
+
+  EmailPackage:
+    file: "CandidateCvData (scraper/src/generator/types.ts)"
+    description: "Manifest object for Channel 1 (Email Apply) application package"
+    fields:
+      to:
+        type: string
+        required: true
+        note: "Target recruiter or company application email address"
+      subject:
+        type: string
+        required: true
+        note: "Personalized email subject line including job title and candidate name"
+      body:
+        type: string
+        required: true
+        note: "Tailored 130–180 word Cover Letter text"
+      attachments:
+        type: "string[]"
+        required: true
+        note: "Array of filesystem paths to generated PDF CV attachment(s)"
+      metadata:
+        type: "EmailPackageMetadata"
+        required: true
+        fields:
+          company: { type: string, required: true }
+          jobTitle: { type: string, required: true }
+          coverLetterWordCount: { type: number, required: true }
+          pdfPath: { type: string, required: true }
+          channel: { type: "'email_apply'", required: true, note: "Channel 1 discriminator" }
+          dryRun: { type: boolean, required: true, note: "true for local test runs (no network sends)" }
+          generatedAt: { type: string, required: true, format: "ISO 8601" }
 
 # ============================================================
 # SYNC RULE

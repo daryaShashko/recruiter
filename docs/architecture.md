@@ -159,6 +159,18 @@
 - Manual /check <url> command for on-demand evaluation
 - /rejected, /wrong commands for reviewing rejected vacancies (planned)
 
+### Application Generator & Submission Channels (scraper/src/generator/)
+- Ingests matched job offers from Notion Board (`Hot Match` / `Review`) or repository mock vacancies.
+- Loads Candidate CV data exclusively from Notion (`Candidate CV & Experience` database; sole source of truth) via notion-loader.ts with offline snapshot fallback (`n8n/prompts/.notion-snapshot.json`).
+- Deterministic Pre-Ranker (pre-ranker.ts) ranks candidate bullets by stack tags with 100% offline fallback.
+- Bullet Assembler (bullet-assembler.ts) maps selected bullet IDs to verbatim text (zero hallucinations).
+- Skills Matrix Formatter (skills-matrix.ts) organizes candidate skills into strictly 5 canonical categories.
+- Playwright PDF Renderer (cv-renderer.ts) renders single-column A4 HTML to vector PDF with RODO clause.
+- Cover Letter Generator (cover-letter.ts) builds 130–180 word letters without stop words or clichés.
+- **Submission Channel Hierarchy:**
+  - **Channel 1: Email Apply (Active / Implemented):** Assembles complete application package (email-package.ts) bundling recipient, subject, Cover Letter body, and attached PDF path into `email_package.json`. Fully verified in local dry-run mode without sending real emails.
+  - **Channels 2+: ATS Web Forms (Scheduled / Subsequent Stages):** Automated Playwright form fillers for Greenhouse, Lever, Workable, and JustJoin IT quick-apply portals, scheduled in roadmap Phase 16.4.
+
 ---
 
 ## Deployment Modes

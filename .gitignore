@@ -39,8 +39,14 @@ Thumbs.db
 docs/codemie/
 
 # Scraped data (debug artifacts)
+output/
 scraper/output/
+scraper/coverage/
+coverage/
 *.scraped.json
+
+# Local agent workspaces
+.agents/teamwork/
 
 # n8n workflow exports — contain personal IDs (chatId, Notion DB IDs, instanceId)
 # Export manually from n8n UI; never commit production workflow JSONs

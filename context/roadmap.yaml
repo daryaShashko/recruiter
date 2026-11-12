@@ -1841,6 +1841,105 @@ phases:
       - "GOOGLE_API_KEY and OPENROUTER_API_KEY documented in .env.example"
       - "P15 unblocks P7 Oracle Cloud ARM deployment (no local Ollama required)"
 
+  P16:
+    name: "Personalized Application Generator & Multi-Channel Submission"
+    status: in_progress
+    goal: >
+      Generate tailored ATS-compliant single-column CV (vector PDF via Playwright), customized
+      130–180 word EU/Poland Cover Letter, and multi-channel application packages from the Notion
+      Candidate CV & Experience database (sole source of truth). Channel 1 (Email Apply) is active
+      and verified via local dry-run; ATS web forms (Greenhouse, Lever, Workable, JustJoin IT) are
+      scheduled as subsequent roadmap stages.
+    adrs: ["ADR-023"]
+    note: >
+      Strict prohibition on manual local CV duplicates (Notion is single source of truth).
+      Email Apply application bundle includes PDF CV, Cover Letter body, and email_package.json.
+      All runs operate in offline dry-run mode without outbound network email delivery.
+
+    sub_phases:
+      "16.1 Foundation & ATS CV Generator (M1 & M2)":
+        status: done
+        tasks:
+          P16-1:
+            status: done
+            title: "Candidate CV data loader & Notion source of truth alignment"
+            owner_agent: developer
+            output: "scraper/src/generator/notion-loader.ts, types.ts"
+            acceptance: "Loads candidate profile/bullets live or offline snapshot; zero manual master-cv files"
+          P16-2:
+            status: done
+            title: "Deterministic Pre-Ranker & zero-hallucination bullet assembler"
+            owner_agent: developer
+            output: "scraper/src/generator/pre-ranker.ts, bullet-assembler.ts"
+            acceptance: "100% offline tag-matching pre-ranker; verbatim bullet text mapped strictly by ID"
+          P16-3:
+            status: done
+            title: "5-category skills matrix & Playwright headless PDF renderer"
+            owner_agent: developer
+            output: "scraper/src/generator/skills-matrix.ts, cv-renderer.ts"
+            acceptance: "Canonical skills categories, single-column vector A4 PDF (strictly 1-2 pages), RODO clause"
+
+      "16.2 Cover Letter Generator (M3)":
+        status: done
+        tasks:
+          P16-4:
+            status: done
+            title: "Cover Letter generator with stop-word filter & language selector"
+            owner_agent: developer
+            output: "scraper/src/generator/cover-letter.ts"
+            acceptance: "Strictly 130-180 words, 3 blocks, forbidden words rejected, EN/PL detection"
+
+      "16.3 Channel 1: Email Apply Packager & Dry-Run CLI (M4)":
+        status: in_progress
+        tasks:
+          P16-5:
+            status: done
+            title: "Email Apply Package manifest builder"
+            owner_agent: developer
+            output: "scraper/src/generator/email-package.ts"
+            acceptance: "Bundles to, subject, body, attachment PDF path, and metadata with channel='email_apply'"
+          P16-6:
+            status: done
+            title: "Channel status alignment in documentation and roadmap"
+            owner_agent: architect
+            output: "context/roadmap.yaml, context/decisions.yaml (ADR-023), PROJECT.md"
+            acceptance: "Channel 1 (Email Apply) recorded as active/implemented; ATS web forms recorded as subsequent stages"
+          P16-7:
+            status: in_progress
+            title: "Dry-run CLI & mock vacancy end-to-end runner"
+            owner_agent: developer
+            output: "scraper/src/generator/cli.ts, output/applications/"
+            acceptance: "Local dry-run generates full application bundle on mock vacancy without network transmission"
+
+      "16.4 Channels 2+: ATS Web-Form Automation (Subsequent Roadmap Stages)":
+        status: pending
+        note: "Scheduled subsequent stages following Channel 1 (Email Apply) stabilization"
+        tasks:
+          P16-8:
+            status: pending
+            title: "Channel 2: Greenhouse ATS web-form auto-apply"
+            owner_agent: developer
+            output: "Playwright automation for Greenhouse application forms (/jobs/<id>#app)"
+            acceptance: "Fills candidate contact fields, uploads PDF CV, pastes Cover Letter, submits in dry-run"
+          P16-9:
+            status: pending
+            title: "Channel 3: Lever ATS web-form auto-apply"
+            owner_agent: developer
+            output: "Playwright automation for Lever posting application forms (/apply)"
+            acceptance: "Fills Lever application fields, uploads PDF CV, pastes Cover Letter, submits in dry-run"
+          P16-10:
+            status: pending
+            title: "Channel 4: Workable ATS web-form auto-apply"
+            owner_agent: developer
+            output: "Playwright automation for Workable application modal forms"
+            acceptance: "Fills Workable application fields, uploads PDF CV, pastes Cover Letter, submits in dry-run"
+          P16-11:
+            status: pending
+            title: "Channel 5: JustJoin IT quick-apply web-form automation"
+            owner_agent: developer
+            output: "Playwright automation for JustJoin IT 1-click apply modal"
+            acceptance: "Fills JustJoin quick-apply form with candidate details, attaches PDF, submits in dry-run"
+
 next_execution_plan:
   plan_id: "LOCAL-OPS-01"
   objective: "Полностью локальный, бесплатный и управляемый запуск: schedule + manual Run Now через Telegram + catch-up после офлайна"

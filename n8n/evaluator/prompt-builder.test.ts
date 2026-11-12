@@ -121,7 +121,7 @@ describe("buildEvaluationPrompt", () => {
 });
 
 describe("EVALUATOR_OUTPUT_SCHEMA", () => {
-  it("requires all 6 expected evaluation output fields and disallows additional properties", () => {
+  it("requires all 7 expected evaluation output fields and disallows additional properties", () => {
     expect(EVALUATOR_OUTPUT_SCHEMA.type).toBe("object");
     expect(EVALUATOR_OUTPUT_SCHEMA.additionalProperties).toBe(false);
     expect(EVALUATOR_OUTPUT_SCHEMA.required).toEqual([
@@ -131,6 +131,7 @@ describe("EVALUATOR_OUTPUT_SCHEMA", () => {
       "red_flags",
       "reason",
       "url",
+      "company_dossier",
     ]);
     expect(Object.keys(EVALUATOR_OUTPUT_SCHEMA.properties)).toEqual([
       "overall_score",
@@ -139,6 +140,7 @@ describe("EVALUATOR_OUTPUT_SCHEMA", () => {
       "red_flags",
       "reason",
       "url",
+      "company_dossier",
     ]);
   });
 });
