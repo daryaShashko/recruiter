@@ -53,18 +53,33 @@ def main():
         if name == "Code: Parse Ollama Response":
             params = node.setdefault("parameters", {})
             js_code = params.get("jsCode", "")
+            
+            # Fix broken syntax if present
+            broken_block = 'companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined ?? "No reason provided",'
+            if broken_block in js_code:
+                js_code = js_code.replace(
+                    broken_block,
+                    'companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
+                )
+                if 'reason: parsed.reason,' in js_code:
+                    js_code = js_code.replace('reason: parsed.reason,', 'reason: parsed.reason ?? "No reason provided",')
+                params["jsCode"] = js_code
+                patched_count += 1
+                print("✅ Fixed SyntaxError in Code: Parse Ollama Response")
+
             # Ensure company_dossier and companyMeta are returned
             if "company_dossier" not in js_code or "companyMeta" not in js_code:
                 print("Updating Code: Parse Ollama Response to forward company_dossier and companyMeta...")
-                # Insert company_dossier and companyMeta into return object if needed
-                js_code = js_code.replace(
-                    "reason: parsed.reason",
-                    "reason: parsed.reason,\n      company_dossier: parsed.company_dossier || undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined"
-                )
-                js_code = js_code.replace(
-                    "reason: reason",
-                    "reason: reason,\n      company_dossier: undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined"
-                )
+                if 'reason: parsed.reason ?? "No reason provided",' in js_code:
+                    js_code = js_code.replace(
+                        'reason: parsed.reason ?? "No reason provided",',
+                        'reason: parsed.reason ?? "No reason provided",\n      company_dossier: parsed.company_dossier || undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
+                    )
+                else:
+                    js_code = js_code.replace(
+                        "reason: parsed.reason,",
+                        'reason: parsed.reason ?? "No reason provided",\n      company_dossier: parsed.company_dossier || undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
+                    )
                 params["jsCode"] = js_code
                 patched_count += 1
                 print("✅ Patched Code: Parse Ollama Response")
