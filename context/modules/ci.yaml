@@ -8,7 +8,7 @@
 module: ci_cd
 path: .github/workflows/
 platform: GitHub Actions
-runner: ubuntu-latest
+runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
 free_tier:
   public_repo: unlimited minutes
   private_repo: "500 min/month"
@@ -25,7 +25,7 @@ workflows:
       manual: "workflow_dispatch with dry_run input (true|false)"
     job:
       name: "Scrape Job Boards"
-      runner: ubuntu-latest
+      runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
       timeout: 15 minutes
       working_directory: scraper/
     steps:
@@ -55,7 +55,7 @@ workflows:
         }
     health_check_job:
       name: "Scraper Health Check"
-      runner: ubuntu-latest
+      runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
       timeout: 15 minutes
       working_directory: scraper/
       triggers: "Monday 09:00 UTC or workflow_dispatch"
@@ -86,7 +86,7 @@ workflows:
       - "pull_request"
       - "push to main"
     job:
-      runner: ubuntu-latest
+      runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
       timeout: 5 minutes
       working_directory: scraper/
     steps:
@@ -135,7 +135,7 @@ workflows:
       manual: "workflow_dispatch"
     job:
       name: "Compare live Router node to committed baseline"
-      runner: ubuntu-latest
+      runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
       timeout: 2 minutes
     steps:
       - { name: "Checkout", action: "actions/checkout@v4" }
@@ -168,7 +168,7 @@ workflows:
       manual: "workflow_dispatch"
     job:
       name: "Run promptfoo Eval"
-      runner: ubuntu-latest
+      runner: ubuntu-24.04 # pinned from ubuntu-latest because Playwright does not yet support ubuntu 26.04
       timeout: 15 minutes
       working_directory: scraper/
     steps:

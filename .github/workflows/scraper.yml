@@ -20,7 +20,7 @@ on:
 jobs:
   scrape:
     name: Scrape Job Boards
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 8 * * *'
 
@@ -71,7 +71,7 @@ jobs:
   # P6-2: Weekly health check — runs unit tests in DRY_RUN mode (no webhook call)
   scraper-health-check:
     name: Scraper Health Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # Runs on Monday 09:00 UTC schedule, or manually via workflow_dispatch
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 * * 1'
