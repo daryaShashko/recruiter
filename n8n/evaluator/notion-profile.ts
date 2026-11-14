@@ -323,7 +323,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords:
       "epam, luxoft, capgemini, accenture, sii, infosys, cognizant, wipro, tcs, tata consultancy, outstaffing, outsourcing agency, outsourcing company",
     description:
-      "Reject roles from outsourcing/outstaffing companies and body-leasing vendors. Candidate wants a Product company (startup <50 or scale-up 50-300). Only flag as outsourcing if there is explicit evidence.",
+      "Reject roles from outsourcing/outstaffing companies and body-leasing vendors. Candidate wants a Product company (startup <50 or scale-up 50-300). Only flag as outsourcing if there is explicit evidence in description (never assume from company name alone).",
     order: 8,
     active: true,
   },
