@@ -60,6 +60,7 @@ export interface EvaluationResult {
   readonly match: boolean;
   readonly company_dossier?: string;
   readonly companyMeta?: CompanyMetadata;
+  readonly companyUrl?: string;
 }
 
 interface RawLlmEvaluation {
@@ -765,5 +766,6 @@ export function evaluateJob(
     reason: parsed.reason ?? "No reason provided",
     match: finalScore >= 50,
     company_dossier: parsed.company_dossier?.trim() || undefined,
+    companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || undefined,
   };
 }
