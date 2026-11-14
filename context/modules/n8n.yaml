@@ -346,7 +346,7 @@ evaluator_prompt:
   source: "Notion Candidate CV and Matching Criteria databases (read by live n8n workflow)"
   offline_template_file: n8n/prompts/evaluator-template.json
   status: "live Notion rows; offline promptfoo template retained only for eval compatibility"
-  last_updated: "2026-11-02"
+  last_updated: "2026-11-14"
   eval_results: "21/22 (95.45%) — promptfoo gold dataset, gemini-3.1-flash-lite"
   model_notes:
     - "llama3.1:8b responds well to explicit role-playing ('You are an expert IT recruiter')"

@@ -53,6 +53,10 @@ describe("notion-profile compiler & Notion API client", () => {
     expect(markdown).toContain("Hard Salary Floor (Min 18k PLN Net / ~23k B2B / ~27k UoP");
     expect(markdown).toContain("Undisclosed or Zero Salary -> Reject unless Verified Tier-1 Product Company");
     expect(markdown).toContain("NO Crypto / Web3 / Blockchain");
+    expect(markdown).toContain("NO Bossware / Invasive Surveillance / Activity Tracking");
+    expect(markdown).toContain("[Force Reject (Score = 0)]: Strictly reject roles requiring invasive activity tracking");
+    expect(markdown).toContain("NO Toxic Overwork / Burnout Culture / Uncompensated 24/7");
+    expect(markdown).toContain("[Penalty (-15 Points)]: Penalize roles with toxic overwork expectations");
     expect(markdown).not.toContain("Should never appear in compiled markdown");
     expect(markdown).not.toContain("Disabled Experimental Rule");
   });
@@ -85,9 +89,87 @@ describe("notion-profile compiler & Notion API client", () => {
 
     const cfg = compileDynamicScoringConfig(customCriteria);
     expect(cfg.minB2bPlnFloor).toBe(25000);
+    expect(cfg.minUopPlnFloor).toBe(27000);
     expect(cfg.outsourcingKeywords).toEqual(["netguru", "stx next", "custom-bodyshop"]);
     // Unspecified gates fall back safely to defaults
     expect(cfg.cryptoKeywords).toContain("blockchain");
+    expect(cfg.tier1Companies).toContain("google");
+
+    const defaultCfg = compileDynamicScoringConfig(DEFAULT_CRITERIA_ENTRIES);
+    expect(defaultCfg.minB2bPlnFloor).toBe(23000);
+    expect(defaultCfg.minUopPlnFloor).toBe(27000);
+    expect(defaultCfg.tier1Companies).toContain("google");
+    expect(defaultCfg.tier1Companies).toContain("stripe");
+  });
+
+  test("compileDynamicScoringConfig parses custom UoP floor and custom Tier-1 companies", () => {
+    const customCriteria: CriterionEntry[] = [
+      {
+        id: "crit-salary-floor",
+        ruleName: "Hard Salary Floor",
+        category: "Salary & Contract",
+        enforcement: "Hard Gate (Code + Prompt)",
+        ruleType: "Force Reject (Score = 0)",
+        valueOrKeywords: "26000 B2B | 31000 UoP",
+        description: "Custom floor",
+        order: 1,
+        active: true,
+      },
+      {
+        id: "crit-salary-undisclosed",
+        ruleName: "Tier-1 Whitelist",
+        category: "Salary & Contract",
+        enforcement: "Hard Gate (Code + Prompt)",
+        ruleType: "Force Reject (Score = 0)",
+        valueOrKeywords: "acmecorp, wondercorp",
+        description: "Only AcmeCorp and WonderCorp allowed with undisclosed salary",
+        order: 2,
+        active: true,
+      },
+    ];
+
+    const cfg = compileDynamicScoringConfig(customCriteria);
+    expect(cfg.minB2bPlnFloor).toBe(26000);
+    expect(cfg.minUopPlnFloor).toBe(31000);
+    expect(cfg.tier1Companies).toEqual(["acmecorp", "wondercorp"]);
+
+    const rawLlm = JSON.stringify({
+      overall_score: 85,
+      tech_stack_match: 90,
+      seniority_match: 90,
+      red_flags: [],
+      reason: "Great match",
+    });
+
+    // AcmeCorp has undisclosed salary -> kept with warning because it is in tier1Companies
+    const acmeResult = evaluateJob(
+      rawLlm,
+      {
+        id: "job_acme",
+        title: "Senior Engineer",
+        company: "AcmeCorp Inc.",
+        url: "https://example.com/acme",
+      },
+      cfg,
+    );
+    expect(acmeResult.match).toBe(true);
+    expect(acmeResult.red_flags).toContain("Salary: Low/Unspecified");
+    expect(acmeResult.red_flags).not.toContain("Salary: Undisclosed / Non-Tier-1");
+
+    // OtherCompany has undisclosed salary -> force rejected
+    const otherResult = evaluateJob(
+      rawLlm,
+      {
+        id: "job_other",
+        title: "Senior Engineer",
+        company: "Unknown Startup",
+        url: "https://example.com/other",
+      },
+      cfg,
+    );
+    expect(otherResult.overall_score).toBe(0);
+    expect(otherResult.match).toBe(false);
+    expect(otherResult.red_flags).toContain("Salary: Undisclosed / Non-Tier-1");
   });
 
   test("evaluateJob respects dynamic outsourcing keywords from Notion", () => {

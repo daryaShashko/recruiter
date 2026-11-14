@@ -15,6 +15,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { DEFAULT_TIER1_COMPANIES } from "./scoring";
 
 export type CvSection =
   | "Role & Summary"
@@ -54,6 +55,7 @@ export type CriterionRuleType =
   | "Discard (Score < 50)"
   | "Review Cap (Score 50-79)"
   | "Hot Match Boost (Score >= 80)"
+  | "Penalty (-15 Points)"
   | "Target / Preference";
 
 export interface CriterionEntry {
@@ -240,7 +242,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     category: "Salary & Contract",
     enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords: "23000",
+    valueOrKeywords: "23000 B2B | 27000 UoP",
     description:
       "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands. Strictly: UoP MINIMUM 27,000 PLN Gross / month; B2B MINIMUM 23,000 PLN Net (+VAT) / month (~5,200 EUR B2B, ~5,600 USD B2B, ~4,500 CHF B2B). Convert foreign currencies to monthly PLN before checking. Force reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
     order: 2,
@@ -252,7 +254,8 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     category: "Salary & Contract",
     enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords: "undisclosed, 0, no salary, n/a, competitive -> red_flag: Salary: Undisclosed / Non-Tier-1",
+    valueOrKeywords:
+      "google, amazon, microsoft, meta, apple, netflix, snowflake, datadog, stripe, spotify, revolut, uber, booking, github, gitlab, atlassian, figma, canva, okta, twilio, palantir, airbnb, salesforce, adobe, dropbox, coinbase, elastic, mongodb",
     description:
       "Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty): ONLY keep if the employer is an internationally recognized Tier-1 product tech company (e.g. Google, Snowflake, Datadog, Stripe, Spotify, Revolut, Amazon, Uber, Microsoft, Booking, Netflix, GitHub, GitLab, Atlassian, Figma, Canva, etc.). For all other companies, unknown software houses, agencies, or local consultancies with undisclosed salary, FORCE REJECT (score = 0, red_flag: Salary: Undisclosed / Non-Tier-1).",
     order: 3,
@@ -269,7 +272,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "gdansk, gdańsk, gdynia, sopot, trojmiasto, trójmiasto, remote, zdalnie, zdalna",
     description:
       "Geographic Preferences: Fully remote in ANY country (Poland, EU, UK, Scandinavia, Switzerland, USA, Asia, etc.; Polish/EU passport, ready for Polish B2B/JDG) OR Hybrid/office in Tricity (Gdańsk / Gdynia / Sopot). No location penalty for these. Exclude explicitly Russia-/Ukraine-/active-conflict-based roles; mainland China-based roles are a culture-risk red flag, not an automatic rejection. Remote roles explicitly requiring residence in the US or Canada get 'Remote region restricted' and a 10-point penalty; US/Canada remote labels alone do not imply residence requirements.",
-    order: 3,
+    order: 4,
     active: true,
   },
   {
@@ -281,7 +284,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "warsaw, warszawa, kraków, krakow, wrocław, wroclaw, katowice, poznań",
     description:
       "Hybrid or on-site positions outside the Tricity (other Polish cities or abroad, e.g. Warsaw, Copenhagen, Zurich, London) are NOT rejected: add 'Relocation required' to red_flags and subtract 10 points from the score. Remote work that explicitly requires residence in the US or Canada (e.g. 'US only' or 'must reside in Canada') is treated the same way ('Remote region restricted'); an employer's hiring-market label alone does not prove a residence restriction.",
-    order: 4,
+    order: 5,
     active: true,
   },
 
@@ -296,7 +299,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
       "crypto, web3, blockchain, solana, bitcoin, ethereum, nft, defi, smart contract",
     description:
       "Absolutely do NOT consider any work, projects, or positions in cryptocurrency, blockchain, NFT, DeFi, smart contracts, or Web3. Immediate score = 0.",
-    order: 5,
+    order: 6,
     active: true,
   },
   {
@@ -308,7 +311,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "gambling, betting, casino, sportsbook, sports-betting",
     description:
       "Discard any roles in betting, casino, iGaming, or gambling platforms. Immediate score = 0.",
-    order: 6,
+    order: 7,
     active: true,
   },
   {
@@ -321,7 +324,33 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
       "epam, luxoft, capgemini, accenture, sii, infosys, cognizant, wipro, tcs, tata consultancy, outstaffing, outsourcing agency, outsourcing company",
     description:
       "Reject roles from outsourcing/outstaffing companies and body-leasing vendors. Candidate wants a Product company (startup <50 or scale-up 50-300). Only flag as outsourcing if there is explicit evidence.",
-    order: 7,
+    order: 8,
+    active: true,
+  },
+  {
+    id: "crit-reject-bossware",
+    ruleName: "NO Bossware / Invasive Surveillance / Activity Tracking",
+    category: "Hard Reject (Red Flag)",
+    enforcement: "Hard Gate (Code + Prompt)",
+    ruleType: "Force Reject (Score = 0)",
+    valueOrKeywords:
+      "hubstaff, time doctor, worksnaps, crossover worksmart, clevercontrol, desktime, sneek, teramind, staffcop, monitask, screenshot monitoring, desktop screenshots, keystroke logging, mouse tracking, activity percentage, webcam monitoring -> red_flag: Process: Invasive Surveillance",
+    description:
+      "Strictly reject roles requiring invasive activity tracking, bossware, or continuous monitoring software (e.g. Hubstaff, Time Doctor, Worksnaps, Crossover Worksmart, CleverControl, DeskTime, Sneek, Teramind, StaffCop, Monitask, automated desktop screenshots, keystroke logging, mouse movement tracking, activity percentage scores, webcam monitoring / snapshots). Force reject (score = 0, red_flag: Process: Invasive Surveillance).",
+    order: 9,
+    active: true,
+  },
+  {
+    id: "crit-reject-overwork",
+    ruleName: "NO Toxic Overwork / Burnout Culture / Uncompensated 24/7",
+    category: "Hard Reject (Red Flag)",
+    enforcement: "Hard Gate (Code + Prompt)",
+    ruleType: "Penalty (-15 Points)",
+    valueOrKeywords:
+      "24/7 availability, 24/7 support, wear many hats in a 24/7, work hard play hard, hustle mentality, startup grind, crunch time, willingness to work long hours, we are a family -> red_flag: Culture: Overwork Risk",
+    description:
+      "Penalize roles with toxic overwork expectations, burnout culture, or uncompensated 24/7 on-call availability (e.g. 'work hard, play hard', 'hustle mentality', 'startup grind', 'crunch time', 'willingness to work long/crazy hours', uncompensated 24/7 pagerduty/support, 'we are like a family'). Standard rotational on-call with explicit compensation/allowance is acceptable and not penalized. Subtract 15 points (red_flag: Culture: Overwork Risk).",
+    order: 10,
     active: true,
   },
   {
@@ -333,7 +362,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "php, java, c#, .net, ruby, c++, legacy maintenance",
     description:
       "Reject roles where a non-JavaScript language (Java, C#, .NET, PHP, Python, Go, Ruby, C++, Kotlin, etc.) is a must-have or the primary day-to-day language, or that maintain a legacy non-JS codebase without a rewrite/migration to Node.js/TypeScript (red_flag: Non-JS required). Do NOT reject when the non-JS language is only nice-to-have, a plus, or learnable on the job — the candidate is happy to pick it up with AI-assisted development (red_flag: Non-JS nice-to-have). JavaScript/TypeScript is NOT Java.",
-    order: 8,
+    order: 11,
     active: true,
   },
   {
@@ -345,7 +374,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "pure html/css, pixel-pushing, no state management, no api integration",
     description:
       "Reject positions that explicitly forbid backend access or involve only pixel-pushing (HTML/CSS/pure styling) without system logic, state management, or API design. (React roles with state/API logic are NOT pixel-pushing).",
-    order: 9,
+    order: 12,
     active: true,
   },
   {
@@ -357,7 +386,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "junior, mid, regular, intern, trainee",
     description:
       "Position is explicitly Junior or Mid-level (< 3 years experience or low seniority). Strictly score < 50.",
-    order: 10,
+    order: 13,
     active: true,
   },
 
@@ -371,7 +400,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "Node.js backend-only, score 60-75",
     description:
       "Node.js/TypeScript backend-only role (no frontend scope mentioned): Score 60–75 (Review). Node.js IS the candidate's target stack — the only penalty is the absence of frontend work. Do NOT reject these roles below 50.",
-    order: 11,
+    order: 14,
     active: true,
   },
   {
@@ -383,7 +412,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
     valueOrKeywords: "Node.js primary, legacy migration",
     description:
       "If Node.js/TypeScript is explicitly stated as the primary technology (e.g. 80% Node.js, 20% legacy Java maintenance during migration), treat it as a Node.js role and score >= 80 if all other criteria match.",
-    order: 12,
+    order: 15,
     active: true,
   },
 
@@ -398,7 +427,7 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
       "AI / ML Products, HealthTech / MedTech, FinTech, Enterprise B2B SaaS, E-commerce, GovTech, SportsTech, Product Startups",
     description:
       "Preferred / Acceptable domains: AI / ML Products, HealthTech / MedTech / NeuroMed / Psychoanalysis (direct experience), FinTech / Finance, Enterprise / B2B SaaS, E-commerce / Retail, GovTech, SportsTech, Product Startups (<50 or 50–300 scale-up).",
-    order: 13,
+    order: 16,
     active: true,
   },
 ];
@@ -440,16 +469,68 @@ export function compileDynamicScoringConfig(
       c.ruleName.toLowerCase().includes("salary floor"),
   );
   let minB2bPlnFloor: number | undefined;
+  let minUopPlnFloor: number | undefined;
+
+  const uopGate = activeGates.find(
+    (c) =>
+      c.id !== "crit-salary-floor" &&
+      (c.id === "crit-salary-uop-floor" ||
+        (c.ruleName.toLowerCase().includes("uop") && c.ruleName.toLowerCase().includes("floor"))),
+  );
+  if (uopGate) {
+    const uopNum = uopGate.valueOrKeywords.replace(/\s+/g, "").match(/\d{4,6}/);
+    if (uopNum) {
+      minUopPlnFloor = Number(uopNum[0]);
+    }
+  }
+
   if (salaryGate) {
-    const numMatch = salaryGate.valueOrKeywords.replace(/\s+/g, "").match(/\d{4,6}/);
-    if (numMatch) {
-      minB2bPlnFloor = Math.max(23000, Number(numMatch[0]));
+    const b2bExplicit =
+      salaryGate.valueOrKeywords.match(/(\d{4,6})\s*(?:pln\s*)?b2b/i) ??
+      salaryGate.valueOrKeywords.match(/b2b\D*(\d{4,6})/i);
+    const genericNum = salaryGate.valueOrKeywords.replace(/\s+/g, "").match(/\d{4,6}/);
+    const b2bVal = b2bExplicit ? Number(b2bExplicit[1]) : genericNum ? Number(genericNum[0]) : undefined;
+    if (b2bVal !== undefined) {
+      minB2bPlnFloor = Math.max(23000, b2bVal);
+    }
+
+    if (minUopPlnFloor === undefined) {
+      const uopExplicit =
+        salaryGate.valueOrKeywords.match(/(\d{4,6})\s*(?:pln\s*)?(?:uop|gross)/i) ??
+        salaryGate.valueOrKeywords.match(/(?:uop|gross)\D*(\d{4,6})/i);
+      if (uopExplicit) {
+        minUopPlnFloor = Number(uopExplicit[1]);
+      }
+    }
+  }
+
+  const tier1Gate = activeGates.find(
+    (c) =>
+      c.id === "crit-salary-undisclosed" ||
+      c.ruleName.toLowerCase().includes("tier-1") ||
+      c.ruleName.toLowerCase().includes("undisclosed"),
+  );
+  let tier1Companies: string[] | undefined;
+  if (tier1Gate) {
+    const raw = tier1Gate.valueOrKeywords.replace(/^tier[-_]?1\s*:\s*/i, "");
+    const parsed = parseKeywordList(raw).filter(
+      (k) =>
+        !k.includes("red_flag") &&
+        k !== "undisclosed" &&
+        k !== "0" &&
+        k !== "no salary" &&
+        k !== "n/a" &&
+        k !== "competitive",
+    );
+    if (parsed.length > 0) {
+      tier1Companies = parsed;
     }
   }
 
   return {
     minB2bPlnFloor: minB2bPlnFloor ?? 23000,
-    minUopPlnFloor: 27000,
+    minUopPlnFloor: minUopPlnFloor ?? 27000,
+    tier1Companies: tier1Companies ?? [...DEFAULT_TIER1_COMPANIES],
     cryptoKeywords: findKeywords("crit-reject-crypto", "crypto", [
       "crypto",
       "web3",
@@ -855,6 +936,7 @@ export async function provisionAndSeedNotionControlPlane(
             { name: "Discard (Score < 50)", color: "orange" },
             { name: "Review Cap (Score 50-79)", color: "yellow" },
             { name: "Hot Match Boost (Score >= 80)", color: "green" },
+            { name: "Penalty (-15 Points)", color: "orange" },
             { name: "Target / Preference", color: "blue" },
           ],
         },

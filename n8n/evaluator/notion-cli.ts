@@ -29,6 +29,8 @@ import {
 
 const PROMPTS_DIR = path.resolve(__dirname, "../prompts");
 const META_FILE = path.join(PROMPTS_DIR, ".notion-control-plane.json");
+const PROFILE_FILE = path.join(PROMPTS_DIR, "candidate_profile.md");
+const SNAPSHOT_FILE = path.join(PROMPTS_DIR, ".notion-snapshot.json");
 
 // Default Evaluation Log DB ID from context/ingest-workflow.yaml
 const KNOWN_EVAL_LOG_DB_ID = "36c747f7-ebec-80c8-bfd7-ed317f4a7c35";
@@ -141,6 +143,24 @@ async function runSync(): Promise<void> {
 
   console.log("[notion-cli] Fetching active CV & Criteria rows from Notion...");
   const data = await fetchNotionControlPlaneData({ token }, cvDbId, criteriaDbId);
+
+  // Save profile Markdown to n8n/prompts/candidate_profile.md
+  fs.writeFileSync(PROFILE_FILE, data.profileMarkdown, "utf-8");
+  console.log(`[notion-cli] Saved candidate profile to ${PROFILE_FILE}`);
+
+  // Save offline snapshot to n8n/prompts/.notion-snapshot.json
+  const snapshot = {
+    syncedAt: new Date().toISOString(),
+    activeCvCount: data.cvEntries.filter((c) => c.active).length,
+    activeCriteriaCount: data.criteriaEntries.filter((c) => c.active).length,
+    scoringConfig: data.scoringConfig,
+    cvEntries: data.cvEntries,
+    criteriaEntries: data.criteriaEntries,
+    rawCv: data.cvEntries,
+    rawCriteria: data.criteriaEntries,
+  };
+  fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2) + "\n", "utf-8");
+  console.log(`[notion-cli] Saved snapshot to ${SNAPSHOT_FILE}`);
 
   console.log(data.profileMarkdown);
   console.log("=== DYNAMIC SCORING CONFIG ===");
