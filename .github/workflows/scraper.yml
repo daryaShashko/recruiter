@@ -91,6 +91,10 @@ jobs:
         working-directory: scraper
         run: npm ci
 
+      - name: Install Playwright Chromium
+        working-directory: scraper
+        run: npx playwright install chromium --with-deps
+
       # DRY_RUN=true is set here to ensure no webhook is called even if tests
       # exercise code paths that read the env var
       - name: Run unit tests

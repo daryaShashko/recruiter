@@ -38,10 +38,6 @@ workflows:
         }
       - { name: "Install deps", run: "npm ci" }
       - {
-          name: "Install Playwright Chromium",
-          run: "npx playwright install chromium --with-deps",
-        }
-      - {
           name: "Run scraper",
           run: "npm run scrape",
           env:
@@ -57,6 +53,26 @@ workflows:
           retention: "7 days",
           if: always,
         }
+    health_check_job:
+      name: "Scraper Health Check"
+      runner: ubuntu-latest
+      timeout: 15 minutes
+      working_directory: scraper/
+      triggers: "Monday 09:00 UTC or workflow_dispatch"
+      steps:
+        - { name: "Checkout", action: "actions/checkout@v4" }
+        - {
+            name: "Setup Node.js 24",
+            action: "actions/setup-node@v4",
+            cache: "npm",
+            cache_path: "scraper/package-lock.json",
+          }
+        - { name: "Install deps", run: "npm ci" }
+        - {
+            name: "Install Playwright Chromium",
+            run: "npx playwright install chromium --with-deps",
+          }
+        - { name: "Run unit tests", run: "npm test", env: { DRY_RUN: "true" } }
     known_gaps:
       - "No concurrency group — parallel runs possible if manual trigger used"
       - "No unit test step"
