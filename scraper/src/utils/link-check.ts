@@ -72,7 +72,7 @@ export async function isOfferLinkValid(offer: JobOffer): Promise<boolean> {
 
 /** Drops offers whose link does not open the exact vacancy. `linkedin`/`manual` pass through untouched. */
 export async function filterValidLinks(offers: JobOffer[]): Promise<JobOffer[]> {
-  const result: boolean[] = new Array(offers.length).fill(true);
+  const result = Array.from({ length: offers.length }, () => true);
   let next = 0;
 
   async function worker(): Promise<void> {

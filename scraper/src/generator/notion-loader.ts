@@ -17,7 +17,6 @@ import {
   NotionLoaderOptions,
   RawCvEntrySnapshot,
   RodoClause,
-  SKILLS_CATEGORIES,
 } from './types';
 
 // ── Default Contacts ────────────────────────────────────────────────────────
@@ -390,7 +389,7 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
     );
     if (validBullets.length > 0) {
       return {
-        contacts: { ...DEFAULT_CANDIDATE_CONTACTS, ...(candidate.contacts || {}) },
+        contacts: { ...DEFAULT_CANDIDATE_CONTACTS, ...candidate.contacts },
         summary: candidate.summary || DEFAULT_CANDIDATE_CV_DATA.summary,
         bullets: validBullets.map((b, idx) => {
           const order = typeof b.order === 'number' ? b.order : idx + 1;
@@ -407,7 +406,7 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
           };
         }),
         skills: candidate.skills || DEFAULT_SKILLS_MATRIX,
-        rodoClause: { ...DEFAULT_RODO_CLAUSE, ...(candidate.rodoClause || {}) },
+        rodoClause: { ...DEFAULT_RODO_CLAUSE, ...candidate.rodoClause },
       };
     }
   }

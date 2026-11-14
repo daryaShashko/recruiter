@@ -20,7 +20,6 @@ import {
   RenderCvOptions,
   RenderCvResult,
 } from './types';
-import { getBrowser } from '../utils/browser';
 import { DEFAULT_RODO_CLAUSE } from './notion-loader';
 import { buildSkillsMatrix, renderSkillsMatrixHtml } from './skills-matrix';
 

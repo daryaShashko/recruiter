@@ -4,7 +4,9 @@
   "description": "Playwright-based scraper for IT job boards with Cloudflare bypass",
   "main": "dist/index.js",
   "scripts": {
+    "prepare": "cd .. && husky scraper/.husky",
     "build": "tsc",
+    "lint": "oxlint --config oxlint.config.cjs --deny-warnings src && knip --no-progress",
     "scrape": "ts-node src/index.ts",
     "scrape:dry": "DRY_RUN=true ts-node src/index.ts",
     "scrape:watch": "HEADLESS=false DRY_RUN=true ts-node src/index.ts",
@@ -24,7 +26,8 @@
     "generate:cv": "ts-node src/generator/cli.ts --target cv --dry-run",
     "generate:letter": "ts-node src/generator/cli.ts --target letter --dry-run",
     "apply:dry": "ts-node src/generator/cli.ts --dry-run",
-    "demo:hitl": "ts-node src/demo-hitl.ts"
+    "demo:hitl": "ts-node src/demo-hitl.ts",
+    "verify": "npm run lint && npm test && npm run typecheck"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -34,7 +37,10 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.9",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
+    "knip": "^6.45.1",
+    "oxlint": "^1.93.0",
     "promptfoo": "^0.121.12",
     "ts-jest": "^29.2.2",
     "ts-node": "^10.9.2",

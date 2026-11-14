@@ -1,4 +1,4 @@
-import { CompanyMetadata, JobOffer } from "../types";
+import { CompanyMetadata } from "../types";
 
 /**
  * Normalizes a company website URL to ensure it has a valid web protocol and domain.
