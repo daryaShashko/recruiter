@@ -534,8 +534,11 @@ export function extractMaxMonthlyPln(salary?: string): number | undefined {
   if (parsedNumbers.length === 0) return undefined;
 
   const maxNumber = Math.max(...parsedNumbers);
+  const isSuspiciouslyHighHourly = isHourly && maxNumber * rateToPln > 3000;
   const monthlyInOriginalCurrency = isHourly
-    ? maxNumber * 160
+    ? isSuspiciouslyHighHourly
+      ? maxNumber
+      : maxNumber * 160
     : isDaily
       ? maxNumber * 20
       : isYearly

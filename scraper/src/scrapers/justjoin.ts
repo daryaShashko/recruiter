@@ -82,7 +82,11 @@ export interface RawJustJoinOffer {
  * and finally falls back to any valid entry with from/to (e.g. conversion).
  */
 export function extractSalary(types: RawEmploymentType[]): string | undefined {
-  const valid = types.filter((e) => Boolean((e.from && e.from > 0) || (e.to && e.to > 0)));
+  const valid = types.filter(
+    (e) =>
+      Boolean((e.from && e.from > 0) || (e.to && e.to > 0)) ||
+      Boolean((e.fromPerUnit && e.fromPerUnit > 0) || (e.toPerUnit && e.toPerUnit > 0)),
+  );
 
   const best =
     valid.find(
@@ -114,11 +118,37 @@ export function extractSalary(types: RawEmploymentType[]): string | undefined {
     valid[0];
 
   if (!best) return undefined;
-  const fromVal = best.from && best.from > 0 ? best.from : undefined;
-  const toVal = best.to && best.to > 0 ? best.to : undefined;
+
+  const isHourly = best.unit === "Hour";
+  const hasPerUnit = Boolean(
+    (best.fromPerUnit && best.fromPerUnit > 0) || (best.toPerUnit && best.toPerUnit > 0),
+  );
+
+  let fromVal: number | undefined;
+  let toVal: number | undefined;
+
+  if (isHourly && hasPerUnit) {
+    fromVal = best.fromPerUnit && best.fromPerUnit > 0 ? best.fromPerUnit : undefined;
+    toVal = best.toPerUnit && best.toPerUnit > 0 ? best.toPerUnit : undefined;
+  } else if (isHourly && !hasPerUnit) {
+    const rawFrom = best.from && best.from > 0 ? best.from : undefined;
+    const rawTo = best.to && best.to > 0 ? best.to : undefined;
+    // JustJoin API precomputes from/to as monthly (e.g. 15120 = 90 * 168)
+    if ((rawFrom && rawFrom > 1000) || (rawTo && rawTo > 1000)) {
+      fromVal = rawFrom ? Math.round(rawFrom / 168) : undefined;
+      toVal = rawTo ? Math.round(rawTo / 168) : undefined;
+    } else {
+      fromVal = rawFrom;
+      toVal = rawTo;
+    }
+  } else {
+    fromVal = best.from && best.from > 0 ? best.from : undefined;
+    toVal = best.to && best.to > 0 ? best.to : undefined;
+  }
+
   if (!fromVal && !toVal) return undefined;
 
-  const unitLabel = best.unit === "Hour" ? "/h" : "/mo";
+  const unitLabel = isHourly ? "/h" : "/mo";
   const typeLabel = best.type === "b2b" ? "B2B" : best.type.toUpperCase();
   const rangeStr =
     fromVal && toVal && fromVal !== toVal

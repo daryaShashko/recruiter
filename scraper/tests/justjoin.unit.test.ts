@@ -160,6 +160,36 @@ describe('extractSalary', () => {
     expect(result).toContain('/h');
     expect(result).not.toContain('/mo');
   });
+
+  it('prefers fromPerUnit/toPerUnit for hourly rate when JustJoin precomputes monthly from/to', () => {
+    const types: RawEmploymentType[] = [{
+      from: 15120,
+      to: 16800,
+      fromPerUnit: 90,
+      toPerUnit: 100,
+      currency: 'PLN',
+      currencySource: 'original',
+      type: 'b2b',
+      unit: 'Hour',
+      gross: false,
+    }];
+    const result = extractSalary(types);
+    expect(result).toBe('90–100 PLN B2B/h');
+  });
+
+  it('divides precomputed monthly from/to by 168 when fromPerUnit is absent for hourly offer', () => {
+    const types: RawEmploymentType[] = [{
+      from: 15120,
+      to: 16800,
+      currency: 'PLN',
+      currencySource: 'original',
+      type: 'b2b',
+      unit: 'Hour',
+      gross: false,
+    }];
+    const result = extractSalary(types);
+    expect(result).toBe('90–100 PLN B2B/h');
+  });
 });
 
 // ─── extractLocation ──────────────────────────────────────────────────────────

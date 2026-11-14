@@ -276,6 +276,9 @@ describe("extractMaxMonthlyPln — salary parsing", () => {
 
   it("parses PLN hourly /h rates and multiplies by 160 hours/month", () => {
     expect(extractMaxMonthlyPln("100–120 PLN B2B/h")).toBe(19200);
+    expect(extractMaxMonthlyPln("90–100 PLN B2B/h")).toBe(16000);
+    // Suspiciously high hourly rate (>3000 PLN/h) is treated as already monthly figure
+    expect(extractMaxMonthlyPln("15 120–16 800 PLN B2B/h")).toBe(16800);
   });
 
   it("parses CHF, daily (/day), annual (/year), and 'k' shorthand salary strings", () => {
@@ -426,6 +429,20 @@ describe("evaluateJob — expanded outsourcing & deterministic salary floor guar
     expect(result.overall_score).toBe(0);
     expect(result.match).toBe(false);
     expect(result.red_flags).toContain("Salary: Below Hard Floor");
+  });
+
+  it("deterministically rejects hourly B2B rates below hard floor (90-100 PLN/h and 15 120-16 800 PLN/h)", () => {
+    const hourlyJob = makeJob({ location: "Gdańsk", salary: "90–100 PLN B2B/h" });
+    const hourlyRes = evaluateJob(rawLlm({ overall_score: 85, red_flags: [] }), hourlyJob);
+    expect(hourlyRes.overall_score).toBe(0);
+    expect(hourlyRes.match).toBe(false);
+    expect(hourlyRes.red_flags).toContain("Salary: Below Hard Floor");
+
+    const mislabeledJob = makeJob({ location: "Gdańsk", salary: "15 120–16 800 PLN B2B/h" });
+    const mislabeledRes = evaluateJob(rawLlm({ overall_score: 85, red_flags: [] }), mislabeledJob);
+    expect(mislabeledRes.overall_score).toBe(0);
+    expect(mislabeledRes.match).toBe(false);
+    expect(mislabeledRes.red_flags).toContain("Salary: Below Hard Floor");
   });
 
   it("passes a high EUR salary ('5 500–7 000 EUR B2B/mo') and respects custom dynamicConfig.minB2bPlnFloor", () => {
