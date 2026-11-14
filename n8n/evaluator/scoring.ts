@@ -76,6 +76,76 @@ const CRITICAL_FLAGS = [
   "Industry: Gambling/Betting",
   "Industry: Agency/Outsourcing",
   "Salary: Below Hard Floor",
+  "Salary: Undisclosed / Non-Tier-1",
+  "Process: Invasive Surveillance",
+];
+
+/** Bossware & invasive telemetry monitoring tools and mechanisms (Hard Reject). */
+export const BOSSWARE_SURVEILLANCE_REGEX = new RegExp(
+  [
+    /\b(?:hubstaff|time\s*doctor|worksnaps|crossover\s+worksmart|clevercontrol|desktime|sneek|teramind|staffcop|monitask)\b/,
+    /\b(?:screenshot\s+(?:monitoring|tracking|capture|taking)|desktop\s+(?:screenshots?|monitoring)|automated\s+screenshots?)\b/,
+    /\b(?:zrzut(?:y|ów)?\s+ekranu|monitoring\s+ekranu|przechwytywani(?:e|a)\s+ekranu)\b/,
+    /\b(?:keystroke\s+(?:logging|tracking|monitoring)|mouse\s+movement\s+tracking|activity\s+(?:level|score)\s*(?:percentage|%))\b/,
+    /\b(?:rejestrowani(?:e|a)\s+klawiszy|śledzeni(?:e|a)\s+ruchów\s+myszy|pomiar\s+aktywności\s+(?:klawiatury|myszy))\b/,
+    /\b(?:webcam\s+(?:monitoring|photos?|snapshots?|capture)|always[\s-]on\s+webcam)\b/,
+    /\b(?:zdjęci(?:a|e)\s+z\s+kamer(?:y|ki)|ciągł(?:y|a)\s+podgląd\s+z\s+kamery)\b/,
+  ]
+    .map((r) => r.source)
+    .join("|"),
+  "i",
+);
+
+/** Toxic overwork, burnout cults, and uncompensated 24/7 expectations (-15 penalty). */
+export const TOXIC_OVERWORK_REGEX = new RegExp(
+  [
+    /\b(?:24\s*\/\s*7\s+(?:on[\s-]call|availability|support|pagerduty))\b/,
+    /\b(?:wear\s+many\s+hats\s+in\s+a\s+24\s*\/\s*7)\b/,
+    /\b(?:stał(?:a|ej)\s+dyspozycyjn(?:ość|ości)\s+24\s*\/\s*7|gotowość\s+do\s+pracy\s+24\s*\/\s*7)\b/,
+    /\b(?:work\s+hard[,\s]+play\s+hard)\b/,
+    /\b(?:hustle\s+(?:mentality|culture)|startup\s+grind|crunch\s+time)\b/,
+    /\b(?:willingness\s+to\s+work\s+(?:long|crazy|outside\s+standard)\s+hours)\b/,
+    /\b(?:we\s+are\s+(?:like\s+)?a\s+family\b(?!\s+(?:friendly|business)))/,
+    /\b(?:jesteśmy\s+jak\s+rodzina\b(?!\s+(?:przyjazna|firma\s+rodzinna)))/,
+  ]
+    .map((r) => r.source)
+    .join("|"),
+  "i",
+);
+
+/** Rotational on-call with explicit compensation / allowance is standard in enterprise and not penalized. */
+export const COMPENSATED_ONCALL_REGEX =
+  /\b(?:rotation(?:al)?|1\s+week\s+in\s+\d+|on[\s-]call\s+(?:allowance|compensation|bonus|stipend)|standby\s+(?:pay|bonus)|dodatek\s+za\s+gotowość|rotacyjn(?:y|e))\b/i;
+
+export const DEFAULT_TIER1_COMPANIES: readonly string[] = [
+  "google",
+  "amazon",
+  "microsoft",
+  "meta",
+  "apple",
+  "netflix",
+  "snowflake",
+  "datadog",
+  "stripe",
+  "spotify",
+  "revolut",
+  "uber",
+  "booking",
+  "github",
+  "gitlab",
+  "atlassian",
+  "figma",
+  "canva",
+  "okta",
+  "twilio",
+  "palantir",
+  "airbnb",
+  "salesforce",
+  "adobe",
+  "dropbox",
+  "coinbase",
+  "elastic",
+  "mongodb",
 ];
 
 const OUTSOURCING_KEYWORDS = [
@@ -207,7 +277,33 @@ function mapToStandardTag(rawTag: unknown): string {
     return "Location: Relocation Required";
   }
 
+  // Culture & Process
+  if (
+    text.includes("bossware") ||
+    text.includes("surveillance") ||
+    text.includes("hubstaff") ||
+    text.includes("time doctor") ||
+    text.includes("screenshot")
+  ) {
+    return "Process: Invasive Surveillance";
+  }
+  if (
+    text.includes("overwork") ||
+    text.includes("hustle") ||
+    text.includes("crunch") ||
+    text.includes("work hard play hard") ||
+    text.includes("24/7 on-call")
+  ) {
+    return "Culture: Overwork Risk";
+  }
+
   // Salary
+  if (
+    text.includes("non-tier-1") ||
+    text.includes("undisclosed / non-tier-1")
+  ) {
+    return "Salary: Undisclosed / Non-Tier-1";
+  }
   if (text.includes("below preferred") || text.includes("preferred range")) {
     return "Salary: Below Preferred";
   }
@@ -548,24 +644,34 @@ export function evaluateJob(
   const salaryUnspecified = isSalaryUnspecified(job.salary);
   const maxMonthlyPln = extractMaxMonthlyPln(job.salary);
   const salaryLower = (job.salary ?? "").toLowerCase();
-  const salaryFloorPln =
-    dynamicConfig?.minB2bPlnFloor ??
-    (salaryLower.includes("uop") ? 28000 : salaryLower.includes("b2b") ? 22000 : 18000);
+  const isUop = salaryLower.includes("uop") || salaryLower.includes("prace") || salaryLower.includes("o pracę");
+  const uopFloorPln = dynamicConfig?.minUopPlnFloor ?? 27000;
+  const b2bFloorPln = Math.max(23000, dynamicConfig?.minB2bPlnFloor ?? 23000);
+  const salaryFloorPln = isUop ? uopFloorPln : b2bFloorPln;
 
   let falseSalaryHardFloorRemoved = false;
 
+  const tier1Companies = dynamicConfig?.tier1Companies ?? DEFAULT_TIER1_COMPANIES;
+  const companyLower = (job.company ?? "").toLowerCase().trim();
+  const isTier1 = tier1Companies.some((t1) => companyLower.includes(t1));
+
   if (salaryUnspecified) {
-    // Missing or zero salary must NEVER trigger a hard-floor reject (score = 0).
-    // Downgrade any LLM-emitted "Salary: Below Hard Floor" to a non-critical red flag
-    // and ensure the offer carries the "Salary: Low/Unspecified" warning flag.
-    for (let i = 0; i < redFlags.length; i++) {
-      if (redFlags[i] === "Salary: Below Hard Floor") {
-        redFlags[i] = "Salary: Low/Unspecified";
-        falseSalaryHardFloorRemoved = true;
+    if (!isTier1) {
+      if (!redFlags.includes("Salary: Undisclosed / Non-Tier-1")) {
+        redFlags.push("Salary: Undisclosed / Non-Tier-1");
       }
-    }
-    if (!redFlags.some((f) => f.startsWith("Salary:"))) {
-      redFlags.push("Salary: Low/Unspecified");
+      overallScore = 0;
+    } else {
+      // Missing or zero salary for verified Tier-1 company: keep with informational warning
+      for (let i = 0; i < redFlags.length; i++) {
+        if (redFlags[i] === "Salary: Below Hard Floor") {
+          redFlags[i] = "Salary: Low/Unspecified";
+          falseSalaryHardFloorRemoved = true;
+        }
+      }
+      if (!redFlags.some((f) => f.startsWith("Salary:"))) {
+        redFlags.push("Salary: Low/Unspecified");
+      }
     }
   } else if (maxMonthlyPln !== undefined && maxMonthlyPln < salaryFloorPln) {
     if (!redFlags.includes("Salary: Below Hard Floor")) {
@@ -618,6 +724,25 @@ export function evaluateJob(
   if (isGambling) {
     if (!redFlags.includes("Industry: Gambling/Betting")) redFlags.push("Industry: Gambling/Betting");
     overallScore = 0;
+  }
+
+  // Bossware & invasive telemetry monitoring check (Hard Reject)
+  if (BOSSWARE_SURVEILLANCE_REGEX.test(jobBodyLower) || BOSSWARE_SURVEILLANCE_REGEX.test(jobTitleLower)) {
+    if (!redFlags.includes("Process: Invasive Surveillance")) {
+      redFlags.push("Process: Invasive Surveillance");
+    }
+    overallScore = 0;
+  }
+
+  // Toxic overwork & uncompensated 24/7 check (Penalty 15 pts)
+  if (
+    (TOXIC_OVERWORK_REGEX.test(jobBodyLower) || TOXIC_OVERWORK_REGEX.test(jobTitleLower)) &&
+    !COMPENSATED_ONCALL_REGEX.test(jobBodyLower)
+  ) {
+    if (!redFlags.includes("Culture: Overwork Risk")) {
+      redFlags.push("Culture: Overwork Risk");
+    }
+    overallScore = Math.max(0, overallScore - 15);
   }
 
   const uniqueRedFlags = Array.from(new Set(redFlags));

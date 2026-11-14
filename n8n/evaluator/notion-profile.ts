@@ -74,6 +74,8 @@ export interface DynamicScoringConfig {
   readonly outsourcingKeywords: readonly string[];
   readonly tricityKeywords: readonly string[];
   readonly minB2bPlnFloor?: number;
+  readonly minUopPlnFloor?: number;
+  readonly tier1Companies?: readonly string[];
 }
 
 // ─── Historical Provisioning Seed Data ──────────────────────────────────────
@@ -234,25 +236,25 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   },
   {
     id: "crit-salary-floor",
-    ruleName: "Hard Salary Floor (Min 18k PLN Net / ~22k B2B — Any Currency Converted to PLN)",
+    ruleName: "Hard Salary Floor (Min 18k PLN Net / ~23k B2B / ~27k UoP — Any Currency Converted to PLN)",
     category: "Salary & Contract",
     enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords: "22000",
+    valueOrKeywords: "23000",
     description:
-      "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands (equivalent to ~22,000 PLN B2B net before taxes, ~5,200 EUR B2B, ~5,600 USD B2B, ~4,400 GBP B2B, or ~28,000 PLN UoP Gross). Any currency is accepted — always convert foreign currencies (EUR, USD, GBP, CHF, SEK, NOK, DKK, SGD, AED, JPY, etc.) and hourly/daily/annual rates to monthly PLN before checking the floor — never compare a foreign amount 1:1 with PLN. Only reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
+      "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands. Strictly: UoP MINIMUM 27,000 PLN Gross / month; B2B MINIMUM 23,000 PLN Net (+VAT) / month (~5,200 EUR B2B, ~5,600 USD B2B, ~4,500 CHF B2B). Convert foreign currencies to monthly PLN before checking. Force reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
     order: 2,
     active: true,
   },
   {
     id: "crit-salary-undisclosed",
-    ruleName: "Undisclosed or Zero Salary -> Keep & Flag as Red Flag (Do NOT Reject)",
+    ruleName: "Undisclosed or Zero Salary -> Reject unless Verified Tier-1 Product Company",
     category: "Salary & Contract",
     enforcement: "Hard Gate (Code + Prompt)",
-    ruleType: "Review Cap (Score 50-79)",
-    valueOrKeywords: "undisclosed, 0, no salary, n/a, competitive -> red_flag: Salary not disclosed",
+    ruleType: "Force Reject (Score = 0)",
+    valueOrKeywords: "undisclosed, 0, no salary, n/a, competitive -> red_flag: Salary: Undisclosed / Non-Tier-1",
     description:
-      "Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty): Do NOT reject the vacancy and do NOT set overall_score to 0! Keep the vacancy, evaluate it normally on tech stack, seniority, domain, and location (score 50–85+ if the role is interesting), and add 'Salary not disclosed' to red_flags so the candidate knows the role is interesting but salary was not listed.",
+      "Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty): ONLY keep if the employer is an internationally recognized Tier-1 product tech company (e.g. Google, Snowflake, Datadog, Stripe, Spotify, Revolut, Amazon, Uber, Microsoft, Booking, Netflix, GitHub, GitLab, Atlassian, Figma, Canva, etc.). For all other companies, unknown software houses, agencies, or local consultancies with undisclosed salary, FORCE REJECT (score = 0, red_flag: Salary: Undisclosed / Non-Tier-1).",
     order: 3,
     active: true,
   },
@@ -441,11 +443,13 @@ export function compileDynamicScoringConfig(
   if (salaryGate) {
     const numMatch = salaryGate.valueOrKeywords.replace(/\s+/g, "").match(/\d{4,6}/);
     if (numMatch) {
-      minB2bPlnFloor = Number(numMatch[0]);
+      minB2bPlnFloor = Math.max(23000, Number(numMatch[0]));
     }
   }
 
   return {
+    minB2bPlnFloor: minB2bPlnFloor ?? 23000,
+    minUopPlnFloor: 27000,
     cryptoKeywords: findKeywords("crit-reject-crypto", "crypto", [
       "crypto",
       "web3",
@@ -487,7 +491,6 @@ export function compileDynamicScoringConfig(
       "trojmiasto",
       "trójmiasto",
     ],
-    minB2bPlnFloor,
   };
 }
 

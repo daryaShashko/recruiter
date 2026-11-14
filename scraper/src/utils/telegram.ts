@@ -254,47 +254,213 @@ export interface TelegramAlertJobInput {
   readonly company_dossier?: string;
   readonly companyUrl?: string;
   readonly isHotMatch?: boolean;
+
+  // Detailed alert fields (approved dry card format)
+  readonly project_domain?: string;
+  readonly project_summary?: string;
+  readonly project_scale?: string;
+  readonly tasks_summary?: string[];
+  readonly match_pros?: string[];
+  readonly match_cons?: string[];
+  readonly net_salary?: string;
+
+  // Stack breakdown (optional)
+  readonly stack_core?: string | string[];
+  readonly stack_infra?: string | string[];
+  readonly tags?: string[];
+}
+
+const TELEGRAM_CARD_DIVIDER = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+
+/**
+ * Checks whether any of the new detailed card fields are present.
+ */
+function hasDetailedAlertFields(job: TelegramAlertJobInput): boolean {
+  return Boolean(
+    job.project_domain ||
+    job.project_summary ||
+    job.project_scale ||
+    (job.tasks_summary && job.tasks_summary.length > 0) ||
+    (job.match_pros && job.match_pros.length > 0) ||
+    (job.match_cons && job.match_cons.length > 0) ||
+    job.net_salary ||
+    job.stack_core ||
+    job.stack_infra
+  );
 }
 
 /**
  * Formats a Telegram HTML message with company dossier and links.
+ * When detailed fields are present, renders the approved dry Telegram card format.
+ * Falls back to legacy format when only basic fields are available.
  */
 export function formatTelegramAlertMessage(job: TelegramAlertJobInput): string {
   const icon = job.isHotMatch ? '🔥' : '👀';
   const prefix = job.isHotMatch ? 'Горячий мэтч' : 'На ревью';
 
-  const companyLink = job.companyUrl
-    ? `<a href="${job.companyUrl}">🌐 Сайт компании</a>`
-    : `<a href="https://www.google.com/search?q=${encodeURIComponent(job.company + ' software')}">🔍 Найти в Google</a>`;
+  // Fallback to legacy format if detailed fields are not provided
+  if (!hasDetailedAlertFields(job)) {
+    const companyLink = job.companyUrl
+      ? `<a href="${job.companyUrl}">🌐 Сайт компании</a>`
+      : `<a href="https://www.google.com/search?q=${encodeURIComponent(job.company + ' software')}">🔍 Найти в Google</a>`;
 
-  const dossierText = job.company_dossier
-    ? job.company_dossier.trim()
-    : 'Информация о компании уточняется.';
+    const dossierText = job.company_dossier
+      ? job.company_dossier.trim()
+      : 'Информация о компании уточняется.';
 
-  const salaryText = job.salary ? job.salary : 'Зарплата не указана';
-  const locationText = job.location ? job.location : 'Локация не указана';
-  const scoreText = job.overall_score !== undefined
-    ? `🎯 Мэтч: ${job.overall_score}/100 (Стек: ${job.tech_stack_match ?? '-'}, Сеньорность: ${job.seniority_match ?? '-'})`
-    : '';
-  const reasonText = job.reason ? `💡 ${job.reason}` : '';
+    const salaryText = job.salary ? job.salary : 'Зарплата не указана';
+    const locationText = job.location ? job.location : 'Локация не указана';
+    const scoreText = job.overall_score !== undefined
+      ? `🎯 Мэтч: ${job.overall_score}/100 (Стек: ${job.tech_stack_match ?? '-'}, Сеньорность: ${job.seniority_match ?? '-'})`
+      : '';
+    const reasonText = job.reason ? `💡 ${job.reason}` : '';
 
-  const lines = [
+    const lines = [
+      `${icon} <b>[${prefix}] ${escapeHtml(job.title)}</b> @ <b>${escapeHtml(job.company)}</b>`,
+      `💰 ${escapeHtml(salaryText)} | 📍 ${escapeHtml(locationText)} | 🌐 ${escapeHtml(job.source)}`,
+      `🔗 <a href="${job.url}">Вакансия</a>`,
+      '',
+      '🏢 <b>О компании:</b>',
+      `${escapeHtml(dossierText)}`,
+      `${companyLink}`,
+    ];
+
+    if (scoreText) {
+      lines.push('');
+      lines.push(scoreText);
+    }
+    if (reasonText) {
+      lines.push(escapeHtml(reasonText));
+    }
+
+    return lines.join('\n');
+  }
+
+  // Approved dry Telegram card format
+  const lines: string[] = [
     `${icon} <b>[${prefix}] ${escapeHtml(job.title)}</b> @ <b>${escapeHtml(job.company)}</b>`,
-    `💰 ${escapeHtml(salaryText)} | 📍 ${escapeHtml(locationText)} | 🌐 ${escapeHtml(job.source)}`,
-    `🔗 <a href="${job.url}">Вакансия</a>`,
-    '',
-    '🏢 <b>О компании:</b>',
-    `${escapeHtml(dossierText)}`,
-    `${companyLink}`,
+    TELEGRAM_CARD_DIVIDER,
   ];
 
-  if (scoreText) {
+  // Salary with optional net salary calculation / breakdown
+  const baseSalary = job.salary ? escapeHtml(job.salary) : 'Зарплата не указана';
+  let salaryLine = `💵 ${baseSalary}`;
+  if (job.net_salary) {
+    const trimmedNet = job.net_salary.trim();
+    if (trimmedNet.startsWith('(') && trimmedNet.endsWith(')')) {
+      salaryLine += `  ${escapeHtml(trimmedNet)}`;
+    } else if (trimmedNet.toLowerCase().includes('на руки')) {
+      salaryLine += `  (${escapeHtml(trimmedNet)})`;
+    } else {
+      const tilde = trimmedNet.startsWith('~') ? '' : '~';
+      salaryLine += `  (на руки ${tilde}${escapeHtml(trimmedNet)})`;
+    }
+  }
+  lines.push(salaryLine);
+
+  // Location
+  const locationText = job.location ? escapeHtml(job.location) : 'Локация не указана';
+  lines.push(`📍 ${locationText}`);
+
+  // Project & Domain
+  const domain = job.project_domain;
+  const summary = job.project_summary || job.company_dossier;
+  const scale = job.project_scale;
+
+  if (domain || summary || scale) {
     lines.push('');
-    lines.push(scoreText);
+    lines.push('📦 <b>Проект и домен:</b>');
+    if (domain) {
+      lines.push(`• Домен: ${escapeHtml(domain)}`);
+    }
+    if (summary) {
+      lines.push(`• Что делает: ${escapeHtml(summary)}`);
+    }
+    if (scale) {
+      lines.push(`• Масштаб/Клиенты: ${escapeHtml(scale)}`);
+    }
   }
-  if (reasonText) {
-    lines.push(escapeHtml(reasonText));
+
+  // Tech Stack
+  let coreStack: string | undefined;
+  if (typeof job.stack_core === 'string') {
+    coreStack = job.stack_core;
+  } else if (Array.isArray(job.stack_core) && job.stack_core.length > 0) {
+    coreStack = job.stack_core.join(', ');
+  } else if (Array.isArray(job.tags) && job.tags.length > 0) {
+    coreStack = job.tags.join(', ');
   }
+
+  let infraStack: string | undefined;
+  if (typeof job.stack_infra === 'string') {
+    infraStack = job.stack_infra;
+  } else if (Array.isArray(job.stack_infra) && job.stack_infra.length > 0) {
+    infraStack = job.stack_infra.join(', ');
+  }
+
+  if (coreStack || infraStack) {
+    lines.push('');
+    lines.push('⚙️ <b>Стек:</b>');
+    if (coreStack) {
+      lines.push(`• Core: ${escapeHtml(coreStack)}`);
+    }
+    if (infraStack) {
+      lines.push(`• Infra: ${escapeHtml(infraStack)}`);
+    }
+  }
+
+  // Key Tasks
+  if (job.tasks_summary && job.tasks_summary.length > 0) {
+    lines.push('');
+    lines.push('🎯 <b>Задачи:</b>');
+    for (const task of job.tasks_summary) {
+      lines.push(`• ${escapeHtml(task)}`);
+    }
+  }
+
+  // Profile Match & Pros/Cons
+  const matchLines: string[] = [];
+  if (job.match_pros && job.match_pros.length > 0) {
+    for (const pro of job.match_pros) {
+      const trimmed = pro.trim();
+      if (trimmed.startsWith('[+]')) {
+        matchLines.push(`• ${escapeHtml(trimmed)}`);
+      } else if (trimmed.startsWith('+ ')) {
+        matchLines.push(`• [+] ${escapeHtml(trimmed.slice(2).trim())}`);
+      } else {
+        matchLines.push(`• [+] ${escapeHtml(trimmed)}`);
+      }
+    }
+  }
+
+  if (job.match_cons && job.match_cons.length > 0) {
+    for (const con of job.match_cons) {
+      const trimmed = con.trim();
+      if (trimmed.startsWith('[−]') || trimmed.startsWith('[-]')) {
+        matchLines.push(`• [−] ${escapeHtml(trimmed.slice(3).trim())}`);
+      } else if (trimmed.startsWith('− ') || trimmed.startsWith('- ')) {
+        matchLines.push(`• [−] ${escapeHtml(trimmed.slice(2).trim())}`);
+      } else {
+        matchLines.push(`• [−] ${escapeHtml(trimmed)}`);
+      }
+    }
+  }
+
+  if (matchLines.length === 0 && job.reason) {
+    matchLines.push(`• ${escapeHtml(job.reason)}`);
+  }
+
+  if (matchLines.length > 0 || job.overall_score !== undefined) {
+    lines.push('');
+    const scorePart = job.overall_score !== undefined ? ` (${job.overall_score}%)` : '';
+    lines.push(`⚖️ <b>Мэтч с твоим профилем${scorePart}:</b>`);
+    if (matchLines.length > 0) {
+      lines.push(...matchLines);
+    }
+  }
+
+  lines.push('');
+  lines.push(TELEGRAM_CARD_DIVIDER);
 
   return lines.join('\n');
 }

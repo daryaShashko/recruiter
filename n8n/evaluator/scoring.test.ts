@@ -327,29 +327,54 @@ describe("extractMaxMonthlyPln — salary parsing", () => {
 });
 
 describe("evaluateJob — expanded outsourcing & deterministic salary floor guardrails", () => {
-  it("keeps jobs with missing or zero salary ('0', undefined, 'Undisclosed'), adds 'Salary: Low/Unspecified' red flag, and prevents false hard-floor zeroing", () => {
-    const undisclosedJob = makeJob({ location: "Gdańsk", salary: undefined });
-    const res1 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedJob);
-    expect(res1.overall_score).toBe(84);
-    expect(res1.match).toBe(true);
-    expect(res1.red_flags).toContain("Salary: Low/Unspecified");
-    expect(res1.red_flags).not.toContain("Salary: Below Hard Floor");
+  it("keeps jobs with missing salary for Tier-1 companies, but rejects non-Tier-1 companies with undisclosed salary", () => {
+    // Non-Tier-1 company with undisclosed salary is rejected (score = 0)
+    const undisclosedNonTier1 = makeJob({ company: "Acme Tech", location: "Gdańsk", salary: undefined });
+    const res1 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedNonTier1);
+    expect(res1.overall_score).toBe(0);
+    expect(res1.match).toBe(false);
+    expect(res1.red_flags).toContain("Salary: Undisclosed / Non-Tier-1");
 
-    // Even if LLM mistakenly emits 'Below hard floor' and score=0 for a '0' salary, code recovers score & downgrades flag
-    const zeroSalaryJob = makeJob({ location: "Gdańsk", salary: "0" });
-    const res2 = evaluateJob(
+    // Tier-1 company with undisclosed salary is kept with informational warning
+    const undisclosedTier1 = makeJob({ company: "Google", location: "Gdańsk", salary: undefined });
+    const res2 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedTier1);
+    expect(res2.overall_score).toBe(84);
+    expect(res2.match).toBe(true);
+    expect(res2.red_flags).toContain("Salary: Low/Unspecified");
+    expect(res2.red_flags).not.toContain("Salary: Below Hard Floor");
+    expect(res2.red_flags).not.toContain("Salary: Undisclosed / Non-Tier-1");
+
+    // Even if LLM mistakenly emits 'Below hard floor' and score=0 for a Tier-1 '0' salary, code recovers score & downgrades flag
+    const zeroSalaryTier1 = makeJob({ company: "Spotify", location: "Gdańsk", salary: "0" });
+    const res3 = evaluateJob(
       rawLlm({
         overall_score: 0,
         tech_stack_match: 90,
         seniority_match: 85,
         red_flags: ["Salary below hard floor"],
       }),
-      zeroSalaryJob,
+      zeroSalaryTier1,
     );
-    expect(res2.overall_score).toBeGreaterThanOrEqual(50);
-    expect(res2.match).toBe(true);
-    expect(res2.red_flags).toContain("Salary: Low/Unspecified");
-    expect(res2.red_flags).not.toContain("Salary: Below Hard Floor");
+    expect(res3.overall_score).toBeGreaterThanOrEqual(50);
+    expect(res3.match).toBe(true);
+    expect(res3.red_flags).toContain("Salary: Low/Unspecified");
+    expect(res3.red_flags).not.toContain("Salary: Below Hard Floor");
+  });
+
+  it("strictly enforces UoP floor of 27,000 PLN gross (18k net on hands)", () => {
+    // 18k - 22k PLN UoP is below 27k gross floor -> rejected
+    const lowUopJob = makeJob({ location: "Gdańsk", salary: "18 000–22 000 PLN UoP/mo" });
+    const lowRes = evaluateJob(rawLlm({ overall_score: 88, red_flags: [] }), lowUopJob);
+    expect(lowRes.overall_score).toBe(0);
+    expect(lowRes.match).toBe(false);
+    expect(lowRes.red_flags).toContain("Salary: Below Hard Floor");
+
+    // 28k PLN UoP is above 27k gross floor -> passes
+    const highUopJob = makeJob({ location: "Gdańsk", salary: "27 000–30 000 PLN UoP/mo" });
+    const highRes = evaluateJob(rawLlm({ overall_score: 88, red_flags: [] }), highUopJob);
+    expect(highRes.overall_score).toBe(88);
+    expect(highRes.match).toBe(true);
+    expect(highRes.red_flags).not.toContain("Salary: Below Hard Floor");
   });
 
   it("prevents LLM currency-conversion mistakes from rejecting a foreign-currency salary that is above the PLN floor", () => {
@@ -421,5 +446,51 @@ describe("evaluateJob — expanded outsourcing & deterministic salary floor guar
     expect(customFloorReject.overall_score).toBe(0);
     expect(customFloorReject.match).toBe(false);
     expect(customFloorReject.red_flags).toContain("Salary: Below Hard Floor");
+  });
+
+  it("deterministically rejects bossware / invasive surveillance (Hubstaff, Time Doctor, screenshot monitoring)", () => {
+    const hubstaffJob = makeJob({
+      company: "Remote Agency",
+      location: "Remote",
+      body: "We require Hubstaff with screenshot monitoring and keystroke logging for productivity verification.",
+    });
+    const result = evaluateJob(rawLlm({ overall_score: 90, red_flags: [] }), hubstaffJob);
+    expect(result.overall_score).toBe(0);
+    expect(result.match).toBe(false);
+    expect(result.red_flags).toContain("Process: Invasive Surveillance");
+  });
+
+  it("allows standard B2B timesheet logging (Jira / Clockify) without triggering bossware reject", () => {
+    const timesheetJob = makeJob({
+      company: "Good Product Co",
+      location: "Remote",
+      body: "Standard monthly timesheet reporting in Jira for B2B invoice generation. High trust environment.",
+    });
+    const result = evaluateJob(rawLlm({ overall_score: 85, red_flags: [] }), timesheetJob);
+    expect(result.overall_score).toBe(85);
+    expect(result.match).toBe(true);
+    expect(result.red_flags).not.toContain("Process: Invasive Surveillance");
+  });
+
+  it("penalizes uncompensated toxic 24/7 on-call and hustle culture by 15 points", () => {
+    const toxicJob = makeJob({
+      company: "Startup Co",
+      location: "Remote",
+      body: "Work hard, play hard! We expect 24/7 on-call availability and hustle mentality in a high-pressure environment.",
+    });
+    const result = evaluateJob(rawLlm({ overall_score: 85, red_flags: [] }), toxicJob);
+    expect(result.overall_score).toBe(70); // 85 - 15 = 70
+    expect(result.red_flags).toContain("Culture: Overwork Risk");
+  });
+
+  it("does not penalize rotational on-call with dedicated compensation allowance", () => {
+    const compensatedOncallJob = makeJob({
+      company: "Enterprise Cloud Co",
+      location: "Remote",
+      body: "Rotational on-call schedule (1 week in 6) with dedicated on-call allowance and standby bonus.",
+    });
+    const result = evaluateJob(rawLlm({ overall_score: 85, red_flags: [] }), compensatedOncallJob);
+    expect(result.overall_score).toBe(85);
+    expect(result.red_flags).not.toContain("Culture: Overwork Risk");
   });
 });

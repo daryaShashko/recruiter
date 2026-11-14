@@ -194,6 +194,156 @@ describe('Telegram HITL Protocol & Keyboard Builders (Slice 2)', () => {
         '&lt;script&gt;alert(&quot;xss &amp; fun&quot;)&lt;/script&gt;',
       );
     });
+
+    it('formats approved dry card for Hot Match when detailed fields are present', () => {
+      const msg = formatTelegramAlertMessage({
+        title: 'Senior Full-Stack Engineer',
+        company: 'FinTech Innovations',
+        salary: '25 000 – 30 000 PLN B2B',
+        net_salary: '20 000 – 24 000 PLN',
+        location: '100% Remote / офис в Гданьске (B2B, Польша)',
+        source: 'justjoin',
+        url: 'https://justjoin.it/offers/fintech-senior-full-stack',
+        overall_score: 85,
+        project_domain: 'FinTech / B2B Payments (эквайринг и расчетный процессинг)',
+        project_summary:
+          'SaaS-платформа приема платежей для e-commerce (аналог Stripe): интеграция с банками Европы, маршрутизация транзакций, авто-возвраты и антифрод.',
+        project_scale: '400+ онлайн-ритейлеров в ЕС, через систему проходит ~$30M/мес.',
+        stack_core: 'Node.js, TypeScript, React, PostgreSQL',
+        stack_infra: 'AWS, Docker, Kafka, Redis',
+        tasks_summary: [
+          'Highload API платёжного шлюза и обработка вебхуков',
+          'Микрофронтенды кабинета мерчантов на React',
+          'Оптимизация SQL-запросов и отказоустойчивость транзакций',
+        ],
+        match_pros: [
+          '100% твой core-стек (TS, Node, React, Postgres)',
+          'Прямой опыт: финтех-модули и лидерство стрима в EPAM',
+        ],
+        match_cons: [
+          'Требуют Kafka (у тебя в опыте RabbitMQ — разница концептуальная, но не блокер)',
+        ],
+        isHotMatch: true,
+      });
+
+      const expected = [
+        '🔥 <b>[Горячий мэтч] Senior Full-Stack Engineer</b> @ <b>FinTech Innovations</b>',
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        '💵 25 000 – 30 000 PLN B2B  (на руки ~20 000 – 24 000 PLN)',
+        '📍 100% Remote / офис в Гданьске (B2B, Польша)',
+        '',
+        '📦 <b>Проект и домен:</b>',
+        '• Домен: FinTech / B2B Payments (эквайринг и расчетный процессинг)',
+        '• Что делает: SaaS-платформа приема платежей для e-commerce (аналог Stripe): интеграция с банками Европы, маршрутизация транзакций, авто-возвраты и антифрод.',
+        '• Масштаб/Клиенты: 400+ онлайн-ритейлеров в ЕС, через систему проходит ~$30M/мес.',
+        '',
+        '⚙️ <b>Стек:</b>',
+        '• Core: Node.js, TypeScript, React, PostgreSQL',
+        '• Infra: AWS, Docker, Kafka, Redis',
+        '',
+        '🎯 <b>Задачи:</b>',
+        '• Highload API платёжного шлюза и обработка вебхуков',
+        '• Микрофронтенды кабинета мерчантов на React',
+        '• Оптимизация SQL-запросов и отказоустойчивость транзакций',
+        '',
+        '⚖️ <b>Мэтч с твоим профилем (85%):</b>',
+        '• [+] 100% твой core-стек (TS, Node, React, Postgres)',
+        '• [+] Прямой опыт: финтех-модули и лидерство стрима в EPAM',
+        '• [−] Требуют Kafka (у тебя в опыте RabbitMQ — разница концептуальная, но не блокер)',
+        '',
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      ].join('\n');
+
+      expect(msg).toBe(expected);
+    });
+
+    it('formats Review mode (👀 [На ревью]) and handles partial detailed fields gracefully', () => {
+      const msg = formatTelegramAlertMessage({
+        title: 'Backend Engineer',
+        company: 'Cloud Corp',
+        location: 'Warsaw Hybrid',
+        source: 'nofluffjobs',
+        url: 'https://nofluffjobs.com/job/cloud-corp',
+        isHotMatch: false,
+        project_domain: 'Cloud Infrastructure & Observability',
+        company_dossier: 'Разработка облачного SaaS сервиса.',
+        stack_core: ['TypeScript', 'Node.js'],
+        tasks_summary: ['Разработка REST & gRPC API микросервисов'],
+      });
+
+      expect(msg).toContain('👀 <b>[На ревью] Backend Engineer</b> @ <b>Cloud Corp</b>');
+      expect(msg).toContain('💵 Зарплата не указана');
+      expect(msg).toContain('📍 Warsaw Hybrid');
+      expect(msg).toContain('📦 <b>Проект и домен:</b>');
+      expect(msg).toContain('• Домен: Cloud Infrastructure &amp; Observability');
+      // Falls back to company_dossier when project_summary is missing
+      expect(msg).toContain('• Что делает: Разработка облачного SaaS сервиса.');
+      expect(msg).not.toContain('• Масштаб/Клиенты:');
+      expect(msg).toContain('⚙️ <b>Стек:</b>');
+      expect(msg).toContain('• Core: TypeScript, Node.js');
+      expect(msg).not.toContain('• Infra:');
+      expect(msg).toContain('🎯 <b>Задачи:</b>');
+      expect(msg).toContain('• Разработка REST &amp; gRPC API микросервисов');
+      expect(msg).not.toContain('⚖️ <b>Мэтч с твоим профилем');
+    });
+
+    it('escapes HTML special characters in detailed fields', () => {
+      const msg = formatTelegramAlertMessage({
+        title: 'Fullstack <Lead> & Architect',
+        company: 'R&D "FinTech" Solutions',
+        salary: '30 000 <net> PLN',
+        location: 'Remote & Hybrid',
+        source: 'manual',
+        url: 'https://example.com',
+        isHotMatch: true,
+        project_domain: 'Payments & Risk <AI>',
+        project_summary: 'Platform handling >10k req/s & <1% chargebacks',
+        tasks_summary: ['Build <secured> API endpoints & hooks'],
+        match_pros: ['Experience with <Kafka> & Node'],
+        match_cons: ['Missing "Elixir" experience'],
+      });
+
+      expect(msg).toContain('Fullstack &lt;Lead&gt; &amp; Architect');
+      expect(msg).toContain('R&amp;D &quot;FinTech&quot; Solutions');
+      expect(msg).toContain('30 000 &lt;net&gt; PLN');
+      expect(msg).toContain('Payments &amp; Risk &lt;AI&gt;');
+      expect(msg).toContain('&gt;10k req/s &amp; &lt;1% chargebacks');
+      expect(msg).toContain('&lt;secured&gt; API endpoints &amp; hooks');
+      expect(msg).toContain('Experience with &lt;Kafka&gt; &amp; Node');
+      expect(msg).toContain('&quot;Elixir&quot;');
+    });
+
+    it('handles various net_salary formats and pro/con prefix variants', () => {
+      const msg1 = formatTelegramAlertMessage({
+        title: 'Developer',
+        company: 'Dev Co',
+        source: 'justjoin',
+        url: 'https://example.com',
+        salary: '20 000 PLN',
+        net_salary: '~16 000 PLN',
+        project_domain: 'DevTools',
+        match_pros: ['[+] Already prefixed pro', '+ Plus prefixed pro'],
+        match_cons: ['[−] Unicode minus prefixed', '[-] ASCII minus prefixed', '- Hyphen prefixed'],
+      });
+
+      expect(msg1).toContain('💵 20 000 PLN  (на руки ~16 000 PLN)');
+      expect(msg1).toContain('• [+] Already prefixed pro');
+      expect(msg1).toContain('• [+] Plus prefixed pro');
+      expect(msg1).toContain('• [−] Unicode minus prefixed');
+      expect(msg1).toContain('• [−] ASCII minus prefixed');
+      expect(msg1).toContain('• [−] Hyphen prefixed');
+
+      const msg2 = formatTelegramAlertMessage({
+        title: 'Developer',
+        company: 'Dev Co',
+        source: 'justjoin',
+        url: 'https://example.com',
+        salary: '20 000 PLN',
+        net_salary: '(на руки ~15 000 PLN)',
+        project_domain: 'DevTools',
+      });
+      expect(msg2).toContain('💵 20 000 PLN  (на руки ~15 000 PLN)');
+    });
   });
 
   describe('buildNotionStatusUpdatePayload', () => {

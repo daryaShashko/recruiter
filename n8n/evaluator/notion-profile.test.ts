@@ -50,8 +50,8 @@ describe("notion-profile compiler & Notion API client", () => {
     expect(markdown).toContain("## 1. Professional Background & Stack");
     expect(markdown).toContain("JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL");
     expect(markdown).toContain("## 3. Employment & Salary Expectations");
-    expect(markdown).toContain("Hard Salary Floor (Min 18k PLN Net / ~22k B2B");
-    expect(markdown).toContain("Undisclosed or Zero Salary -> Keep & Flag as Red Flag");
+    expect(markdown).toContain("Hard Salary Floor (Min 18k PLN Net / ~23k B2B / ~27k UoP");
+    expect(markdown).toContain("Undisclosed or Zero Salary -> Reject unless Verified Tier-1 Product Company");
     expect(markdown).toContain("NO Crypto / Web3 / Blockchain");
     expect(markdown).not.toContain("Should never appear in compiled markdown");
     expect(markdown).not.toContain("Disabled Experimental Rule");
