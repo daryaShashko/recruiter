@@ -56,13 +56,11 @@ if (ollamaResp?.error) {
 const raw = ollamaResp?.message?.content || '';
 if (!raw) return [fallback('Empty LLM response')];
 
-const exports = {};
+var exports = typeof exports !== 'undefined' ? exports : {};
 """
 
     footer = """
-const { evaluateJob } = exports;
-
-const evaluation = evaluateJob(raw, {
+const evaluation = exports.evaluateJob(raw, {
   id: job.id || '', title: job.title, company: job.company, url: job.url || '',
   source: job.source, location: job.location, salary: job.salary,
   body: job.body, scrapedAt: job.scrapedAt, fingerprint: job.fingerprint || '',
