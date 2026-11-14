@@ -11,6 +11,8 @@
     "scrape:dry": "DRY_RUN=true ts-node src/index.ts",
     "scrape:watch": "HEADLESS=false DRY_RUN=true ts-node src/index.ts",
     "test": "jest",
+    "test:tier1": "jest --testPathPattern='(\\.(unit|tier1)\\.test\\.ts$|sender\\.test\\.ts$)'",
+    "test:tier2": "jest tests/contracts/schema-contracts.test.ts tests/generator/tier2-contracts.test.ts",
     "test:integration": "RUN_INTEGRATION=1 jest tests/justjoin.test.ts tests/nofluffjobs.test.ts tests/e2e.test.ts",
     "test:justjoin": "RUN_INTEGRATION=1 jest tests/justjoin.test.ts",
     "test:nofluffjobs": "RUN_INTEGRATION=1 jest tests/nofluffjobs.test.ts",
