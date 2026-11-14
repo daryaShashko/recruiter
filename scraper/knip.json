@@ -1,4 +1,11 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "include": ["files", "dependencies"]
+  "include": ["files", "dependencies"],
+  "ignoreDependencies": [
+    "husky",
+    "jest",
+    "oxlint",
+    "promptfoo",
+    "ts-node"
+  ]
 }
