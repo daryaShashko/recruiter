@@ -4,7 +4,8 @@ Use Russian with the user (short, concrete). Keep code, paths, commands, and ide
 
 ## Source of Truth
 - Runtime: checked-in code & current configuration.
-- Candidate CV: Notion `Candidate CV & Experience` database only (via `scraper/src/generator/notion-loader.ts` or `n8n/prompts/.notion-snapshot.json` fallback). No `master-cv.yaml` or static duplicates.
+- Candidate CV & Criteria: Notion `Candidate CV & Experience` and `Matching Criteria & Guardrails` databases only.
+- Read-Only Generated Artifacts: `n8n/prompts/candidate_profile.md` and `n8n/prompts/.notion-snapshot.json` are auto-generated from Notion. NEVER edit them by hand! All updates to candidate experience, criteria, salary floors, or restrictions MUST be performed in Notion (or via Notion API / `notion-cli.ts`), then re-synced via `npm run notion:sync`.
 - Supporting notes: `context/` and `docs/` may be stale; verify against running code.
 - Skills: `.agents/skills/<name>/SKILL.md`. See `docs/agent-tools.md` for adapter pointers.
 

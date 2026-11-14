@@ -1,3 +1,5 @@
 #!/usr/bin/env sh
+cd "$(dirname "$0")/../.." || exit 1
+./scripts/check-agent-surfaces.sh || exit 1
 cd scraper || exit 1
 npm run lint && npm test
