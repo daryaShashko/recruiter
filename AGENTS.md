@@ -39,3 +39,10 @@ Context to inspect: <only files or commands needed to decide the next action>
 Acceptance checks: <specific evidence that proves completion>
 Stop conditions: <unknowns, failures, or actions requiring the user>
 ```
+
+## Slice Completion & Deployment Protocol
+- **Explicit Commit & Push Status**: Never silently leave finished slice or feature changes uncommitted in the working tree. Always explicitly inform the user whether changes are committed, report git status, and ask to commit & push to `origin/main`.
+- **n8n Live Workflow Sync**: When changes affect scoring rules, hard thresholds, evaluation prompts, or Telegram alert templates (e.g. in `n8n/evaluator/scoring.ts` or `scraper/src/utils/telegram.ts`):
+  1. Rebuild n8n dist: `cd n8n && npm run build`
+  2. Patch live n8n instance: `python3 scripts/patch-n8n-hitl-review.py`
+  3. Confirm to user that both git repo and live n8n workflow are in sync.

@@ -21,6 +21,65 @@ def get_api_key():
     return key
 
 
+def build_parse_ollama_code():
+    dist_scoring = Path(__file__).resolve().parent.parent / "n8n" / "dist" / "evaluator" / "scoring.js"
+    if not dist_scoring.exists():
+        sys.exit(f"Compiled scoring.js not found at {dist_scoring}. Run 'cd n8n && npm run build' first.")
+    scoring_code = dist_scoring.read_text(encoding="utf-8")
+
+    header = """const ollamaResp = $input.first().json;
+const job = $('Code: Build Ollama Payload').first().json;
+
+const fallback = (reason) => ({
+  json: {
+    id: job.id, title: job.title, company: job.company,
+    url: job.url, source: job.source, location: job.location,
+    salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,
+    fingerprint: job.fingerprint || '',
+    overall_score: 0, tech_stack_match: 0, seniority_match: 0,
+    red_flags: [reason.toLowerCase().includes('ollama') ? 'Pipeline: LLM Error' : 'Pipeline: Parse Error'],
+    reason: `Error: ${reason}`,
+    match: false
+  }
+});
+
+if (ollamaResp?.error) {
+  if (job.profileError) {
+    const failClosed = fallback('Notion profile unavailable');
+    failClosed.json.red_flags = ['Pipeline: Notion Error'];
+    failClosed.json.model = 'notion-profile';
+    return [failClosed];
+  }
+  return [fallback(`LLM Router error: ${JSON.stringify(ollamaResp.error).slice(0, 180)}`)];
+}
+
+const raw = ollamaResp?.message?.content || '';
+if (!raw) return [fallback('Empty LLM response')];
+
+const exports = {};
+"""
+
+    footer = """
+const { evaluateJob } = exports;
+
+const evaluation = evaluateJob(raw, {
+  id: job.id || '', title: job.title, company: job.company, url: job.url || '',
+  source: job.source, location: job.location, salary: job.salary,
+  body: job.body, scrapedAt: job.scrapedAt, fingerprint: job.fingerprint || '',
+  companyMeta: job.companyMeta
+}, job.scoringConfig);
+
+return [{
+  json: {
+    ...evaluation,
+    tags: job.tags,
+    model: ollamaResp?.provider || 'gemini:gemini-2.5-flash-lite'
+  }
+}];
+"""
+    return header + scoring_code + footer
+
+
 def main():
     api_key = get_api_key()
     headers = {
@@ -47,42 +106,14 @@ def main():
     nodes = wf.get("nodes", [])
     patched_count = 0
 
-    # Ensure Code: Parse Ollama Response forwards company_dossier & companyMeta
+    # Ensure Code: Parse Ollama Response has full compiled scoring logic
     for node in nodes:
         name = node.get("name", "")
         if name == "Code: Parse Ollama Response":
             params = node.setdefault("parameters", {})
-            js_code = params.get("jsCode", "")
-            
-            # Fix broken syntax if present
-            broken_block = 'companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined ?? "No reason provided",'
-            if broken_block in js_code:
-                js_code = js_code.replace(
-                    broken_block,
-                    'companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
-                )
-                if 'reason: parsed.reason,' in js_code:
-                    js_code = js_code.replace('reason: parsed.reason,', 'reason: parsed.reason ?? "No reason provided",')
-                params["jsCode"] = js_code
-                patched_count += 1
-                print("✅ Fixed SyntaxError in Code: Parse Ollama Response")
-
-            # Ensure company_dossier and companyMeta are returned
-            if "company_dossier" not in js_code or "companyMeta" not in js_code:
-                print("Updating Code: Parse Ollama Response to forward company_dossier and companyMeta...")
-                if 'reason: parsed.reason ?? "No reason provided",' in js_code:
-                    js_code = js_code.replace(
-                        'reason: parsed.reason ?? "No reason provided",',
-                        'reason: parsed.reason ?? "No reason provided",\n      company_dossier: parsed.company_dossier || undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
-                    )
-                else:
-                    js_code = js_code.replace(
-                        "reason: parsed.reason,",
-                        'reason: parsed.reason ?? "No reason provided",\n      company_dossier: parsed.company_dossier || undefined,\n      companyMeta: job.companyMeta || undefined,\n      companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || job.companyUrl || undefined,'
-                    )
-                params["jsCode"] = js_code
-                patched_count += 1
-                print("✅ Patched Code: Parse Ollama Response")
+            params["jsCode"] = build_parse_ollama_code()
+            patched_count += 1
+            print("✅ Embedded latest compiled scoring logic into Code: Parse Ollama Response")
 
     # Update Telegram: Send Alert (Topic 2)
     for node in nodes:
@@ -101,7 +132,20 @@ def main():
     const cUrl = (item.companyMeta && item.companyMeta.companyUrl) || item.companyUrl;
     const compLink = cUrl ? `[🌐 Сайт компании](${cUrl})` : `[🔍 Найти в Google](https://www.google.com/search?q=${encodeURIComponent(comp + ' software')})`;
 
-    const text = `🔥 *${item.title || ''}* (Score: ${item.overall_score || 0})\\n🏢 ${comp}\\n💰 ${item.salary || 'не указана'}\\n📍 ${item.location || 'не указано'} | ${item.source || ''}\\n🔗 ${item.url || ''}\\n\\n🏢 *О компании:*\\n${dossier}\\n${compLink}\\n\\n_${item.reason || ''}_`;
+    const text = [
+      `🔥 *[Горячий мэтч] ${item.title || ''}* @ *${comp}*`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `💵 *${item.salary || 'Зарплата не указана'}*`,
+      `📍 *${item.location || 'Локация не указана'}* | 🌐 ${item.source || ''}`,
+      ``,
+      `📦 *Проект и домен:*`,
+      `• ${dossier}`,
+      compLink,
+      ``,
+      `🎯 *Мэтч:* ${item.overall_score || 0}/100 (Стек: ${item.tech_stack_match ?? '-'}, Сеньорность: ${item.seniority_match ?? '-'})`,
+      `💡 _${item.reason || ''}_`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+    ].join('\\n');
 
     return JSON.stringify({
       chat_id: "-1004357080568",
@@ -132,7 +176,7 @@ def main():
   })()
 }}"""
             patched_count += 1
-            print("✅ Configured Telegram: Send Alert with Topic 2 Hot Match keyboard and company dossier block")
+            print("✅ Configured Telegram: Send Alert with compact mobile card and Hot Match keyboard")
 
         elif name == "Telegram: Send Review Alert":
             params = node.setdefault("parameters", {})
@@ -149,7 +193,21 @@ def main():
     const compLink = cUrl ? `[🌐 Сайт компании](${cUrl})` : `[🔍 Найти в Google](https://www.google.com/search?q=${encodeURIComponent(comp + ' software')})`;
     const flags = (item.red_flags || []).join(', ') || 'нет';
 
-    const text = `📋 *${item.title || ''}* (Score: ${item.overall_score || 0})\\n🏢 ${comp}\\n💰 ${item.salary || 'не указана'}\\n📍 ${item.location || 'не указано'} | ${item.source || ''}\\n🔗 ${item.url || ''}\\n\\n🏢 *О компании:*\\n${dossier}\\n${compLink}\\n\\n📝 *Вердикт:* _${item.reason || ''}_\\n\\n⚠️ *Red Flags:* ${flags}`;
+    const text = [
+      `👀 *[На ревью] ${item.title || ''}* @ *${comp}*`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `💵 *${item.salary || 'Зарплата не указана'}*`,
+      `📍 *${item.location || 'Локация не указана'}* | 🌐 ${item.source || ''}`,
+      ``,
+      `📦 *Проект и домен:*`,
+      `• ${dossier}`,
+      compLink,
+      ``,
+      `🎯 *Мэтч:* ${item.overall_score || 0}/100 (Стек: ${item.tech_stack_match ?? '-'}, Сеньорность: ${item.seniority_match ?? '-'})`,
+      `💡 _${item.reason || ''}_`,
+      flags !== 'нет' ? `⚠️ *Red Flags:* ${flags}` : '',
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+    ].filter(Boolean).join('\\n');
 
     return JSON.stringify({
       chat_id: "-1004357080568",
@@ -180,7 +238,7 @@ def main():
   })()
 }}"""
             patched_count += 1
-            print("✅ Configured Telegram: Send Review Alert with Topic 3 Review keyboard and company dossier block")
+            print("✅ Configured Telegram: Send Review Alert with compact mobile card and Review keyboard")
 
     if patched_count > 0:
         payload = {
