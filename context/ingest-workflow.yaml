@@ -134,9 +134,7 @@ key_logic:
       GEMINI_API_KEY is read from $env.GEMINI_API_KEY; OpenRouter uses the openrouter/free
       auto-router (hardcoded 2025 :free model slugs and gemini-2.0-flash were retired
       upstream and returned HTTP 404).
-      Two old generator scripts exist and are both stale: scripts/p12_6_llm_router.py
-      ($env.LLM_PROVIDER, fetch) and scripts/patch_llm_router.py (CLOUD-11-A, hardcoded
-      single provider, this.helpers.httpRequest) — neither reflects the live fallback-chain
+      Historical generator scripts are stale and neither reflects the live fallback-chain
       code described above.
     ported_to_ts: >
       n8n/evaluator/router.ts (Jest-tested) ports this fallback logic verbatim, reusing

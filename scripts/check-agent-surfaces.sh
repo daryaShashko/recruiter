@@ -128,11 +128,11 @@ fi
 # 8. Current-state notes name only paths that exist (see path_ok above).
 # Scope: context notes and current docs. History and plans are excluded because they
 # legitimately name removed or future files: context/roadmap.yaml, context/decisions.yaml,
-# docs/adr/, docs/benchmarks/, docs/post-mortem.md, docs/pe-tuning-log.md, and
+# docs/adr/, docs/post-mortem.md, docs/pe-tuning-log.md, and
 # docs/agent-navigation-remediation.md. Markdown: backticked paths. YAML: values of
 # file: and path: keys. (git pathspec * also matches "/", so subdirectories are included.)
 CURRENT_MD="$(git ls-files 'context/*.md' 'docs/*.md' \
-  | grep -v -E '^docs/(adr|benchmarks)/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation|agent-tools)\.md$' \
+  | grep -v -E '^docs/adr/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation|agent-tools)\.md$' \
   | sort -u)"
 CURRENT_YAML="$(git ls-files 'context/*.yaml' \
   | grep -v -E '^context/(roadmap|decisions)\.yaml$' | sort -u)"
@@ -163,7 +163,7 @@ fi
 # gitignored, or not in the repository. Same exclusions as check 8, applied to all
 # tracked Markdown and YAML files.
 claims="$(git ls-files '*.md' '*.yaml' '*.yml' \
-  | grep -v -E '^docs/(adr|benchmarks)/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation)\.md$|^context/(roadmap|decisions)\.yaml$' \
+  | grep -v -E '^docs/adr/|^docs/(post-mortem|pe-tuning-log|agent-navigation-remediation)\.md$|^context/(roadmap|decisions)\.yaml$' \
   | while IFS= read -r f; do [[ -f "$f" ]] && grep -H -n -i 'n8n/workflows' "$f"; done \
   | grep -i -E 'в репозитори|в репо |in (the|this) repo|checked[ -]in|committed (to|in)|tracked (in|by) git|stored in git' \
   | grep -v -i -E 'локальн|local|gitignor|not in (the|this) repo|нет в репозитори|не в репозитори|не хранится|not committed|never commit|не коммит' \

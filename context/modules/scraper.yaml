@@ -216,12 +216,6 @@ files:
       Company URL resolution and Google search fallback generator when direct company
       website is absent or unavailable.
 
-  src/debug-urls.ts:
-    exports: [] # debug script, not imported elsewhere
-    purpose: "Log all non-static network URLs from both sites. Re-run when site structure suspected to have changed."
-    run: "npx ts-node src/debug-urls.ts"
-    note: "DELETE or keep; not part of production pipeline"
-
   src/utils/browser.ts:
     exports: [openPage, closeBrowser]
     openPage_returns: "{ page: Page, context: BrowserContext }"
@@ -235,8 +229,7 @@ playwright_contract:
   scope: >
     No longer used by justjoin.ts or nofluffjobs.ts (ADR-019, 2026-10 — both call
     their APIs directly via axios). Still used by src/check-manual.ts (manual job
-    submission from an arbitrary URL — genuinely needs a real browser) and the
-    debug scripts src/debug-urls.ts / src/scrape-one.ts.
+    submission from an arbitrary URL — genuinely needs a real browser).
   method: "XHR interception — page.on('response', handler)"
   never_use: "DOM selectors (page.$, page.locator)"
   never_use_reason: "Cloudflare blocks headless patterns; DOM breaks on UI changes"

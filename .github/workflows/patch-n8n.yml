@@ -32,5 +32,6 @@ jobs:
           N8N_BASE_URL: "https://n8n-recruiter.duckdns.org"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SCRIPT_NAME: ${{ github.event.inputs.script_name }}
         run: |
-          python3 ${{ github.event.inputs.script_name }}
+          python3 "$SCRIPT_NAME"

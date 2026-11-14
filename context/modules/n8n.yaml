@@ -316,10 +316,9 @@ ollama:
     LLM_MODEL:    "model name (default: provider-specific)"
     LLM_BASE_URL: "Ollama base URL (default: http://localhost:11434)"
     setup_note: >
-      Read as $env.* only by the scripts/p12_6_llm_router.py version of Code: LLM Router.
-      The later scripts/patch_llm_router.py version (CLOUD-11-A) hardcodes provider, model,
-      and key and reads none of these. Which version runs is known only from the local
-      export or n8n.
+      Historical versions of Code: LLM Router differed in how they read provider
+      configuration. Verify the currently deployed inline node in the local export or
+      n8n before relying on these variables.
   request_template:
     model: "llama3.1:8b"
     stream: false

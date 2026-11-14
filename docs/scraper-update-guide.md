@@ -53,14 +53,6 @@ GET https://justjoin.it/api/candidate-api/offers?categories=javascript&...
 3. Принять куки, кликнуть на категорию **JavaScript**.
 4. Найти запрос, соответствующий паттерну `candidate-api/offers` или содержащий `data: [...]`.
 
-```bash
-# Альтернатива через debug-скрипт:
-cd scraper
-npx ts-node src/debug-urls.ts
-# Скрипт выведет все сетевые запросы с обоих сайтов.
-# Искать строки вида: GET https://justjoin.it/api/...
-```
-
 5. Проверить структуру ответа: убедиться, что в JSON есть поле `data` — массив объектов
    с полями `slug`, `title`, `companyName`, `workplaceType`, `employmentTypes`.
 
@@ -315,9 +307,6 @@ DRY_RUN=true npx ts-node src/index.ts
 ### Дополнительные команды для диагностики
 
 ```bash
-# Посмотреть все сетевые запросы с обоих сайтов (для обнаружения новых endpoints):
-cd scraper && npx ts-node src/debug-urls.ts
-
 # Проверить количество вакансий в последнем dry-run:
 cat output/dry-run-*.json | python3 -c "
 import json, sys, glob

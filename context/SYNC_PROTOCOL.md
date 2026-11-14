@@ -104,7 +104,7 @@ context: <action> <file> — <description>
 - пути в `AGENTS.md`, таблицах `docs/agent-tools.md`, текущих заметках `context/` и `docs/`
   существуют в git (или в `.gitignore` как локальные, или перечислены как planned в
   скрипте); история и планы (`context/roadmap.yaml`, `context/decisions.yaml`, `docs/adr/`,
-  `docs/benchmarks/`, post-mortem, PE-лог) не проверяются;
+  post-mortem, PE-лог) не проверяются;
 - текущие заметки не называют локальные экспорты `n8n/workflows/*.json` частью репозитория;
 - адаптеры, skills, нет `${{ }}` внутри `run:`.
 

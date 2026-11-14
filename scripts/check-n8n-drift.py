@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Fail if the live n8n "Code: LLM Router" node drifts from the committed baseline.
 
-Why this exists: the Router node's code only ever lived inline in n8n's UI, with two
-separate hand-maintained patch scripts (p12_6_llm_router.py, patch_llm_router.py) that
-each generated a different version of it. By 2026-09-27 the live node matched neither
-script. This check closes that gap by comparing the live node's summary (via
+Why this exists: the Router node's code only ever lived inline in n8n's UI. Separate
+hand-maintained rewrites generated different versions of it, and by 2026-09-27 the live
+node matched neither version. This check closes that gap by comparing the live node's summary (via
 inspect-n8n.py's own fetch/summary logic — not a second copy of it) against a committed
 baseline on every run, instead of relying on someone remembering to check by hand.
 

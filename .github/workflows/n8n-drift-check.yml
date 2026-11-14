@@ -3,10 +3,9 @@ name: n8n LLM Router Drift Check
 # Fails (and alerts via Telegram) when the live "Code: LLM Router" node in the
 # deployed n8n workflow no longer matches scripts/n8n-router-baseline.txt.
 #
-# Why: the Router node's code only ever lived inline in n8n's UI. Two separate
-# hand-maintained patch scripts (scripts/p12_6_llm_router.py,
-# scripts/patch_llm_router.py) each generated a different version of it, and by
-# 2026-09-27 the live node matched neither. This check runs scripts/check-n8n-drift.py
+# Why: the Router node's code only ever lived inline in n8n's UI. Separate
+# hand-maintained rewrites generated different versions of it, and by 2026-09-27
+# the live node matched neither. This check runs scripts/check-n8n-drift.py
 # automatically so that kind of drift shows up here instead of waiting for someone
 # to remember to run scripts/inspect-n8n.py by hand.
 

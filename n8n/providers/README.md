@@ -67,12 +67,10 @@ const result = await provider.complete({ systemPrompt, userMessage, outputSchema
 
 **Not wired into n8n yet.** The running `Code: LLM Router` node does not import these
 adapters. Its code is inline in the workflow export and handles only `ollama`, `gemini`,
-and `anthropic`. Two scripts have generated it: `scripts/p12_6_llm_router.py` (provider
-from `$env.LLM_PROVIDER`, 300 s / 60 s timeouts) and the later
-`scripts/patch_llm_router.py` (CLOUD-11-A: provider and model hardcoded, no `$env`, no
-explicit timeout). With the second version, step 3 below has no effect in n8n. A new
-adapter here, `openrouter` included, takes effect in n8n only after the node code is
-updated (roadmap P15-5).
+and `anthropic`. Historical versions differed in provider configuration and request
+handling. With versions that hardcode the provider and model, step 3 below has no effect
+in n8n. New adapters here, including `openrouter`, take effect in n8n only after the
+node code is updated (roadmap P15-5).
 
 ## No external dependencies
 

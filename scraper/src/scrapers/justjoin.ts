@@ -331,7 +331,7 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
     if (rawOffers.length === 0) {
       console.warn(
         "[JustJoin] WARNING: 0 offers collected — API contract may have changed. " +
-          "Re-check via DevTools or scraper/src/debug-urls.ts.",
+          "Re-check the API request in browser DevTools.",
       );
       return [];
     }

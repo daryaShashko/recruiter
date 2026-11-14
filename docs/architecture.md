@@ -138,10 +138,8 @@
 
 ### LLM Evaluator
 - **Current:** inline code in the n8n `Code: LLM Router` node (ADR-016), not
-  `n8n/providers/`. Two generator scripts exist: `scripts/p12_6_llm_router.py`
-  (`$env.LLM_PROVIDER`, default Ollama) and the later `scripts/patch_llm_router.py`
-  (CLOUD-11-A: Gemini `gemini-2.0-flash` hardcoded). Which one runs is known only from the
-  local export or n8n.
+  `n8n/providers/`. Historical rewrites used different provider configurations; verify
+  the deployed behavior in the local export or n8n.
 - **Planned (ADR-011):** Groq (primary) + Gemini 1.5 Flash (fallback); throttled queue
   (Wait node 4s → ≤15 RPM). P15 (pending) plans Gemini 2.0 Flash primary + OpenRouter fallback.
 - Returns strict JSON: `{ overall_score, tech_stack_match, seniority_match, red_flags, reason, url }`

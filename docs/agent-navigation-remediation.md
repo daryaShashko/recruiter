@@ -82,7 +82,7 @@ non-zero on `FAIL`:
 8. (Slice 3) Paths named in current notes exist under the same rule as check 5: backticked
    paths in `context/*.md`, `context/starters/`, `docs/*.md`, `docs/agents/`; `file:` and
    `path:` values in `context/*.yaml`. History and plans are excluded
-   (`context/roadmap.yaml`, `context/decisions.yaml`, `docs/adr/`, `docs/benchmarks/`,
+   (`context/roadmap.yaml`, `context/decisions.yaml`, `docs/adr/`,
    `docs/post-mortem.md`, `docs/pe-tuning-log.md`, this file).
 9. (Slice 3) No tracked Markdown/YAML note (same exclusions) has a line that names
    `n8n/workflows/` and says it is in the repository without also marking it local,
@@ -95,8 +95,8 @@ were each reported as `FAIL`. Since Slice 3 the script runs as the blocking
 
 ### Layer B — fixed task set
 
-Store cases in `docs/benchmarks/agent-routing/cases.md` with the expected route written
-**before** any run. Run the full set in **at least two different tools** from the supported
+Store cases alongside their run records with the expected route written **before** any
+run. Run the full set in **at least two different tools** from the supported
 list (for example Claude Code CLI and Codex CLI). Tool-agnosticism is demonstrated only if
 the thresholds hold in each tool separately; a result that holds in one tool only is a
 tool-specific result. Use the same prompts before and after remediation; keep model,
@@ -219,7 +219,7 @@ Remaining gaps:
 
 The fixes were written against these cases, so the gains overstate the real
 improvement. The rerun also exposed an incomplete router description in `cae503b`
-(`scripts/patch_llm_router.py`, CLOUD-11-A); it is corrected.
+(the historical CLOUD-11-A rewrite); it is corrected.
 
 **Planned changes:** add the 12 case definitions with expected routes, then run them in at least two
 supported tools against the current setup. Avoid production data, external writes, or paid

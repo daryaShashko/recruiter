@@ -3,10 +3,9 @@
  *
  * Ports the live n8n "Code: LLM Router" node (see ADR-019, context/decisions.yaml) —
  * tries each provider in order via n8n/providers' adapters, returns the first success,
- * and throws an aggregated error if every provider fails. The node's own two historical
- * "generator" scripts (scripts/p12_6_llm_router.py, scripts/patch_llm_router.py) both
+ * and throws an aggregated error if every provider fails. Historical generators both
  * drifted from what's actually deployed; this reads the live node's real behavior
- * directly (captured via the n8n API on 2026-10-05), not either script's assumption.
+ * directly (captured via the n8n API on 2026-10-05), not either generator's assumption.
  */
 
 import { getProvider } from "../providers";

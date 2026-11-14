@@ -10,8 +10,8 @@ decisions:
     title: "XHR interception instead of DOM parsing"
     status: "accepted; partially superseded by ADR-019 (2026-10) for justjoin.ts and
       nofluffjobs.ts — the Cloudflare block this ADR worked around no longer reproduces
-      for those two endpoints. Still in effect for check-manual.ts, debug-urls.ts, and
-      scrape-one.ts, which still launch a real browser."
+      for those two endpoints. Still in effect for check-manual.ts, which launches a
+      real browser."
     date: "2024-07"
     context: >
       Job boards (JustJoin.it, NoFluffJobs) use Cloudflare WAF.
@@ -688,9 +688,8 @@ decisions:
       paginated calls is kept — removing it was observed to make NFJ's server fall back
       to the full-snapshot behavior described above.
       scraper/src/utils/browser.ts and the `playwright` dependency are KEPT: they are
-      still used by check-manual.ts (manual job submission from an arbitrary URL) and
-      the debug scripts debug-urls.ts / scrape-one.ts. This ADR only covers the two
-      automated scrapers.
+      still used by check-manual.ts (manual job submission from an arbitrary URL). This
+      ADR only covers the two automated scrapers.
     rationale:
       - "Direct HTTP re-verified reachable from a GitHub Actions runner — no bypass needed"
       - "No browser launch = faster CI runs, no Playwright install step for these two scrapers"
@@ -719,7 +718,7 @@ decisions:
                with extractPostingsBatch tests)
       Removed: .github/workflows/temp-cf-check.yml
       Unchanged: scraper/src/utils/browser.ts, scraper/src/check-manual.ts,
-                 scraper/src/debug-urls.ts, scraper/src/scrape-one.ts, playwright dependency
+                 playwright dependency
       No changes to: ingest.json, interfaces.yaml, types.ts (source='manual' already present)
 
   ADR-020:

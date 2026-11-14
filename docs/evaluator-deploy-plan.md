@@ -16,8 +16,7 @@ make sure.
 ## 1. Why this exists (minimum context, see ADR-019 in `context/decisions.yaml` for the full story)
 
 - The n8n "Code: LLM Router" node's logic lived only inline in n8n's UI and had already
-  drifted from its own historical patch scripts (`scripts/p12_6_llm_router.py`,
-  `scripts/patch_llm_router.py`) — neither matched what was actually deployed.
+  drifted from its historical rewrites — neither matched what was actually deployed.
 - That logic (LLM fallback-chain call + hard-reject scoring, read directly from the live
   node via the n8n API) has been ported verbatim into `n8n/evaluator/router.ts` and
   `scoring.ts`, with 20 Jest tests, reusing the already-existing `n8n/providers/*.ts`
