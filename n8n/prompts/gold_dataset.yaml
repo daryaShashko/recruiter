@@ -422,7 +422,8 @@
         try {
           const reason = JSON.parse(output).reason;
           return typeof reason === 'string'
-            && (/\b80%\s*(?:node(?:\.js)?|allocation|focus)/i.test(reason) || /\bnode(?:\.js)?\b[^.;]{0,60}(?:\b(?:primary|main|core)\b|80%)/i.test(reason) || /\b(?:primary|main|core)\b[^.;]{0,60}\bnode(?:\.js)?\b/i.test(reason))
+            && /\bnode(?:\.js)?\b/i.test(reason)
+            && (/\b80%/i.test(reason) || /\b(?:primary|main|core|migration)\b/i.test(reason))
             && !/\bjava\s+(?:is|remains|becomes)\s+(?:the\s+)?(?:primary|main|core)\b|\b(?:primary|main|core)\s+(?:stack|technology|language)\s+(?:is\s+)?java\b/i.test(reason);
         } catch(e) { return false; }
       weight: 1

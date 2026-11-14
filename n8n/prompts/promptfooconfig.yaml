@@ -141,6 +141,7 @@ defaultTest:
 # Ollama takes ~12s/test → ~5 Gemini grading calls/min, safely under 15 RPM limit.
 evaluateOptions:
   maxConcurrency: 1
+  delay: 1500
 
 # ─── Test Cases ──────────────────────────────────────────
 # CI uses deterministic assertions only; manual rubrics live in rubric_dataset.yaml.

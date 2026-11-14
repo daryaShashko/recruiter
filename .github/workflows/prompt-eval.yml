@@ -47,6 +47,8 @@ jobs:
           npx promptfoo eval \
             -c ../n8n/prompts/promptfooconfig.yaml \
             --providers google:gemini-3.1-flash-lite \
+            --delay 1500 \
+            --max-concurrency 1 \
             --output promptfoo-results.json
 
       - name: Upload eval results artifact
