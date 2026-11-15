@@ -79,6 +79,9 @@ const CRITICAL_FLAGS = [
   "Salary: Below Hard Floor",
   "Salary: Undisclosed / Non-Tier-1",
   "Process: Invasive Surveillance",
+  "Stack: Legacy/Non-JS",
+  "Stack: Non-JS Required",
+  "Role: Infra From Scratch",
 ];
 
 /** Bossware & invasive telemetry monitoring tools and mechanisms (Hard Reject). */
@@ -342,6 +345,16 @@ function mapToStandardTag(rawTag: unknown): string {
   }
   if (text.includes("stack mismatch") || text.includes("backend stack") || text.includes("non-js")) {
     return "Stack: Mismatch";
+  }
+
+  // Role
+  if (
+    text.includes("from scratch") ||
+    text.includes("greenfield infra") ||
+    text.includes("setup from scratch") ||
+    text.includes("founding engineer")
+  ) {
+    return "Role: Infra From Scratch";
   }
 
   // Seniority
@@ -750,10 +763,6 @@ export function evaluateJob(
   }
 
   const uniqueRedFlags = Array.from(new Set(redFlags));
-  // If the stack contains non-JS technologies, route to Review (cap at 75) rather than hard-rejecting to 0
-  if (uniqueRedFlags.includes("Stack: Legacy/Non-JS") && overallScore >= 80) {
-    overallScore = 75;
-  }
   if (uniqueRedFlags.some((f) => CRITICAL_FLAGS.includes(f))) {
     overallScore = 0;
   }

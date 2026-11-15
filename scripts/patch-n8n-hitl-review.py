@@ -126,7 +126,7 @@ def main():
   (() => {
     const item = $('Code: Parse Ollama Response').item.json;
     const comp = item.company || '';
-    const dossier = (item.company_dossier && item.company_dossier.trim()) ? item.company_dossier.trim() : 'Информация о компании уточняется.';
+    const dossier = (item.company_dossier && item.company_dossier.trim() && !item.company_dossier.toLowerCase().includes('уточняется')) ? item.company_dossier.trim() : 'Не знаю';
     const cUrl = (item.companyMeta && item.companyMeta.companyUrl) || item.companyUrl;
     const compLink = cUrl ? `[🌐 Сайт компании](${cUrl})` : `[🔍 Найти в Google](https://www.google.com/search?q=${encodeURIComponent(comp + ' software')})`;
 
@@ -186,7 +186,7 @@ def main():
   (() => {
     const item = $('Code: Parse Ollama Response').item.json;
     const comp = item.company || '';
-    const dossier = (item.company_dossier && item.company_dossier.trim()) ? item.company_dossier.trim() : 'Информация о компании уточняется.';
+    const dossier = (item.company_dossier && item.company_dossier.trim() && !item.company_dossier.toLowerCase().includes('уточняется')) ? item.company_dossier.trim() : 'Не знаю';
     const cUrl = (item.companyMeta && item.companyMeta.companyUrl) || item.companyUrl;
     const compLink = cUrl ? `[🌐 Сайт компании](${cUrl})` : `[🔍 Найти в Google](https://www.google.com/search?q=${encodeURIComponent(comp + ' software')})`;
     const flags = (item.red_flags || []).join(', ') || 'нет';

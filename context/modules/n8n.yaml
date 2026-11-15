@@ -380,7 +380,7 @@ telegram_alert_format: |
   🔗 {{ $json.url }}
 
   🏢 *О компании:*
-  {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+  {{ $json.company_dossier || 'Не знаю' }}
   {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('[🌐 Сайт компании](' + $json.companyMeta.companyUrl + ')') : ('[🔍 Найти в Google](https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + ')') }}
 
   _{{ $json.reason }}_

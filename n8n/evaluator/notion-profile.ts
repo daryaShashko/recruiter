@@ -85,29 +85,29 @@ export interface DynamicScoringConfig {
 export const DEFAULT_CV_ENTRIES: readonly CvEntry[] = [
   {
     id: "cv-role-summary",
-    title: "Senior Full-Stack & Product Engineer | Tech Stream Lead",
+    title: "Senior Forward Deployed & Full-Stack Engineer | Team Lead (Frontend & Full-Stack)",
     section: "Role & Summary",
     order: 1,
     highlight:
-      "Senior Full-Stack & Product Engineer with 10 years of commercial experience in the JS/TS ecosystem, combining deep React/Next.js frontend expertise with scalable Node.js/NestJS and Python backend delivery. Proven track record of leading technical streams (up to 6 engineers), driving Frontend-to-Full-Stack team transitions, and executing complex legacy migrations (Java/MySQL to Node.js/PostgreSQL). Experienced in AI-native product engineering, multi-agent development workflows, and resolving critical stakeholder escalations through structured architecture and shared UI systems.",
-    tags: ["TypeScript", "React", "Node.js", "Next.js", "NestJS", "Python", "Architecture"],
+      "Senior Forward Deployed & Full-Stack Engineer with 10 years of commercial experience in the JS/TS ecosystem (React, Next.js, Node.js, NestJS). Operates as a Product / Forward Deployed Engineer with spec-driven delivery (PRD, ADR, feature files, tests, ticket slicing, and implementation). Open to Forward Deployed, Product Engineer, and Team Lead (Frontend / Full-Stack) roles in the JS/TS ecosystem. Strictly works with JavaScript, TypeScript, and Node.js (no Java, Python, C#, or Go backend). Not seeking roles setting up infrastructure or DevOps from scratch.",
+    tags: ["TypeScript", "React", "Node.js", "Next.js", "NestJS", "Forward Deployed", "Product Engineer", "Team Lead"],
     period: "Core Profile",
     active: true,
     details:
-      "Core positioning: Senior/Lead Product & Full-Stack engineer combining strong Frontend architecture with production Node.js/NestJS/Python backend delivery and AI-assisted engineering.",
+      "Core positioning: Senior Forward Deployed / Product Engineer & Team Lead combining strong UI architecture with production Node.js/NestJS delivery and AI-assisted workflows.",
   },
   {
     id: "cv-recent-6m",
-    title: "FinTech Investment Platform / EPAM Systems — Senior Product Engineer & UI Stream Lead",
+    title: "FinTech Investment Platform / EPAM Systems — Forward Deployed Engineer & UI Stream Lead",
     section: "Recent Experience (Last 6m)",
     order: 2,
     highlight:
-      "Operate as a Product / Forward-Deployed Engineer on an AI-integrated investment platform (TypeScript, React, Python, AI stack), owning ambiguous feature scopes end-to-end from direct customer discovery to production release. Stepped in to lead a 6-engineer technical stream following a critical customer design-alignment escalation; partnered with the Chief Designer to architect and deliver a Shared UI Component Library that unblocked parallel feature teams, while leading backlog slicing, refinement, and sprint demos.",
-    tags: ["TypeScript", "React", "Python", "Node.js", "GenAI", "Team Lead", "Architecture"],
+      "Operate as a Product / Forward Deployed Engineer on an AI-integrated investment platform (TypeScript, React, Node.js, AI tooling), owning ambiguous feature scopes end-to-end from customer discovery, PRD, and ADR to feature files, tests, ticket slicing, and production release. Stepped in to lead a 6-engineer technical stream following a customer design escalation; partnered with Chief Designer to architect and deliver a Shared UI Component Library, while leading backlog slicing and sprint demos.",
+    tags: ["TypeScript", "React", "Node.js", "GenAI", "Forward Deployed", "Product Engineer", "Team Lead"],
     period: "July 2026 – Present",
     active: true,
     details:
-      "Current commercial project: AI-integrated FinTech investment platform, leading 6-engineer UI platform & quality stream.",
+      "Current commercial project: AI-integrated FinTech investment platform, Forward Deployed Engineer and leading 6-engineer UI platform & quality stream.",
   },
   {
     id: "cv-primary-stack",
@@ -115,8 +115,8 @@ export const DEFAULT_CV_ENTRIES: readonly CvEntry[] = [
     section: "Primary Stack",
     order: 3,
     highlight:
-      "JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, Python (working knowledge), HTML5, CSS3, SCSS.",
-    tags: ["JavaScript", "TypeScript", "React", "Next.js", "Node.js", "NestJS", "PostgreSQL", "Python"],
+      "JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, HTML5, CSS3, SCSS. Strictly JavaScript/TypeScript ecosystem only (no Python, Java, C#, Go, PHP).",
+    tags: ["JavaScript", "TypeScript", "React", "Next.js", "Node.js", "NestJS", "PostgreSQL"],
     period: "Daily Production",
     active: true,
   },
@@ -159,19 +159,19 @@ export const DEFAULT_CV_ENTRIES: readonly CvEntry[] = [
     section: "Target Role & Leadership",
     order: 7,
     highlight:
-      "Ideal role is Full-Stack (50/50 to 70/30 in favor of Frontend), Product Engineer, or Node.js/TS Backend-heavy where Senior JS/TS skills apply. Leverage elite Frontend & UI architecture expertise while actively contributing to Node.js/NestJS/Python backend & AI engineering.",
-    tags: ["Full-Stack", "Frontend", "Backend", "Node.js", "React"],
+      "Ideal role is Forward Deployed Engineer, Product Engineer, Team Lead (Frontend/Full-Stack), or Full-Stack (50/50 to 70/30 in favor of Frontend) in JS/TS ecosystem. Leverage elite Frontend & UI architecture expertise combined with Node.js/NestJS backend delivery. No non-JS backends (no Java, Python, C#, Go).",
+    tags: ["Forward Deployed", "Product Engineer", "Full-Stack", "Frontend", "Backend", "Node.js", "React"],
     period: "Target Role",
     active: true,
   },
   {
     id: "cv-leadership",
-    title: "Leadership, Management & Hands-On Ratio (Tech Lead / Team Lead)",
+    title: "Leadership, Management & Hands-On Ratio (Team Lead / FDE)",
     section: "Target Role & Leadership",
     order: 8,
     highlight:
-      "Strong communication and stakeholder management skills; actively leads technical streams (up to 6 engineers), customer demos, and escalations (Tech Lead / Team Lead / Product Engineer roles). Preferred hands-on coding ratio is 50% to 70% (NO 100% people management without coding, and NO zero-impact pure coder role).",
-    tags: ["Tech Lead", "Team Lead", "Architecture", "Mentoring"],
+      "Strong communication and team leadership skills; experienced Team Lead for Frontend and Full-Stack teams (up to 6 engineers), running PRD/ADR workflows, 1:1s, code reviews, and stakeholder alignment. Preferred hands-on coding ratio is 50% to 70% in established frameworks (NO greenfield DevOps / infra from scratch, and NO 100% pure people management without code).",
+    tags: ["Team Lead", "Forward Deployed", "Product Engineer", "Mentoring"],
     period: "Target Role",
     active: true,
   },
@@ -355,13 +355,13 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   },
   {
     id: "crit-reject-legacy",
-    ruleName: "NO Non-JS Language as Must-Have (Java, C#, PHP, Python, Go, Ruby...; Nice-to-Have Is OK)",
+    ruleName: "NO Non-JS Backend or Mandatory Non-JS (Java, Python, C#, Go, PHP, etc.)",
     category: "Hard Reject (Red Flag)",
-    enforcement: "Prompt Rule (LLM Only)",
+    enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords: "php, java, c#, .net, ruby, c++, legacy maintenance",
+    valueOrKeywords: "java, python, c#, .net, golang, go, php, ruby, c++, non-js backend, non-js required",
     description:
-      "Reject roles where a non-JavaScript language (Java, C#, .NET, PHP, Python, Go, Ruby, C++, Kotlin, etc.) is a must-have or the primary day-to-day language, or that maintain a legacy non-JS codebase without a rewrite/migration to Node.js/TypeScript (red_flag: Non-JS required). Do NOT reject when the non-JS language is only nice-to-have, a plus, or learnable on the job — the candidate is happy to pick it up with AI-assisted development (red_flag: Non-JS nice-to-have). JavaScript/TypeScript is NOT Java.",
+      "Strictly REJECT (score = 0, red_flag: Stack: Non-JS Required) any vacancy where the backend is implemented in Java, Python, C#, .NET, Go, PHP, Ruby, etc., or where a non-JS language is a mandatory requirement. The candidate knows ONLY JavaScript, TypeScript, and Node.js. Such vacancies must NEVER appear in Hot Match or Review. (Non-JS mentioned strictly as an optional nice-to-have or learnable plus where primary work is Node.js/TS is allowed, but must NOT require a non-JS backend).",
     order: 11,
     active: true,
   },
@@ -405,15 +405,15 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   },
   {
     id: "crit-score-mixed-migration",
-    ruleName: "Mixed Stack with Node.js PRIMARY (e.g. 80% Node, 20% Java Migration) -> Hot Match (>=80)",
+    ruleName: "Mixed Stack with Node.js PRIMARY (e.g. 80% Node, 20% Java Migration) -> Deprecated",
     category: "Scoring Guideline",
     enforcement: "Prompt Rule (LLM Only)",
     ruleType: "Hot Match Boost (Score >= 80)",
     valueOrKeywords: "Node.js primary, legacy migration",
     description:
-      "If Node.js/TypeScript is explicitly stated as the primary technology (e.g. 80% Node.js, 20% legacy Java maintenance during migration), treat it as a Node.js role and score >= 80 if all other criteria match.",
+      "Deprecated rule: candidate works strictly in JS/TS/Node.js ecosystem without non-JS backend writing.",
     order: 15,
-    active: true,
+    active: false,
   },
 
   // ── 5. Target Domains & Industries ────────────────────────────────────────

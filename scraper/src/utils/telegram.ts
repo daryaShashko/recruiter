@@ -304,9 +304,9 @@ export function formatTelegramAlertMessage(job: TelegramAlertJobInput): string {
       ? `<a href="${job.companyUrl}">🌐 Сайт компании</a>`
       : `<a href="https://www.google.com/search?q=${encodeURIComponent(job.company + ' software')}">🔍 Найти в Google</a>`;
 
-    const dossierText = job.company_dossier
+    const dossierText = job.company_dossier && !job.company_dossier.toLowerCase().includes('уточняется')
       ? job.company_dossier.trim()
-      : 'Информация о компании уточняется.';
+      : 'Не знаю';
 
     const salaryText = job.salary ? job.salary : 'Зарплата не указана';
     const locationText = job.location ? job.location : 'Локация не указана';

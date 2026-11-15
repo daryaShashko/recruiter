@@ -197,23 +197,23 @@ describe("evaluateJob — non-JS stack rules", () => {
     expect(result.overall_score).toBe(80);
   });
 
-  it("routes to Review rather than force-zeroing when non-JS stack is present", () => {
+  it("force-rejects (score 0) when non-JS stack is present as required", () => {
     for (const flag of ["Java primary stack", "Non-JS required"]) {
       const result = evaluateJob(rawLlm({ overall_score: 70, red_flags: [flag] }), makeJob({ location: "Gdańsk" }));
       expect(result.red_flags).toContain("Stack: Legacy/Non-JS");
-      expect(result.overall_score).toBe(70);
-      expect(result.match).toBe(true);
+      expect(result.overall_score).toBe(0);
+      expect(result.match).toBe(false);
     }
   });
 
-  it("caps Hot Match at 75 for Review when non-JS stack is present", () => {
+  it("force-rejects (score 0) when non-JS secondary/infra stack is required", () => {
     const result = evaluateJob(
       rawLlm({ overall_score: 90, red_flags: ["Golang and Rust secondary stack"] }),
       makeJob({ location: "Gdańsk" }),
     );
     expect(result.red_flags).toContain("Stack: Legacy/Non-JS");
-    expect(result.overall_score).toBe(75);
-    expect(result.match).toBe(true);
+    expect(result.overall_score).toBe(0);
+    expect(result.match).toBe(false);
   });
 
   it("does not reject a pure Node.js backend role", () => {

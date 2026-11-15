@@ -156,7 +156,7 @@ key_logic:
         🔗 <a href="{{ $json.url }}">Вакансия</a>
 
         🏢 <b>О компании:</b>
-        {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+        {{ $json.company_dossier || 'Не знаю' }}
         {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('<a href="' + $json.companyMeta.companyUrl + '">🌐 Сайт компании</a>') : ('<a href="https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + '">🔍 Найти в Google</a>') }}
 
         🎯 Мэтч: {{ $json.overall_score }}/100 (Стек: {{ $json.tech_stack_match }}, Сеньорность: {{ $json.seniority_match }})
@@ -191,7 +191,7 @@ key_logic:
         🔗 <a href="{{ $json.url }}">Вакансия</a>
 
         🏢 <b>О компании:</b>
-        {{ $json.company_dossier || 'Информация о компании уточняется.' }}
+        {{ $json.company_dossier || 'Не знаю' }}
         {{ $json.companyMeta && $json.companyMeta.companyUrl ? ('<a href="' + $json.companyMeta.companyUrl + '">🌐 Сайт компании</a>') : ('<a href="https://www.google.com/search?q=' + encodeURIComponent(($json.company || '') + ' software') + '">🔍 Найти в Google</a>') }}
 
         🎯 Мэтч: {{ $json.overall_score }}/100 (Стек: {{ $json.tech_stack_match }}, Сеньорность: {{ $json.seniority_match }})

@@ -12,6 +12,7 @@
     "test": "cd ../scraper && npx jest ../n8n",
     "notion:provision": "ts-node evaluator/notion-cli.ts provision",
     "notion:sync": "ts-node evaluator/notion-cli.ts sync",
+    "notion:update": "ts-node evaluator/notion-cli.ts update-profile",
     "notion:preview": "ts-node evaluator/notion-cli.ts preview"
   },
   "dependencies": {},
