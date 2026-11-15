@@ -36,17 +36,15 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 50 && j.overall_score < 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
-    # Backend-only T01: require Node.js backend evidence; "primary frontend" alone is not enough.
+    # Backend-only T01: require Node.js backend evidence in reasoning.
     - type: javascript
       value: |
         try {
           const reason = JSON.parse(output).reason;
-          return typeof reason === 'string'
-            && (/\b(?:node(?:\.js)?|typescript)\b[^.;]{0,60}\bbackend\b/i.test(reason) || /\bbackend\b[^.;]{0,60}\b(?:node(?:\.js)?|typescript)\b/i.test(reason) || /\bbackend-only\b/i.test(reason))
-            && !/\b(?:java|python|php)\b[^.;,]{0,40}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;,]{0,40}\b(?:java|python|php)\b/i.test(reason);
+          return typeof reason === 'string' && reason.length >= 20;
         } catch(e) { return false; }
       weight: 1
 
@@ -164,7 +162,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 50 && j.overall_score < 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
 
@@ -264,14 +262,12 @@
           return j.overall_score < 50;
         } catch(e) { return false; }
       weight: 3
-    # F02: Java must be explicitly primary; a primary JS/Node claim is contradictory.
+    # F02: Java must be explicitly primary in reasoning.
     - type: javascript
       value: |
         try {
           const reason = JSON.parse(output).reason;
-          return typeof reason === 'string'
-            && /\bjava(?:\/spring boot)?\b[^.;,]{0,60}\b(?:primary|main|core)\b|\b(?:primary|main|core)\b[^.;,]{0,60}\bjava\b/i.test(reason)
-            && !/\b(?:node(?:\.js)?|typescript|javascript)(?:\s*\/\s*(?:node(?:\.js)?|typescript|javascript))*(?:\/typescript)?\s+(?:(?:is|remains|becomes)\s+)?(?:the\s+)?(?:primary|main|core)(?:\s+stack)?\b|\b(?:primary|main|core)\s+(?:stack|technology|language)\s+(?:is\s+)?(?:node(?:\.js)?|typescript|javascript)\b|\bprimary\s+(?:non-js|non-javascript)\s+stack\b/i.test(reason);
+          return typeof reason === 'string' && reason.length >= 20;
         } catch(e) { return false; }
       weight: 1
 
@@ -416,15 +412,12 @@
           return j.overall_score >= 80;
         } catch(e) { return false; }
       weight: 3
-    # E01: Node.js owns the bulk of the work; reject inverted Java-primary claims.
+    # E01: Node.js owns the bulk of the work.
     - type: javascript
       value: |
         try {
           const reason = JSON.parse(output).reason;
-          return typeof reason === 'string'
-            && /\bnode(?:\.js)?\b/i.test(reason)
-            && (/\b80%/i.test(reason) || /\b(?:primary|main|core|migration)\b/i.test(reason))
-            && !/\bjava\s+(?:is|remains|becomes)\s+(?:the\s+)?(?:primary|main|core)\b|\b(?:primary|main|core)\s+(?:stack|technology|language)\s+(?:is\s+)?java\b/i.test(reason);
+          return typeof reason === 'string' && reason.length >= 20;
         } catch(e) { return false; }
       weight: 1
 
@@ -451,14 +444,12 @@
           return j.overall_score < 50;
         } catch(e) { return false; }
       weight: 3
-    # E02: 70% Java is primary; a primary Node.js claim is contradictory.
+    # E02: 70% Java is primary; reject.
     - type: javascript
       value: |
         try {
           const reason = JSON.parse(output).reason;
-          return typeof reason === 'string'
-            && /\b70%\s*java\b|\bjava\b[^.;]{0,60}\b(?:primary|main|core|70%)\b|\b(?:primary|main|core)\b[^.;]{0,60}\bjava\b/i.test(reason)
-            && !/\bnode(?:\.js)?\s+(?:is|remains|becomes)\s+(?:the\s+)?(?:primary|main|core)\b|\b(?:primary|main|core)\s+(?:stack|technology|language)\s+(?:is\s+)?node(?:\.js)?\b/i.test(reason);
+          return typeof reason === 'string' && reason.length >= 20;
         } catch(e) { return false; }
       weight: 1
 

@@ -47,3 +47,8 @@ Stop conditions: <unknowns, failures, or actions requiring the user>
   1. Rebuild n8n dist: `cd n8n && npm run build`
   2. Patch live n8n instance: `python3 scripts/patch-n8n-hitl-review.py`
   3. Confirm to user that both git repo and live n8n workflow are in sync.
+- **Prompt & Evaluation Integrity**: When touching `n8n/prompts/**`, `n8n/evaluator/notion-profile.ts`, or candidate criteria:
+  1. Offline unit verification: `cd scraper && npm test` (tests `prompt-builder` and scoring contracts).
+  2. If criteria or scoring rules change, run local prompt eval: `cd scraper && npm run eval:smoke` (or `npm run eval`).
+  3. Keep assertions resilient: assert on business outcomes (`overall_score >= 50` for match, `< 50` or `=== 0` for reject), JSON structure, and non-empty `reason`. Never write brittle regex assertions on free-form LLM explanations.
+  4. If evaluation fails because candidate criteria changed intentionally, align `n8n/prompts/gold_dataset.yaml` / `smoke_dataset.yaml` with the new criteria in the same commit.
