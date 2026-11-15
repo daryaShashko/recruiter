@@ -238,6 +238,89 @@ def main():
             patched_count += 1
             print("✅ Configured Telegram: Send Review Alert with compact mobile card and Review keyboard")
 
+        elif name == "Code: Prepare Digest":
+            params = node.setdefault("parameters", {})
+            params["jsCode"] = """let totalReceived = 0;
+try {
+  totalReceived = $('Code: Normalize Jobs').all().length;
+} catch (e) {}
+
+let uniqueAfterBatchDedup = 0;
+try {
+  uniqueAfterBatchDedup = $('Code: Dedup Batch').all().length;
+} catch (e) {}
+const batchDuplicates = Math.max(0, totalReceived - uniqueAfterBatchDedup);
+
+let duplicatesCount = 0;
+let dupRun = 0;
+while (true) {
+  try {
+    const items = $('Code: Check Duplicate').all(0, dupRun);
+    if (!items || items.length === 0) break;
+    for (const item of items) {
+      if (item && item.json && item.json.isDuplicate === true) duplicatesCount++;
+    }
+    dupRun++;
+  } catch (e) {
+    break;
+  }
+}
+
+let evaluatedJobs = [];
+let evalRun = 0;
+while (true) {
+  try {
+    const items = $('Code: Parse Ollama Response').all(0, evalRun);
+    if (!items || items.length === 0) break;
+    for (const item of items) {
+      if (item && item.json) evaluatedJobs.push(item.json);
+    }
+    evalRun++;
+  } catch (e) {
+    break;
+  }
+}
+
+const hotMatches = evaluatedJobs.filter(j => (j.overall_score || 0) >= 80);
+const reviews = evaluatedJobs.filter(j => (j.overall_score || 0) >= 50 && (j.overall_score || 0) < 80);
+const rejected = evaluatedJobs.filter(j => (j.overall_score || 0) < 50);
+
+const dateStr = new Date().toLocaleDateString('ru-RU', { timeZone: 'Europe/Warsaw' });
+const timeStr = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' });
+
+const text = `🏁 *AI Recruiter — Дайджест прогона*
+📅 _${dateStr} ${timeStr}_
+───────────────────────────
+📥 *Получено от скрейпера:* ${totalReceived}
+👥 *Дубликаты в прогоне (кросс-постинг):* ${batchDuplicates}
+♻️ *Дубликаты в базе Notion:* ${duplicatesCount}
+🤖 *Оценено нейросетью:* ${evaluatedJobs.length}
+───────────────────────────
+🔥 *Горячие (Score >= 80):* ${hotMatches.length}
+👉 _отправлены в тему «Горячий мэтч»_
+
+📋 *На ревью (Score 50–79):* ${reviews.length}
+👉 _отправлены в тему «На ревью»_
+
+❌ *Отклонено (Score < 50):* ${rejected.length}
+───────────────────────────
+${reviews.length > 0 ? `💡 *Внимание:* в теме «На ревью» вас ждут ${reviews.length} вакансий для проверки!` : `✨ Все подходящие вакансии разобраны!`}`;
+
+return [{
+  json: {
+    totalReceived,
+    batchDuplicates,
+    duplicatesCount,
+    evaluatedCount: evaluatedJobs.length,
+    hotCount: hotMatches.length,
+    reviewCount: reviews.length,
+    rejectedCount: rejected.length,
+    digestText: text
+  }
+}];"""
+            patched_count += 1
+            print("✅ Configured Code: Prepare Digest with batchDuplicates / cross-posting breakdown")
+
     if patched_count > 0:
         payload = {
             "name": wf.get("name"),
