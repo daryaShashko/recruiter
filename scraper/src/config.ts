@@ -76,7 +76,10 @@ export const config = {
   // the LLM evaluator applies remote/relocation rules.
   global: {
     // Drop postings older than this (by publish date)
+    // Aggregator freshness threshold (JustJoin, NoFluffJobs, TheHub, SwissDevJobs, Adzuna)
     maxAgeDays: 60,
+    // Direct ATS board freshness threshold (Greenhouse, Lever, Ashby, Workable, Recruitee, Personio)
+    atsMaxAgeDays: 180,
     // Polite delay between sequential requests to the same host (ms)
     requestDelayMs: 300,
     // Per-request timeout (ms)
@@ -124,6 +127,36 @@ export const config = {
       "working student",
       "werkstudent",
       "apprentice",
+    ],
+    // Role families rejected before LLM evaluation (ADR-028)
+    rejectRoleFamilies: [
+      "support",
+      "customer support",
+      "tech support",
+      "technical support",
+      "sales",
+      "sales engineer",
+      "account executive",
+      "sre",
+      "site reliability",
+      "devops",
+      "platform engineer",
+      "infrastructure engineer",
+      "sysadmin",
+      "system administrator",
+      "qa",
+      "quality assurance",
+      "test engineer",
+      "data",
+      "data engineer",
+      "data scientist",
+      "data analyst",
+      "database administrator",
+      "dba",
+      "mobile",
+      "ios",
+      "android",
+      "flutter",
     ],
     // Hard legal blockers for an EU citizen (description, case-insensitive)
     legalBlockers: [

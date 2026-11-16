@@ -17,6 +17,9 @@ const JUSTJOIN_BASE_URL = "https://justjoin.it";
 const JUSTJOIN_API_PATH = "/api/candidate-api/offers";
 
 function sleep(ms: number): Promise<void> {
+  if (process.env.NODE_ENV === "test") {
+    return Promise.resolve();
+  }
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -287,17 +290,27 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
 // without a browser-like User-Agent.
 
 // Safety cap — prevents runaway loops on unexpected totalItems values.
-const JUSTJOIN_MAX_PAGES = 30;
-const JUSTJOIN_PAGE_SIZE = 100;
+export const JUSTJOIN_MAX_PAGES = 50;
+export const JUSTJOIN_PAGE_SIZE = 10;
 
 interface JustJoinApiResponse {
   data?: RawJustJoinOffer[];
-  meta?: { totalItems?: number };
+  meta?: {
+    totalItems?: number;
+    page?: number;
+    perPage?: number;
+    next?: {
+      cursor?: number | null;
+    } | null;
+    prev?: {
+      cursor?: number | null;
+    } | null;
+  };
 }
 
-async function fetchOffersPage(
-  from: number,
-): Promise<{ offers: RawJustJoinOffer[]; totalItems: number }> {
+export async function fetchOffersPage(
+  cursor: number,
+): Promise<{ offers: RawJustJoinOffer[]; totalItems: number; nextCursor: number | null }> {
   const response = await axios.get<JustJoinApiResponse>(
     `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}`,
     {
@@ -305,7 +318,7 @@ async function fetchOffersPage(
         categories: "javascript",
         orderBy: "descending",
         sortBy: "publishedAt",
-        from,
+        from: cursor,
         perPage: JUSTJOIN_PAGE_SIZE,
       },
       headers: {
@@ -321,39 +334,60 @@ async function fetchOffersPage(
     typeof response.data?.meta?.totalItems === "number"
       ? response.data.meta.totalItems
       : 0;
+  const rawNext = response.data?.meta?.next?.cursor;
+  const nextCursor = typeof rawNext === "number" ? rawNext : null;
 
-  return { offers, totalItems };
+  return { offers, totalItems, nextCursor };
 }
 
 export async function scrapeJustJoin(): Promise<JobOffer[]> {
   const rawOffers: RawJustJoinOffer[] = [];
 
   try {
-    console.log("[JustJoin] Fetching page 1...");
-    const first = await fetchOffersPage(0);
-    rawOffers.push(...first.offers);
-    console.log(
-      `[JustJoin] Page 1: ${first.offers.length} offers (totalItems: ${first.totalItems})`,
-    );
+    let currentCursor: number | null = 0;
+    let pageNum = 1;
 
-    if (first.totalItems > JUSTJOIN_PAGE_SIZE) {
-      const totalPages = Math.min(
-        Math.ceil(first.totalItems / JUSTJOIN_PAGE_SIZE),
-        JUSTJOIN_MAX_PAGES,
-      );
-      console.log(`[JustJoin] Fetching pages 2..${totalPages}...`);
-
-      for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
+    while (currentCursor !== null && pageNum <= JUSTJOIN_MAX_PAGES) {
+      if (pageNum > 1) {
         // Polite inter-request delay
         await sleep(300);
-
-        const fromOffset = (pageNum - 1) * JUSTJOIN_PAGE_SIZE;
-        const { offers } = await fetchOffersPage(fromOffset);
-        rawOffers.push(...offers);
-        console.log(
-          `[JustJoin] Page ${pageNum}/${totalPages}: ${offers.length} offers (running total: ${rawOffers.length})`,
-        );
       }
+
+      console.log(`[JustJoin] Fetching page ${pageNum} (from cursor ${currentCursor})...`);
+      const { offers, totalItems, nextCursor } = await fetchOffersPage(currentCursor);
+
+      if (offers.length === 0) {
+        console.log(`[JustJoin] Page ${pageNum} returned 0 offers. Stopping.`);
+        break;
+      }
+
+      rawOffers.push(...offers);
+      console.log(
+        `[JustJoin] Page ${pageNum}: ${offers.length} offers (running total: ${rawOffers.length}, totalItems: ${totalItems})`,
+      );
+
+      // Stop condition: offers older than 60 days
+      const hasExpiredOffers = offers.some(
+        (offer) => !passesAgeFilter(parseDate(offer.publishedAt)),
+      );
+      if (hasExpiredOffers) {
+        console.log(
+          `[JustJoin] Page ${pageNum} contains offers older than age limit. Stopping pagination.`,
+        );
+        break;
+      }
+
+      if (nextCursor === null || nextCursor === currentCursor) {
+        console.log(`[JustJoin] Reached end of pagination (nextCursor: ${nextCursor}).`);
+        break;
+      }
+
+      currentCursor = nextCursor;
+      pageNum++;
+    }
+
+    if (pageNum > JUSTJOIN_MAX_PAGES) {
+      console.warn(`[JustJoin] Reached maximum page ceiling (${JUSTJOIN_MAX_PAGES}).`);
     }
 
     console.log(`[JustJoin] Total raw offers collected: ${rawOffers.length}`);

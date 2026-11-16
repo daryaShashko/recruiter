@@ -11,6 +11,7 @@ import { validateConfig } from "./config";
 import { closeBrowser } from "./utils/browser";
 import { enrichMissingSalaries } from "./utils/salary-enricher";
 import { filterValidLinks } from "./utils/link-check";
+import { funnelTracker } from "./utils/funnel";
 import { JobOffer } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "true";
@@ -90,6 +91,14 @@ async function main(): Promise<void> {
     if (result.status === "fulfilled") {
       console.log(`[${scraperName}] Collected ${result.value.length} offers`);
       allOffers.push(...result.value);
+      const stats = funnelTracker.getSourceStats(scraperName);
+      const hasFilterStats =
+        funnelTracker.hasFilterStats(scraperName) ||
+        stats.passed > 0 ||
+        stats.dropped > 0;
+      if (!hasFilterStats) {
+        funnelTracker.recordPassed(scraperName, result.value.length);
+      }
     } else {
       console.error(`[${scraperName}] Scraper failed:`, result.reason);
     }
@@ -101,6 +110,9 @@ async function main(): Promise<void> {
   console.log(
     `\nTotal: ${allOffers.length} collected, ${allOffers.length - deduplicated.length} duplicates removed, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
   );
+
+  const stats = funnelTracker.finalizeSent(enrichedOffers);
+  funnelTracker.printSummaryTable();
 
   if (enrichedOffers.length === 0) {
     process.stderr.write(
@@ -115,7 +127,7 @@ async function main(): Promise<void> {
     saveDryRunOutput(enrichedOffers);
   } else {
     try {
-      await sendToWebhook(enrichedOffers, "scraper-combined");
+      await sendToWebhook(enrichedOffers, "scraper-combined", stats);
       console.log(
         `\n✅ Successfully sent ${enrichedOffers.length} offers to webhook`,
       );

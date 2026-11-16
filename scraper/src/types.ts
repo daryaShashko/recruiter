@@ -55,6 +55,21 @@ export interface JobOffer {
 }
 
 /**
+ * Funnel statistics for an individual job source.
+ */
+export interface SourceFunnelStats {
+  collected: number;
+  dropped: number;
+  passed: number;
+  sent: number;
+}
+
+/**
+ * Summary funnel statistics across sources.
+ */
+export type FunnelStats = Record<string, SourceFunnelStats>;
+
+/**
  * Payload sent to the n8n Webhook.
  */
 export interface WebhookPayload {
@@ -63,6 +78,7 @@ export interface WebhookPayload {
     source: string;
     count: number;
     sentAt: string;
+    stats?: FunnelStats;
   };
 }
 

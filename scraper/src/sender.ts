@@ -1,5 +1,5 @@
 import axios, { AxiosError } from "axios";
-import { JobOffer, WebhookPayload } from "./types";
+import { FunnelStats, JobOffer, WebhookPayload } from "./types";
 import { config } from "./config";
 
 function sleep(ms: number): Promise<void> {
@@ -108,6 +108,7 @@ async function postPayloadWithRetry(payload: WebhookPayload): Promise<void> {
 export async function sendToWebhook(
   jobs: JobOffer[],
   source: string,
+  stats?: FunnelStats,
 ): Promise<void> {
   if (!config.webhookUrl) {
     throw new Error("WEBHOOK_URL is not configured");
@@ -131,6 +132,7 @@ export async function sendToWebhook(
         source,
         count: batchJobs.length,
         sentAt: new Date().toISOString(),
+        ...(stats ? { stats } : {}),
       },
     };
 

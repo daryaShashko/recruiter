@@ -11,6 +11,7 @@ import {
   sleep,
   stripHtml,
 } from "../utils/global-filter";
+import { getAtsCompanyName } from "./ats-companies";
 
 const { workable, recruitee, personio } = config.global.atsFeeds;
 const { greenhouse, lever, ashby } = config.global.ats;
@@ -87,6 +88,35 @@ export interface RawLeverPosting {
   };
 }
 
+export interface RawAshbyCompensationComponent {
+  summary?: string;
+  compensationType?: string;
+  interval?: string;
+  currencyCode?: string;
+  minValue?: number;
+  maxValue?: number;
+}
+
+export interface RawAshbyCompensationTier {
+  title?: string;
+  tierSummary?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  minValue?: number;
+  maxValue?: number;
+  currency?: string;
+  currencyCode?: string;
+  interval?: string;
+  components?: RawAshbyCompensationComponent[];
+}
+
+export interface RawAshbyCompensation {
+  summary?: string;
+  compensationTierSummary?: string;
+  scrapeableCompensationSalarySummary?: string;
+  compensationTiers?: RawAshbyCompensationTier[];
+}
+
 export interface RawAshbyJob {
   id: string;
   title: string;
@@ -99,6 +129,7 @@ export interface RawAshbyJob {
   isListed?: boolean;
   department?: string;
   team?: string;
+  compensation?: unknown;
 }
 
 interface WorkableWidget {
@@ -189,6 +220,7 @@ function readAshbyJob(value: unknown): RawAshbyJob | undefined {
     isListed: typeof value.isListed === "boolean" ? value.isListed : undefined,
     department: optionalString(value.department),
     team: optionalString(value.team),
+    compensation: value.compensation,
   };
 }
 
@@ -357,6 +389,129 @@ export function normalizeGreenhouse(
   };
 }
 
+function formatSalaryK(val: number): string {
+  if (val >= 1000) {
+    const k = val / 1000;
+    if (Number.isInteger(k)) {
+      return `${k}k`;
+    }
+    const rounded = Math.round(k * 100) / 100;
+    return `${rounded}k`;
+  }
+  return String(val);
+}
+
+function getCurrencyPrefix(currency: string): string {
+  switch (currency.toUpperCase()) {
+    case "USD":
+      return "$";
+    case "EUR":
+      return "€";
+    case "GBP":
+      return "£";
+    default:
+      return "";
+  }
+}
+
+export function parseAshbyCompensation(comp: unknown): string | undefined {
+  if (!comp) return undefined;
+
+  // 1. Structured tiers check
+  let tiers: RawAshbyCompensationTier[] = [];
+  if (isRecord(comp) && Array.isArray(comp.compensationTiers)) {
+    tiers = comp.compensationTiers as RawAshbyCompensationTier[];
+  } else if (Array.isArray(comp)) {
+    tiers = comp as RawAshbyCompensationTier[];
+  }
+
+  if (tiers.length > 0) {
+    for (const tier of tiers) {
+      if (!isRecord(tier)) continue;
+
+      let min: number | undefined;
+      let max: number | undefined;
+      let currency = "USD";
+      let interval = "Year";
+
+      if (Array.isArray(tier.components) && tier.components.length > 0) {
+        const salaryComp =
+          tier.components.find(
+            (c) =>
+              isRecord(c) &&
+              typeof c.compensationType === "string" &&
+              /salary/i.test(c.compensationType),
+          ) ?? tier.components[0];
+        if (isRecord(salaryComp)) {
+          min = typeof salaryComp.minValue === "number" ? salaryComp.minValue : undefined;
+          max = typeof salaryComp.maxValue === "number" ? salaryComp.maxValue : min;
+          if (typeof salaryComp.currencyCode === "string") currency = salaryComp.currencyCode;
+          if (typeof salaryComp.interval === "string") interval = salaryComp.interval;
+        }
+      }
+
+      if (min === undefined) {
+        if (typeof tier.minSalary === "number") min = tier.minSalary;
+        else if (typeof tier.minValue === "number") min = tier.minValue;
+
+        if (typeof tier.maxSalary === "number") max = tier.maxSalary;
+        else if (typeof tier.maxValue === "number") max = tier.maxValue;
+        else max = min;
+
+        if (typeof tier.currency === "string") currency = tier.currency;
+        else if (typeof tier.currencyCode === "string") currency = tier.currencyCode;
+
+        if (typeof tier.interval === "string") interval = tier.interval;
+      }
+
+      if (min !== undefined && min > 0) {
+        const unit = /hour/i.test(interval)
+          ? "/h"
+          : /month/i.test(interval)
+            ? "/mo"
+            : "/ year";
+        const minK = formatSalaryK(min);
+        const maxK = max !== undefined && max > 0 && max !== min ? formatSalaryK(max) : undefined;
+        const prefix = getCurrencyPrefix(currency);
+
+        if (prefix) {
+          const range = maxK ? `${prefix}${minK} - ${prefix}${maxK}` : `${prefix}${minK}`;
+          return `${range} ${unit}`;
+        }
+        const range = maxK ? `${minK} - ${maxK}` : minK;
+        return `${range} ${currency.toUpperCase()} ${unit}`;
+      }
+    }
+  }
+
+  // 2. Summary string fallback
+  let rawSummary: string | undefined;
+  if (typeof comp === "string") {
+    rawSummary = comp;
+  } else if (isRecord(comp)) {
+    rawSummary =
+      optionalString(comp.scrapeableCompensationSalarySummary) ??
+      optionalString(comp.summary) ??
+      optionalString(comp.compensationTierSummary);
+  }
+
+  if (rawSummary) {
+    // Strip trailing equity notes like "• Offers Equity" or "· Full-time"
+    const cleaned = rawSummary.split(/[•·]/)[0].trim().replace(/—/g, "-");
+    if (/\d/.test(cleaned)) {
+      // Normalize numbers ending with ,000 or 000 into k
+      const withK = cleaned.replace(/\b(\d+),000\b/g, "$1k").replace(/\b(\d{2,})000\b/g, "$1k");
+      // Ensure explicit yearly interval if not already present
+      if (!/(?:\/|per)\s*(?:year|yr|annum|month|mo|h|hr|hour|day)/i.test(withK)) {
+        return `${withK} / year`;
+      }
+      return withK;
+    }
+  }
+
+  return undefined;
+}
+
 export function normalizeLever(
   slug: string,
   posting: RawLeverPosting,
@@ -371,7 +526,7 @@ export function normalizeLever(
   return {
     id: `lever_${slug}_${posting.id}`,
     title: posting.text,
-    company: slug,
+    company: getAtsCompanyName(slug),
     url: posting.hostedUrl ?? `https://jobs.lever.co/${slug}/${posting.id}`,
     body,
     source: "lever",
@@ -381,27 +536,31 @@ export function normalizeLever(
 }
 
 export function normalizeAshby(slug: string, job: RawAshbyJob): JobOffer {
+  const salary = parseAshbyCompensation(job.compensation);
   return {
     id: `ashby_${slug}_${job.id}`,
     title: job.title,
-    company: slug,
+    company: getAtsCompanyName(slug),
     url: job.jobUrl ?? `https://jobs.ashbyhq.com/${slug}/${job.id}`,
     body: stripHtml(job.descriptionPlain ?? job.descriptionHtml ?? "") || job.title,
     source: "ashby",
     location: job.location || (job.isRemote ? "Remote" : "Unknown"),
+    ...(salary ? { salary } : {}),
     scrapedAt: new Date().toISOString(),
   };
 }
 
-function passesFilter(
+export function passesFilter(
   title: string,
   description: string,
   publishedAt: unknown,
+  source: string = "ats",
 ): GlobalFilterReason {
   return evaluateGlobalFilter({
     title,
     description: stripHtml(description),
     publishedAt: parseDate(publishedAt),
+    source,
   });
 }
 
@@ -450,6 +609,7 @@ async function scrapeWorkableSlug(slug: string): Promise<JobOffer[]> {
         .filter((part): part is string => Boolean(part))
         .join("\n"),
       job.published_on,
+      "workable",
     );
     reasons.push(reason);
     if (reason === "ok") {
@@ -485,6 +645,7 @@ async function scrapeRecruiteeSlug(slug: string): Promise<JobOffer[]> {
         .filter((part): part is string => Boolean(part))
         .join("\n"),
       offer.published_at ?? offer.created_at,
+      "recruitee",
     );
     reasons.push(reason);
     if (reason === "ok") {
@@ -513,6 +674,7 @@ async function scrapePersonioSlug(slug: string): Promise<JobOffer[]> {
       position.name,
       position.descriptions.join("\n"),
       position.createdAt,
+      "personio",
     );
     reasons.push(reason);
     if (reason === "ok") {
@@ -545,6 +707,7 @@ async function scrapeGreenhouseSlug(slug: string): Promise<JobOffer[]> {
       job.title,
       job.content ?? "",
       job.first_published ?? job.updated_at,
+      "greenhouse",
     );
     reasons.push(reason);
     if (reason === "ok") {
@@ -584,6 +747,7 @@ async function scrapeLeverSlug(slug: string): Promise<JobOffer[]> {
       posting.text,
       description,
       posting.createdAt,
+      "lever",
     );
     reasons.push(reason);
     if (reason === "ok") {
@@ -598,7 +762,10 @@ async function scrapeLeverSlug(slug: string): Promise<JobOffer[]> {
 async function scrapeAshbySlug(slug: string): Promise<JobOffer[]> {
   const response = await axios.get<unknown>(
     `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`,
-    { timeout },
+    {
+      params: { includeCompensation: "true" },
+      timeout,
+    },
   );
   const jobs = getArray<unknown>(response.data, "jobs");
   const reasons: GlobalFilterReason[] = [];
@@ -619,6 +786,7 @@ async function scrapeAshbySlug(slug: string): Promise<JobOffer[]> {
       job.title,
       job.descriptionPlain ?? job.descriptionHtml ?? "",
       job.publishedAt,
+      "ashby",
     );
     reasons.push(reason);
     if (reason === "ok") {

@@ -1,11 +1,88 @@
 import {
   evaluateGlobalFilter,
+  matchesRoleFamily,
   parseDate,
+  passesAgeFilter,
+  passesTitleFilter,
   stripHtml,
 } from '../src/utils/global-filter';
 
 const NOW = new Date('2026-11-04T12:00:00Z');
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000);
+
+describe('passesTitleFilter', () => {
+  it('allows standard product and engineering titles without requiring senior keywords', () => {
+    expect(passesTitleFilter('Product Engineer')).toBe(true);
+    expect(passesTitleFilter('Software Engineer')).toBe(true);
+    expect(passesTitleFilter('Fullstack Developer')).toBe(true);
+    expect(passesTitleFilter('Frontend Engineer')).toBe(true);
+    expect(passesTitleFilter('Senior Software Engineer')).toBe(true);
+    expect(passesTitleFilter('Staff Product Engineer')).toBe(true);
+  });
+
+  it('rejects junior and trainee titles', () => {
+    expect(passesTitleFilter('Junior Software Engineer')).toBe(false);
+    expect(passesTitleFilter('Frontend Intern')).toBe(false);
+    expect(passesTitleFilter('Software Engineering Trainee')).toBe(false);
+    expect(passesTitleFilter('Junior to Senior Developer')).toBe(false);
+  });
+
+  it('rejects non-target role families (ADR-028)', () => {
+    expect(passesTitleFilter('Senior QA Engineer')).toBe(false);
+    expect(passesTitleFilter('Lead DevOps Architect')).toBe(false);
+    expect(passesTitleFilter('Site Reliability Engineer')).toBe(false);
+    expect(passesTitleFilter('SRE Lead')).toBe(false);
+    expect(passesTitleFilter('Customer Support Specialist')).toBe(false);
+    expect(passesTitleFilter('Technical Support Engineer')).toBe(false);
+    expect(passesTitleFilter('Senior Sales Engineer')).toBe(false);
+    expect(passesTitleFilter('Data Engineer')).toBe(false);
+    expect(passesTitleFilter('Senior Data Scientist')).toBe(false);
+    expect(passesTitleFilter('Mobile Developer (iOS)')).toBe(false);
+    expect(passesTitleFilter('Android Engineer')).toBe(false);
+  });
+
+  it('does not falsely reject words containing role substrings without word boundaries', () => {
+    // "qa" inside "equal", "sre" inside "disregard"
+    expect(passesTitleFilter('Equal Opportunity Software Engineer')).toBe(true);
+    expect(passesTitleFilter('Disregard Test Role')).toBe(true);
+  });
+});
+
+describe('matchesRoleFamily', () => {
+  it('matches role families on word boundaries', () => {
+    expect(matchesRoleFamily('QA Engineer')).toBe(true);
+    expect(matchesRoleFamily('Senior SRE')).toBe(true);
+    expect(matchesRoleFamily('DevOps Specialist')).toBe(true);
+  });
+
+  it('does not match substrings without word boundaries', () => {
+    expect(matchesRoleFamily('Equal Opportunity Employer')).toBe(false);
+    expect(matchesRoleFamily('Disregard')).toBe(false);
+  });
+});
+
+describe('passesAgeFilter', () => {
+  it('evaluates freshness with default 60 days for aggregators', () => {
+    expect(passesAgeFilter(daysAgo(30), NOW)).toBe(true);
+    expect(passesAgeFilter(daysAgo(59), NOW)).toBe(true);
+    expect(passesAgeFilter(daysAgo(61), NOW)).toBe(false);
+    expect(passesAgeFilter(daysAgo(100), NOW)).toBe(false);
+  });
+
+  it('evaluates freshness with custom maxAgeDays (e.g. 180 days for ATS)', () => {
+    expect(passesAgeFilter(daysAgo(70), NOW, 180)).toBe(true);
+    expect(passesAgeFilter(daysAgo(179), NOW, 180)).toBe(true);
+    expect(passesAgeFilter(daysAgo(181), NOW, 180)).toBe(false);
+  });
+
+  it('allows numeric maxAgeDays as second argument', () => {
+    expect(passesAgeFilter(daysAgo(70), 180)).toBe(true);
+  });
+
+  it('allows postings without publish date', () => {
+    expect(passesAgeFilter(undefined)).toBe(true);
+  });
+});
 
 describe('evaluateGlobalFilter', () => {
   const base = {
@@ -18,16 +95,65 @@ describe('evaluateGlobalFilter', () => {
     expect(evaluateGlobalFilter(base, NOW)).toBe('ok');
   });
 
+  it('allows titles without senior words like Product Engineer and Software Engineer', () => {
+    expect(evaluateGlobalFilter({ ...base, title: 'Software Engineer' }, NOW)).toBe('ok');
+    expect(evaluateGlobalFilter({ ...base, title: 'Product Engineer' }, NOW)).toBe('ok');
+    expect(evaluateGlobalFilter({ ...base, title: 'Frontend Developer' }, NOW)).toBe('ok');
+  });
+
   it('rejects junior titles even with senior words', () => {
     expect(evaluateGlobalFilter({ ...base, title: 'Junior to Senior Developer' }, NOW)).toBe('rejected-level');
   });
 
-  it('rejects titles without a seniority signal', () => {
-    expect(evaluateGlobalFilter({ ...base, title: 'Software Engineer' }, NOW)).toBe('not-senior');
+  it('rejects role families with rejected-role status', () => {
+    expect(evaluateGlobalFilter({ ...base, title: 'Senior QA Engineer' }, NOW)).toBe('rejected-role');
+    expect(evaluateGlobalFilter({ ...base, title: 'DevOps Engineer' }, NOW)).toBe('rejected-role');
+    expect(evaluateGlobalFilter({ ...base, title: 'Customer Support Lead' }, NOW)).toBe('rejected-role');
+    expect(evaluateGlobalFilter({ ...base, title: 'Staff Data Engineer' }, NOW)).toBe('rejected-role');
   });
 
-  it('rejects postings older than maxAgeDays', () => {
+  it('ensures Product Engineer without explicit stack in title or description is not dropped by no-js-signal', () => {
+    expect(
+      evaluateGlobalFilter(
+        {
+          title: 'Product Engineer',
+          description: 'We build intuitive workflows and delightful user experiences.',
+          publishedAt: daysAgo(3),
+        },
+        NOW,
+      ),
+    ).toBe('ok');
+  });
+
+  it('rejects postings older than maxAgeDays (default 60 days)', () => {
     expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(61) }, NOW)).toBe('too-old');
+  });
+
+  it('allows postings older than 60 days when atsMaxAgeDays (180 days) is used', () => {
+    expect(
+      evaluateGlobalFilter(
+        { ...base, publishedAt: daysAgo(90), maxAgeDays: 180 },
+        NOW,
+      ),
+    ).toBe('ok');
+    expect(
+      evaluateGlobalFilter(
+        { ...base, publishedAt: daysAgo(90), source: 'ats' },
+        NOW,
+      ),
+    ).toBe('ok');
+    expect(
+      evaluateGlobalFilter(
+        { ...base, publishedAt: daysAgo(90), source: 'greenhouse' },
+        NOW,
+      ),
+    ).toBe('ok');
+    expect(
+      evaluateGlobalFilter(
+        { ...base, publishedAt: daysAgo(181), source: 'greenhouse' },
+        NOW,
+      ),
+    ).toBe('too-old');
   });
 
   it('keeps postings without a publish date', () => {

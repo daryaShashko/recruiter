@@ -1,9 +1,13 @@
 import axios from "axios";
 import {
+  normalizeAshby,
+  normalizeLever,
   normalizePersonio,
   normalizeRecruitee,
   normalizeWorkable,
+  parseAshbyCompensation,
   parsePersonioXml,
+  passesFilter,
   RawAshbyJob,
   RawGreenhouseJob,
   RawLeverPosting,
@@ -12,6 +16,8 @@ import {
   RawWorkableJob,
   scrapeAts,
 } from "../src/scrapers/ats";
+import { getAtsCompanyName } from "../src/scrapers/ats-companies";
+import { extractMaxMonthlyPln } from "../../n8n/evaluator/scoring";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -22,6 +28,8 @@ jest.mock("../src/config", () => ({
       requestDelayMs: 0,
       requestTimeoutMs: 1000,
       maxAgeDays: 60,
+      atsMaxAgeDays: 180,
+      rejectRoleFamilies: [],
       jsSignals: ["javascript", "typescript", "node", "react"],
       seniorTitleSignals: ["senior", "lead", "staff", "principal"],
       rejectTitleSignals: ["junior", "intern"],
@@ -332,6 +340,62 @@ describe("scrapeAts", () => {
 
     await expect(scrapeAts()).resolves.toEqual([]);
   });
+
+  it("keeps ATS vacancies aged between 61 and 180 days (e.g. 90, 120 days) and drops >180 days", async () => {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
+    const oneTwentyDaysAgo = new Date(Date.now() - 120 * 86_400_000).toISOString();
+    const twoHundredDaysAgo = new Date(Date.now() - 200 * 86_400_000).toISOString();
+
+    mockedAxios.get
+      .mockResolvedValueOnce({ data: { name: "Workable Co", jobs: [] } })
+      .mockResolvedValueOnce({
+        data: {
+          offers: [
+            recruiteeOffer({ id: 101, published_at: ninetyDaysAgo }),
+            recruiteeOffer({ id: 102, published_at: twoHundredDaysAgo }),
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: '<?xml version="1.0"?><workzag-jobs></workzag-jobs>',
+      })
+      .mockResolvedValueOnce({
+        data: {
+          jobs: [
+            greenhouseJob({ id: 201, first_published: oneTwentyDaysAgo }),
+            greenhouseJob({ id: 202, first_published: twoHundredDaysAgo }),
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          leverPosting({
+            id: "lever-90",
+            createdAt: new Date(ninetyDaysAgo).getTime(),
+          }),
+          leverPosting({
+            id: "lever-200",
+            createdAt: new Date(twoHundredDaysAgo).getTime(),
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        data: {
+          jobs: [
+            ashbyJob({ id: "ashby-120", publishedAt: oneTwentyDaysAgo }),
+            ashbyJob({ id: "ashby-200", publishedAt: twoHundredDaysAgo }),
+          ],
+        },
+      });
+
+    const offers = await scrapeAts();
+    expect(offers.map((o) => o.id)).toEqual([
+      "recruitee_recruitee-co_101",
+      "greenhouse_greenhouse-co_201",
+      "lever_lever-co_lever-90",
+      "ashby_ashby-co_ashby-120",
+    ]);
+  });
 });
 
 describe("parsePersonioXml", () => {
@@ -392,3 +456,254 @@ describe("ATS normalization", () => {
     expect(personio.location).toBe("Unknown");
   });
 });
+
+describe("ATS Company Mapping", () => {
+  it("resolves clean company names for known Ashby slugs", () => {
+    expect(getAtsCompanyName("linear")).toBe("Linear");
+    expect(getAtsCompanyName("supabase")).toBe("Supabase");
+    expect(getAtsCompanyName("n8n")).toBe("n8n");
+    expect(getAtsCompanyName("ramp")).toBe("Ramp");
+    expect(getAtsCompanyName("lovable")).toBe("Lovable");
+    expect(getAtsCompanyName("synthesia")).toBe("Synthesia");
+    expect(getAtsCompanyName("elevenlabs")).toBe("ElevenLabs");
+    expect(getAtsCompanyName("incident")).toBe("Incident.io");
+    expect(getAtsCompanyName("attio")).toBe("Attio");
+  });
+
+  it("resolves clean company names for known Lever slugs", () => {
+    expect(getAtsCompanyName("spotify")).toBe("Spotify");
+    expect(getAtsCompanyName("matillion")).toBe("Matillion");
+    expect(getAtsCompanyName("contentsquare")).toBe("Contentsquare");
+    expect(getAtsCompanyName("swile")).toBe("Swile");
+  });
+
+  it("handles case-insensitivity and falls back to slug for unknown companies", () => {
+    expect(getAtsCompanyName("LINEAR")).toBe("Linear");
+    expect(getAtsCompanyName("Spotify")).toBe("Spotify");
+    expect(getAtsCompanyName("unknown-startup")).toBe("unknown-startup");
+  });
+
+  it("normalizeAshby and normalizeLever use clean company names", () => {
+    const ashby = normalizeAshby("linear", ashbyJob({ id: "prod-eng", title: "Product Engineer" }));
+    expect(ashby.company).toBe("Linear");
+
+    const lever = normalizeLever("spotify", leverPosting({ id: "swe-1", text: "Senior Software Engineer" }));
+    expect(lever.company).toBe("Spotify");
+  });
+});
+
+describe("parseAshbyCompensation", () => {
+  it("formats structured compensationTiers with components into annual salary with K suffix", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          title: "US / Remote",
+          components: [
+            {
+              summary: "$180,000 — $220,000",
+              compensationType: "Salary",
+              interval: "1 YEAR",
+              currencyCode: "USD",
+              minValue: 180000,
+              maxValue: 220000,
+            },
+          ],
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(comp)).toBe("$180k - $220k / year");
+  });
+
+  it("formats decimal thousands properly (Linear real case: $220,000 - $268,250)", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          components: [
+            {
+              compensationType: "Salary",
+              interval: "1 YEAR",
+              currencyCode: "USD",
+              minValue: 220000,
+              maxValue: 268250,
+            },
+          ],
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(comp)).toBe("$220k - $268.25k / year");
+  });
+
+  it("formats direct tier minSalary/maxSalary when components are absent", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          minSalary: 180000,
+          maxSalary: 220000,
+          currency: "USD",
+          interval: "Year",
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(comp)).toBe("$180k - $220k / year");
+  });
+
+  it("formats non-USD currencies with appropriate symbol or code", () => {
+    const compEur = {
+      compensationTiers: [
+        {
+          minSalary: 80000,
+          maxSalary: 100000,
+          currency: "EUR",
+          interval: "Year",
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(compEur)).toBe("€80k - €100k / year");
+
+    const compChf = {
+      compensationTiers: [
+        {
+          minSalary: 120000,
+          maxSalary: 140000,
+          currency: "CHF",
+          interval: "Year",
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(compChf)).toBe("120k - 140k CHF / year");
+  });
+
+  it("formats single value when min equals max or max is omitted", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          minSalary: 180000,
+          currency: "USD",
+          interval: "Year",
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(comp)).toBe("$180k / year");
+  });
+
+  it("falls back to summary strings when compensationTiers are empty or absent", () => {
+    expect(
+      parseAshbyCompensation({ summary: "$180,000 - $220,000 / year" }),
+    ).toBe("$180k - $220k / year");
+
+    expect(
+      parseAshbyCompensation({
+        compensationTierSummary: "$220,000 — $268,250 • Offers Equity",
+      }),
+    ).toBe("$220k - $268,250 / year");
+  });
+
+  it("formats hourly interval properly", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          minSalary: 80,
+          maxSalary: 100,
+          currency: "USD",
+          interval: "Hour",
+        },
+      ],
+    };
+    expect(parseAshbyCompensation(comp)).toBe("$80 - $100 /h");
+  });
+
+  it("returns undefined for missing, null, or unparseable compensation", () => {
+    expect(parseAshbyCompensation(undefined)).toBeUndefined();
+    expect(parseAshbyCompensation(null)).toBeUndefined();
+    expect(parseAshbyCompensation({})).toBeUndefined();
+    expect(parseAshbyCompensation({ compensationTiers: [] })).toBeUndefined();
+  });
+
+  it("parses cleanly in extractMaxMonthlyPln and applies B2B threshold (no UoP markers)", () => {
+    const comp = {
+      compensationTiers: [
+        {
+          components: [
+            {
+              compensationType: "Salary",
+              interval: "1 YEAR",
+              currencyCode: "USD",
+              minValue: 220000,
+              maxValue: 268250,
+            },
+          ],
+        },
+      ],
+    };
+
+    const formattedSalary = parseAshbyCompensation(comp);
+    expect(formattedSalary).toBeDefined();
+
+    // Verify absence of UoP markers so scoring applies B2B floor
+    const lower = formattedSalary!.toLowerCase();
+    expect(lower).not.toContain("uop");
+    expect(lower).not.toContain("prace");
+    expect(lower).not.toContain("o pracę");
+
+    // Verify extractMaxMonthlyPln converts annual USD salary to monthly PLN
+    const monthlyPln = extractMaxMonthlyPln(formattedSalary);
+    expect(monthlyPln).toBeDefined();
+    // 268250 / 12 * 3.95 = ~88,299 PLN/month, which is >= 24,000 B2B floor
+    expect(monthlyPln).toBeGreaterThan(24000);
+    expect(monthlyPln).toBeCloseTo(88299, -2);
+  });
+});
+
+describe("passesFilter (ATS 180-day freshness threshold)", () => {
+  const title = "Senior TypeScript Engineer";
+  const description = "<p>Building scalable products with React and Node.js.</p>";
+
+  it("evaluates to 'ok' for ATS vacancies aged between 61 and 180 days (default and explicit ATS sources)", () => {
+    const now = Date.now();
+    const dayMs = 86_400_000;
+
+    const sixtyOneDaysAgo = new Date(now - 61 * dayMs).toISOString();
+    const ninetyDaysAgo = new Date(now - 90 * dayMs).toISOString();
+    const oneTwentyDaysAgo = new Date(now - 120 * dayMs).toISOString();
+    const oneHundredSeventyNineDaysAgo = new Date(now - 179 * dayMs).toISOString();
+
+    // Default source ("ats")
+    expect(passesFilter(title, description, sixtyOneDaysAgo)).toBe("ok");
+    expect(passesFilter(title, description, ninetyDaysAgo)).toBe("ok");
+    expect(passesFilter(title, description, oneTwentyDaysAgo)).toBe("ok");
+    expect(passesFilter(title, description, oneHundredSeventyNineDaysAgo)).toBe("ok");
+
+    // Explicit ATS source names
+    expect(passesFilter(title, description, ninetyDaysAgo, "ats")).toBe("ok");
+    expect(passesFilter(title, description, ninetyDaysAgo, "greenhouse")).toBe("ok");
+    expect(passesFilter(title, description, oneTwentyDaysAgo, "lever")).toBe("ok");
+    expect(passesFilter(title, description, oneTwentyDaysAgo, "ashby")).toBe("ok");
+    expect(passesFilter(title, description, ninetyDaysAgo, "recruitee")).toBe("ok");
+    expect(passesFilter(title, description, ninetyDaysAgo, "personio")).toBe("ok");
+    expect(passesFilter(title, description, ninetyDaysAgo, "workable")).toBe("ok");
+  });
+
+  it("evaluates to 'too-old' for ATS vacancies aged >180 days", () => {
+    const now = Date.now();
+    const dayMs = 86_400_000;
+
+    const oneHundredEightyOneDaysAgo = new Date(now - 181 * dayMs).toISOString();
+    const twoHundredDaysAgo = new Date(now - 200 * dayMs).toISOString();
+    const threeHundredDaysAgo = new Date(now - 300 * dayMs).toISOString();
+
+    // Default source ("ats")
+    expect(passesFilter(title, description, oneHundredEightyOneDaysAgo)).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo)).toBe("too-old");
+    expect(passesFilter(title, description, threeHundredDaysAgo)).toBe("too-old");
+
+    // Explicit ATS source names
+    expect(passesFilter(title, description, twoHundredDaysAgo, "ats")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "greenhouse")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "lever")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "ashby")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "recruitee")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "personio")).toBe("too-old");
+    expect(passesFilter(title, description, twoHundredDaysAgo, "workable")).toBe("too-old");
+  });
+});
+

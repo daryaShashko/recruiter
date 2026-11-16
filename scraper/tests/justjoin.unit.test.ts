@@ -1,8 +1,12 @@
+import axios from 'axios';
 import {
   extractSalary,
   extractLocation,
+  fetchOffersPage,
   matchesPreFilter,
   normalizeOffer,
+  scrapeJustJoin,
+  JUSTJOIN_MAX_PAGES,
   RawEmploymentType,
   RawJustJoinOffer,
 } from '../src/scrapers/justjoin';
@@ -332,5 +336,143 @@ describe('enrichMissingSalaries — cross-platform salary lookup', () => {
     const { offers, enrichedCount } = enrichMissingSalaries([jjOffer, nfjOffer]);
     expect(enrichedCount).toBe(1);
     expect(offers[0]?.salary).toBe('6 000–7 500 EUR B2B/mo (via nofluffjobs)');
+  });
+});
+
+// ─── Cursor pagination tests ─────────────────────────────────────────────────
+
+describe('fetchOffersPage & scrapeJustJoin pagination', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('fetchOffersPage sends cursor in "from" param and returns nextCursor from meta', async () => {
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: {
+        data: [makeOffer({ slug: 'offer-1' })],
+        meta: {
+          totalItems: 35,
+          next: { cursor: 10 },
+        },
+      },
+    });
+
+    const result = await fetchOffersPage(0);
+    expect(axios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/api/candidate-api/offers'),
+      expect.objectContaining({
+        params: expect.objectContaining({
+          from: 0,
+          perPage: 10,
+          categories: 'javascript',
+        }),
+      }),
+    );
+    expect(result.offers).toHaveLength(1);
+    expect(result.totalItems).toBe(35);
+    expect(result.nextCursor).toBe(10);
+  });
+
+  it('scrapeJustJoin iterates through cursors (0 -> 10 -> 20) until nextCursor is null', async () => {
+    const page1Offer = makeOffer({ slug: 'offer-1', workplaceType: 'remote', experienceLevel: 'senior' });
+    const page2Offer = makeOffer({ slug: 'offer-2', workplaceType: 'remote', experienceLevel: 'senior' });
+    const page3Offer = makeOffer({ slug: 'offer-3', workplaceType: 'remote', experienceLevel: 'senior' });
+
+    jest.spyOn(axios, 'get')
+      .mockResolvedValueOnce({
+        data: {
+          data: [page1Offer],
+          meta: { totalItems: 30, next: { cursor: 10 } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [page2Offer],
+          meta: { totalItems: 30, next: { cursor: 20 } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [page3Offer],
+          meta: { totalItems: 30, next: { cursor: null } },
+        },
+      });
+
+    const offers = await scrapeJustJoin();
+    expect(offers).toHaveLength(3);
+    expect(offers.map((o) => o.id)).toEqual([
+      'justjoin_offer-1',
+      'justjoin_offer-2',
+      'justjoin_offer-3',
+    ]);
+    expect(axios.get).toHaveBeenCalledTimes(3);
+  });
+
+  it('scrapeJustJoin stops pagination when an offer is older than 60 days', async () => {
+    const freshOffer = makeOffer({
+      slug: 'fresh-offer',
+      publishedAt: new Date().toISOString(),
+      workplaceType: 'remote',
+      experienceLevel: 'senior',
+    });
+    const expiredOffer = makeOffer({
+      slug: 'expired-offer',
+      publishedAt: '2023-01-01T00:00:00.000Z',
+      workplaceType: 'remote',
+      experienceLevel: 'senior',
+    });
+
+    jest.spyOn(axios, 'get')
+      .mockResolvedValueOnce({
+        data: {
+          data: [freshOffer, expiredOffer],
+          meta: { totalItems: 100, next: { cursor: 10 } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [makeOffer({ slug: 'should-not-be-called' })],
+          meta: { totalItems: 100, next: { cursor: 20 } },
+        },
+      });
+
+    const offers = await scrapeJustJoin();
+    // Only 1 page fetched because expiredOffer triggered early termination
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    // matchesPreFilter also filters out the expiredOffer, so only freshOffer remains
+    expect(offers).toHaveLength(1);
+    expect(offers[0].id).toBe('justjoin_fresh-offer');
+  });
+
+  it('scrapeJustJoin stops when JUSTJOIN_MAX_PAGES is reached', async () => {
+    const spy = jest.spyOn(axios, 'get');
+    for (let i = 0; i < 55; i++) {
+      spy.mockResolvedValueOnce({
+        data: {
+          data: [makeOffer({ slug: `offer-${i}`, workplaceType: 'remote', experienceLevel: 'senior' })],
+          meta: { totalItems: 1000, next: { cursor: (i + 1) * 10 } },
+        },
+      });
+    }
+
+    const offers = await scrapeJustJoin();
+    expect(spy).toHaveBeenCalledTimes(JUSTJOIN_MAX_PAGES);
+    expect(offers).toHaveLength(JUSTJOIN_MAX_PAGES);
+  });
+
+  it('scrapeJustJoin handles empty response gracefully', async () => {
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: {
+        data: [],
+        meta: { totalItems: 0, next: null },
+      },
+    });
+
+    const offers = await scrapeJustJoin();
+    expect(offers).toEqual([]);
   });
 });

@@ -1,0 +1,40 @@
+{
+  "name": "Ingest Jobs",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jobs/ingest",
+        "responseMode": "responseNode"
+      },
+      "id": "node-1-webhook",
+      "name": "Webhook: POST /jobs/ingest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseBody": "{\"ok\":true}"
+      },
+      "id": "node-2-respond",
+      "name": "Respond to Webhook: 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: Code: LLM Router\n// Fallback order: Gemini models primary with retries, OpenRouter fallback.\n\nconst PROVIDER_ORDER = [\n  'gemini:gemini-2.5-flash-lite',\n  'gemini:gemini-3.1-flash-lite',\n  'gemini:gemini-2.5-flash',\n  'gemini:gemini-3.5-flash',\n  'openrouter:openrouter/free'\n];\n\nconst maxRetries = 2;\nconst timeoutMs = 30000;\n\nconst geminiApiKey = $env.GEMINI_API_KEY;\nconst openrouterApiKey = $env.OPENROUTER_API_KEY;\n\nconst item = $input.first().json;\nconst prompt = item.prompt || item.systemPrompt || '';\n\nasync function callGemini(model, attempt = 1) {\n  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;\n  try {\n    return await this.helpers.httpRequest({\n      method: 'POST',\n      url,\n      timeout: timeoutMs,\n      headers: { 'Content-Type': 'application/json' },\n      body: { contents: [{ parts: [{ text: prompt }] }] },\n      json: true\n    });\n  } catch (err) {\n    if (attempt <= maxRetries && (err.statusCode === 429 || err.statusCode >= 500)) {\n      return await callGemini.call(this, model, attempt + 1);\n    }\n    throw err;\n  }\n}\n\nasync function callOpenRouter(model) {\n  const url = 'https://openrouter.ai/api/v1/chat/completions';\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url,\n    timeout: timeoutMs,\n    headers: {\n      'Authorization': `Bearer ${openrouterApiKey}`,\n      'Content-Type': 'application/json'\n    },\n    body: {\n      model,\n      messages: [{ role: 'user', content: prompt }]\n    },\n    json: true\n  });\n}\n\nfor (const target of PROVIDER_ORDER) {\n  const [provider, model] = target.split(':');\n  try {\n    if (provider === 'gemini') {\n      const res = await callGemini.call(this, model);\n      return [{ json: { provider: target, message: { content: res.candidates[0].content.parts[0].text } } }];\n    } else if (provider === 'openrouter') {\n      const res = await callOpenRouter.call(this, model);\n      return [{ json: { provider: target, message: { content: res.choices[0].message.content } } }];\n    }\n  } catch (e) {\n    // fallback to next provider in PROVIDER_ORDER\n  }\n}\n\nreturn [{ json: { error: 'All providers failed in PROVIDER_ORDER fallback chain' } }];\n"
+      },
+      "id": "node-3-router",
+      "name": "Code: LLM Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {}
+}
