@@ -41,10 +41,35 @@ describe("routeCompletion", () => {
     const succeeding = { complete: jest.fn().mockResolvedValue({ content: "{}", provider: "openrouter", model: "x" }) };
     mockedGetProvider.mockImplementation((name: string) => (name === "gemini" ? failing : succeeding));
 
-    const result = await routeCompletion(BASE_REQUEST);
+    const sleepFn = jest.fn().mockResolvedValue(undefined);
+    const result = await routeCompletion(BASE_REQUEST, DEFAULT_PROVIDER_ORDER, { sleepFn });
 
     expect(result).toEqual({ content: "{}", provider: "openrouter" });
+    expect(failing.complete).toHaveBeenCalledTimes(3);
+    expect(sleepFn).toHaveBeenCalledTimes(2);
+    expect(sleepFn).toHaveBeenNthCalledWith(1, 1000);
+    expect(sleepFn).toHaveBeenNthCalledWith(2, 2000);
     expect(mockedGetProvider).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries up to 3 attempts with exponential backoff on 429/5xx and succeeds on retry", async () => {
+    const flaky = {
+      complete: jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Gemini request failed: 429 Too Many Requests"))
+        .mockRejectedValueOnce(new Error("Gemini request failed: 503 Service Unavailable"))
+        .mockResolvedValueOnce({ content: '{"overall_score":91}', provider: "gemini", model: "x" }),
+    };
+    mockedGetProvider.mockReturnValue(flaky);
+
+    const sleepFn = jest.fn().mockResolvedValue(undefined);
+    const result = await routeCompletion(BASE_REQUEST, ["gemini"], { sleepFn });
+
+    expect(result).toEqual({ content: '{"overall_score":91}', provider: "gemini" });
+    expect(flaky.complete).toHaveBeenCalledTimes(3);
+    expect(sleepFn).toHaveBeenCalledTimes(2);
+    expect(sleepFn).toHaveBeenNthCalledWith(1, 1000);
+    expect(sleepFn).toHaveBeenNthCalledWith(2, 2000);
   });
 
   it("throws an aggregated error when every provider fails", async () => {

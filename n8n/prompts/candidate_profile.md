@@ -30,7 +30,7 @@ This profile is dynamically compiled from the Notion Control Plane (Candidate CV
 *Note: To avoid tax confusion, the AI assistant must calculate net/gross equivalents strictly based on Polish tax regulations.*
 
 - **Target Compensation: PLN-Equivalent Monthly Pay, Any Currency**: Target about 20,000 PLN/month net take-home. Preferred B2B target is 25,000–30,000 PLN/month net+VAT; UoP target about 32,000 PLN gross/month. Accept compensation in any currency and compare only after approximate conversion to PLN/month. The candidate can contract through Polish B2B/JDG; do not assume visa sponsorship is needed.
-- **Hard Salary Floor: Convert Currency and Period to Monthly PLN**: Reject (Score = 0, tag: Low salary) ONLY if explicitly disclosed MAX salary converts below monthly floor: < 22,000 PLN B2B net+VAT / < 28,000 PLN UoP Gross (< 5,200 EUR/mo, < 5,600 USD/mo, < 4,400 GBP/mo). For ranges (min-max), if MAX meets threshold, do NOT reject. Missing/undisclosed salary is NOT a rejection: evaluate normally, tag: Salary not disclosed.
+- **Hard Salary Floor: Convert Currency and Period to Monthly PLN**: Reject (Score = 0, tag: Low salary) ONLY if explicitly disclosed MAX salary converts below monthly floor: < 24,000 PLN B2B net+VAT / < 27,000 PLN UoP Gross (< 5,650 EUR/mo, < 6,080 USD/mo, < 4,800 GBP/mo, < 5,275 CHF/mo; FX rates as of 2026-11-16: 1 EUR ≈ 4.25 PLN, 1 USD ≈ 3.95 PLN, 1 GBP ≈ 5.00 PLN, 1 CHF ≈ 4.55 PLN). For ranges (min-max), if MAX meets threshold, do NOT reject. Missing/undisclosed salary is NOT a rejection: evaluate normally, tag: Salary: Undisclosed.
 
 ---
 

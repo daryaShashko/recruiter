@@ -50,8 +50,8 @@ describe("notion-profile compiler & Notion API client", () => {
     expect(markdown).toContain("## 1. Professional Background & Stack");
     expect(markdown).toContain("JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL");
     expect(markdown).toContain("## 3. Employment & Salary Expectations");
-    expect(markdown).toContain("Hard Salary Floor (Min 18k PLN Net / ~23k B2B / ~27k UoP");
-    expect(markdown).toContain("Undisclosed or Zero Salary -> Reject unless Verified Tier-1 Product Company");
+    expect(markdown).toContain("Hard Salary Floor (Min 24k PLN B2B / 27k PLN UoP");
+    expect(markdown).toContain("Undisclosed or Zero Salary -> Not a Rejection (Informational Badge Only)");
     expect(markdown).toContain("NO Crypto / Web3 / Blockchain");
     expect(markdown).toContain("NO Bossware / Invasive Surveillance / Activity Tracking");
     expect(markdown).toContain("[Force Reject (Score = 0)]: Strictly reject roles requiring invasive activity tracking");
@@ -93,16 +93,13 @@ describe("notion-profile compiler & Notion API client", () => {
     expect(cfg.outsourcingKeywords).toEqual(["netguru", "stx next", "custom-bodyshop"]);
     // Unspecified gates fall back safely to defaults
     expect(cfg.cryptoKeywords).toContain("blockchain");
-    expect(cfg.tier1Companies).toContain("google");
 
     const defaultCfg = compileDynamicScoringConfig(DEFAULT_CRITERIA_ENTRIES);
-    expect(defaultCfg.minB2bPlnFloor).toBe(23000);
+    expect(defaultCfg.minB2bPlnFloor).toBe(24000);
     expect(defaultCfg.minUopPlnFloor).toBe(27000);
-    expect(defaultCfg.tier1Companies).toContain("google");
-    expect(defaultCfg.tier1Companies).toContain("stripe");
   });
 
-  test("compileDynamicScoringConfig parses custom UoP floor and custom Tier-1 companies", () => {
+  test("compileDynamicScoringConfig parses custom B2B and UoP floors without clamping to 23000, and undisclosed salary is never force-rejected", () => {
     const customCriteria: CriterionEntry[] = [
       {
         id: "crit-salary-floor",
@@ -110,28 +107,16 @@ describe("notion-profile compiler & Notion API client", () => {
         category: "Salary & Contract",
         enforcement: "Hard Gate (Code + Prompt)",
         ruleType: "Force Reject (Score = 0)",
-        valueOrKeywords: "26000 B2B | 31000 UoP",
+        valueOrKeywords: "21000 B2B | 31000 UoP",
         description: "Custom floor",
         order: 1,
-        active: true,
-      },
-      {
-        id: "crit-salary-undisclosed",
-        ruleName: "Tier-1 Whitelist",
-        category: "Salary & Contract",
-        enforcement: "Hard Gate (Code + Prompt)",
-        ruleType: "Force Reject (Score = 0)",
-        valueOrKeywords: "acmecorp, wondercorp",
-        description: "Only AcmeCorp and WonderCorp allowed with undisclosed salary",
-        order: 2,
         active: true,
       },
     ];
 
     const cfg = compileDynamicScoringConfig(customCriteria);
-    expect(cfg.minB2bPlnFloor).toBe(26000);
+    expect(cfg.minB2bPlnFloor).toBe(21000);
     expect(cfg.minUopPlnFloor).toBe(31000);
-    expect(cfg.tier1Companies).toEqual(["acmecorp", "wondercorp"]);
 
     const rawLlm = JSON.stringify({
       overall_score: 85,
@@ -141,35 +126,20 @@ describe("notion-profile compiler & Notion API client", () => {
       reason: "Great match",
     });
 
-    // AcmeCorp has undisclosed salary -> kept with warning because it is in tier1Companies
-    const acmeResult = evaluateJob(
+    // Any company with undisclosed salary -> kept with Salary: Undisclosed badge
+    const undisclosedResult = evaluateJob(
       rawLlm,
       {
-        id: "job_acme",
-        title: "Senior Engineer",
-        company: "AcmeCorp Inc.",
-        url: "https://example.com/acme",
-      },
-      cfg,
-    );
-    expect(acmeResult.match).toBe(true);
-    expect(acmeResult.red_flags).toContain("Salary: Low/Unspecified");
-    expect(acmeResult.red_flags).not.toContain("Salary: Undisclosed / Non-Tier-1");
-
-    // OtherCompany has undisclosed salary -> force rejected
-    const otherResult = evaluateJob(
-      rawLlm,
-      {
-        id: "job_other",
+        id: "job_undisclosed",
         title: "Senior Engineer",
         company: "Unknown Startup",
         url: "https://example.com/other",
       },
       cfg,
     );
-    expect(otherResult.overall_score).toBe(0);
-    expect(otherResult.match).toBe(false);
-    expect(otherResult.red_flags).toContain("Salary: Undisclosed / Non-Tier-1");
+    expect(undisclosedResult.overall_score).toBe(85);
+    expect(undisclosedResult.match).toBe(true);
+    expect(undisclosedResult.red_flags).toContain("Salary: Undisclosed");
   });
 
   test("evaluateJob respects dynamic outsourcing keywords from Notion", () => {

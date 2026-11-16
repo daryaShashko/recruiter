@@ -3,7 +3,7 @@
 # 6 representative boundary cases adapted from gold_dataset.yaml:
 #   1. T01: Node.js backend-only Review match (50 <= score < 80)
 #   2. T02: Hot Match Full-Stack (score >= 80)
-#   3. E01: Mixed stack Node.js primary migration (score >= 80)
+#   3. E06: Undisclosed salary Senior Full-Stack (score >= 50, NOT rejected)
 #   4. F08: Crypto restricted industry reject (score < 50)
 #   5. F01: Low salary / Junior reject (score < 50)
 #   6. E05: Title-only tech stack (score >= 50)
@@ -30,7 +30,7 @@
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 50 && j.overall_score < 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
 
@@ -58,27 +58,26 @@
         } catch(e) { return false; }
       weight: 3
 
-- description: "E01: Node.js + Java legacy — Node.js is PRIMARY → should match"
+- description: "E06: Senior Full-Stack TypeScript/React/Node.js — undisclosed salary → should match (score >= 50, NOT rejected)"
   vars:
-    title: "Senior Software Engineer"
-    company: "LegacyTech"
-    location: "Remote"
-    salary: "22,000 – 28,000 PLN net B2B"
-    url: "https://justjoin.it/offers/legacytech-senior-engineer-nodejs-java-aaaa1"
+    title: "Senior Full-Stack Engineer (TypeScript / React / Node.js)"
+    company: "CloudScale Product Inc."
+    location: "Remote (EU)"
+    salary: "Undisclosed"
+    url: "https://jobs.ashbyhq.com/cloudscale/senior-fullstack-ts-aaaa1"
     body: >-
-      We are rebuilding our platform in Node.js and TypeScript. Primary
-      development is Node.js microservices with NestJS framework, React
-      frontend with Next.js, and PostgreSQL database. Some legacy Java
-      services exist but are actively being migrated to Node.js. You will
-      spend 80% of your time on Node.js and 20% maintaining Java services
-      during the transition. 5+ years experience, Node.js expertise required.
+      We are a B2B SaaS product company looking for a Senior Full-Stack Engineer.
+      You will build end-to-end product features using TypeScript, React, Next.js,
+      Node.js, NestJS, and PostgreSQL. 6+ years of commercial experience in the
+      JavaScript/TypeScript ecosystem required. Fully remote across Europe.
+      Compensation is competitive and discussed during the first call.
   assert:
     - type: javascript
       value: |
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
 

@@ -389,30 +389,28 @@
 #  EDGE CASES — tricky scenarios from evaluator.md table
 # ═══════════════════════════════════════════════════════════
 
-- description: "E01: Node.js + Java legacy — Node.js is PRIMARY → should match"
+- description: "E01: Senior Full-Stack TypeScript/React/Node.js — undisclosed salary → should match (score >= 50, NOT rejected)"
   vars:
-    title: "Senior Software Engineer"
-    company: "LegacyTech"
-    location: "Remote"
-    salary: "22,000 – 28,000 PLN net B2B"
-    url: "https://justjoin.it/offers/legacytech-senior-engineer-nodejs-java-aaaa1"
+    title: "Senior Full-Stack Engineer (TypeScript / React / Node.js)"
+    company: "CloudScale Product Inc."
+    location: "Remote (EU)"
+    salary: "Undisclosed"
+    url: "https://jobs.ashbyhq.com/cloudscale/senior-fullstack-ts-aaaa1"
     body: >-
-      We are rebuilding our platform in Node.js and TypeScript. Primary
-      development is Node.js microservices with NestJS framework, React
-      frontend with Next.js, and PostgreSQL database. Some legacy Java
-      services exist but are actively being migrated to Node.js. You will
-      spend 80% of your time on Node.js and 20% maintaining Java services
-      during the transition. 5+ years experience, Node.js expertise required.
+      We are a B2B SaaS product company looking for a Senior Full-Stack Engineer.
+      You will build end-to-end product features using TypeScript, React, Next.js,
+      Node.js, NestJS, and PostgreSQL. 6+ years of commercial experience in the
+      JavaScript/TypeScript ecosystem required. Fully remote across Europe.
+      Compensation is competitive and discussed during the first call.
   assert:
     - type: javascript
       value: |
         try {
           const j = JSON.parse(output);
           if (!j) return false;
-          return j.overall_score >= 80;
+          return j.overall_score >= 50;
         } catch(e) { return false; }
       weight: 3
-    # E01: Node.js owns the bulk of the work.
     - type: javascript
       value: |
         try {

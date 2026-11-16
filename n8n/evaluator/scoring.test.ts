@@ -1,4 +1,11 @@
-import { evaluateJob, extractMaxMonthlyPln, JobForScoring } from "./scoring";
+import {
+  classifyPipelineError,
+  CURRENCY_RATES_TO_PLN,
+  evaluateJob,
+  extractMaxMonthlyPln,
+  JobForScoring,
+  RATES_AS_OF_DATE,
+} from "./scoring";
 
 function makeJob(overrides: Partial<JobForScoring> = {}): JobForScoring {
   return {
@@ -89,6 +96,15 @@ describe("evaluateJob — pipeline failure fallbacks", () => {
     expect(result.overall_score).toBe(0);
     expect(result.red_flags).toEqual(["Pipeline: Parse Error"]);
     expect(result.reason).toMatch(/^Error: JSON parse failed/);
+  });
+
+  it("classifies 429, 5xx/provider, and parse errors distinctly via classifyPipelineError", () => {
+    expect(classifyPipelineError("Gemini request failed: 429 Too Many Requests")).toBe("Pipeline: Quota Error");
+    expect(classifyPipelineError("Rate limit exceeded / quota exhausted")).toBe("Pipeline: Quota Error");
+    expect(classifyPipelineError("Gemini request failed: 503 Service Unavailable")).toBe("Pipeline: LLM Error");
+    expect(classifyPipelineError("All providers failed in PROVIDER_ORDER")).toBe("Pipeline: LLM Error");
+    expect(classifyPipelineError("JSON parse failed: Unexpected token")).toBe("Pipeline: Parse Error");
+    expect(classifyPipelineError("Empty LLM response")).toBe("Pipeline: Parse Error");
   });
 });
 
@@ -327,28 +343,32 @@ describe("extractMaxMonthlyPln — salary parsing", () => {
     expect(extractMaxMonthlyPln("CHF 120'000 - 140'000")).toBe(Math.round((140000 * 4.55) / 12));
     expect(extractMaxMonthlyPln("€70,000 – €90,000")).toBe(Math.round((90000 * 4.25) / 12));
   });
+
+  it("exposes RATES_AS_OF_DATE on CURRENCY_RATES_TO_PLN", () => {
+    expect(RATES_AS_OF_DATE).toBe("2026-11-16");
+    expect(CURRENCY_RATES_TO_PLN.RATES_AS_OF_DATE).toBe("2026-11-16");
+  });
 });
 
 describe("evaluateJob — expanded outsourcing & deterministic salary floor guardrails", () => {
-  it("keeps jobs with missing salary for Tier-1 companies, but rejects non-Tier-1 companies with undisclosed salary", () => {
-    // Non-Tier-1 company with undisclosed salary is rejected (score = 0)
-    const undisclosedNonTier1 = makeJob({ company: "Acme Tech", location: "Gdańsk", salary: undefined });
-    const res1 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedNonTier1);
-    expect(res1.overall_score).toBe(0);
-    expect(res1.match).toBe(false);
-    expect(res1.red_flags).toContain("Salary: Undisclosed / Non-Tier-1");
+  it("evaluates jobs with undisclosed or zero salary normally and adds 'Salary: Undisclosed' badge (no Tier-1 rejection)", () => {
+    // Non-Tier-1 company with undisclosed salary is evaluated normally, NOT rejected
+    const undisclosedJob = makeJob({ company: "Acme Tech", location: "Gdańsk", salary: undefined });
+    const res1 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedJob);
+    expect(res1.overall_score).toBe(84);
+    expect(res1.match).toBe(true);
+    expect(res1.red_flags).toContain("Salary: Undisclosed");
 
-    // Tier-1 company with undisclosed salary is kept with informational warning
-    const undisclosedTier1 = makeJob({ company: "Google", location: "Gdańsk", salary: undefined });
-    const res2 = evaluateJob(rawLlm({ overall_score: 84, red_flags: [] }), undisclosedTier1);
-    expect(res2.overall_score).toBe(84);
+    // Company with 'Competitive' or '0' salary also evaluated normally
+    const competitiveJob = makeJob({ company: "Cloudflare", location: "Remote", salary: "Competitive" });
+    const res2 = evaluateJob(rawLlm({ overall_score: 88, red_flags: [] }), competitiveJob);
+    expect(res2.overall_score).toBe(88);
     expect(res2.match).toBe(true);
-    expect(res2.red_flags).toContain("Salary: Low/Unspecified");
+    expect(res2.red_flags).toContain("Salary: Undisclosed");
     expect(res2.red_flags).not.toContain("Salary: Below Hard Floor");
-    expect(res2.red_flags).not.toContain("Salary: Undisclosed / Non-Tier-1");
 
-    // Even if LLM mistakenly emits 'Below hard floor' and score=0 for a Tier-1 '0' salary, code recovers score & downgrades flag
-    const zeroSalaryTier1 = makeJob({ company: "Spotify", location: "Gdańsk", salary: "0" });
+    // Even if LLM mistakenly emits 'Below hard floor' and score=0 for a '0' salary, code recovers score & downgrades flag
+    const zeroSalaryJob = makeJob({ company: "Unknown Product Co", location: "Gdańsk", salary: "0" });
     const res3 = evaluateJob(
       rawLlm({
         overall_score: 0,
@@ -356,11 +376,11 @@ describe("evaluateJob — expanded outsourcing & deterministic salary floor guar
         seniority_match: 85,
         red_flags: ["Salary below hard floor"],
       }),
-      zeroSalaryTier1,
+      zeroSalaryJob,
     );
     expect(res3.overall_score).toBeGreaterThanOrEqual(50);
     expect(res3.match).toBe(true);
-    expect(res3.red_flags).toContain("Salary: Low/Unspecified");
+    expect(res3.red_flags).toContain("Salary: Undisclosed");
     expect(res3.red_flags).not.toContain("Salary: Below Hard Floor");
   });
 

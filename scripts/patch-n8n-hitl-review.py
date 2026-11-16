@@ -21,6 +21,155 @@ def get_api_key():
     return key
 
 
+def build_check_duplicate_code():
+    return """const resp = $input.first().json;
+const job = $('Split In Batches: 1').item.json;
+
+const results = Array.isArray(resp.results) ? resp.results : [];
+let isDuplicate = false;
+
+for (const match of results) {
+  const props = match?.properties || {};
+  const score = props?.Score?.number;
+  const statusName = props?.Status?.select?.name || props?.Status?.status?.name || '';
+  const redFlags = (props?.['Red Flags']?.multi_select || []).map(x => x.name || '');
+  const reasonText = (props?.Reason?.rich_text || []).map(t => t.plain_text || '').join('');
+
+  const isErrorEntry =
+    statusName.toLowerCase().includes('error') ||
+    redFlags.some(f => f.startsWith('Pipeline:')) ||
+    reasonText.startsWith('Error:');
+
+  // Re-evaluation is allowed ONLY when the Eval Log entry is an execution/pipeline error
+  // or when Score is missing/null without a completed evaluation.
+  // Completed rejections (overall_score === 0, match === false) MUST be treated as duplicates!
+  if (isErrorEntry || score === null || score === undefined) {
+    continue;
+  }
+  isDuplicate = true;
+  break;
+}
+
+if (isDuplicate) {
+  console.log(`[Dedup] SKIP "${job.title}" @ ${job.company}`);
+} else {
+  console.log(`[Dedup] NEW "${job.title}" @ ${job.company} — fp: ${job.fingerprint}`);
+}
+
+return [{ json: { ...job, isDuplicate } }];
+"""
+
+
+def build_llm_router_code():
+    return """// Node: Code: LLM Router
+// Fallback order: Gemini models primary with exponential backoff retries (1s -> 2s -> 4s), OpenRouter fallback.
+
+const PROVIDER_ORDER = [
+  'gemini:gemini-2.5-flash-lite',
+  'gemini:gemini-3.1-flash-lite',
+  'gemini:gemini-2.5-flash',
+  'gemini:gemini-3.5-flash',
+  'openrouter:openrouter/free'
+];
+
+const maxRetries = 2;
+const maxAttempts = 3;
+const timeoutMs = 30000;
+
+const geminiApiKey = $env.GEMINI_API_KEY;
+const openrouterApiKey = $env.OPENROUTER_API_KEY;
+
+const item = $input.first().json;
+const prompt = item.prompt || item.systemPrompt || '';
+const userMessage = item.userMessage || '';
+const fullPrompt = userMessage ? `${prompt}\\n\\n${userMessage}` : prompt;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRetryableStatus(err) {
+  const status = err?.statusCode || err?.status || err?.httpCode || 0;
+  const msg = String(err?.message || err || '').toLowerCase();
+  return (
+    status === 429 ||
+    status >= 500 ||
+    /\\b(?:429|500|502|503|504)\\b/.test(msg) ||
+    msg.includes('rate limit') ||
+    msg.includes('too many requests') ||
+    msg.includes('quota')
+  );
+}
+
+async function callGemini(model, attempt = 1) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+  try {
+    return await this.helpers.httpRequest({
+      method: 'POST',
+      url,
+      timeout: timeoutMs,
+      headers: { 'Content-Type': 'application/json' },
+      body: { contents: [{ parts: [{ text: fullPrompt }] }] },
+      json: true
+    });
+  } catch (err) {
+    if (attempt <= maxRetries && isRetryableStatus(err)) {
+      const delayMs = 1000 * Math.pow(2, attempt - 1);
+      await sleep(delayMs);
+      return await callGemini.call(this, model, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+async function callOpenRouter(model, attempt = 1) {
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  try {
+    return await this.helpers.httpRequest({
+      method: 'POST',
+      url,
+      timeout: timeoutMs,
+      headers: {
+        'Authorization': `Bearer ${openrouterApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: {
+        model,
+        messages: [{ role: 'user', content: fullPrompt }]
+      },
+      json: true
+    });
+  } catch (err) {
+    if (attempt <= maxRetries && isRetryableStatus(err)) {
+      const delayMs = 1000 * Math.pow(2, attempt - 1);
+      await sleep(delayMs);
+      return await callOpenRouter.call(this, model, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+const providerErrors = [];
+
+for (const target of PROVIDER_ORDER) {
+  const [provider, model] = target.split(':');
+  try {
+    if (provider === 'gemini') {
+      const res = await callGemini.call(this, model);
+      return [{ json: { provider: target, message: { content: res.candidates[0].content.parts[0].text } } }];
+    } else if (provider === 'openrouter') {
+      const res = await callOpenRouter.call(this, model);
+      return [{ json: { provider: target, message: { content: res.choices[0].message.content } } }];
+    }
+  } catch (e) {
+    const status = e?.statusCode || e?.status || '';
+    const msg = e?.message || String(e);
+    providerErrors.push(`${target}${status ? ' (' + status + ')' : ''}: ${msg}`);
+  }
+}
+
+return [{ json: { error: `All providers failed in PROVIDER_ORDER fallback chain: ${providerErrors.join(' | ')}` } }];
+"""
+
+
 def build_parse_ollama_code():
     dist_scoring = Path(__file__).resolve().parent.parent / "n8n" / "dist" / "evaluator" / "scoring.js"
     if not dist_scoring.exists():
@@ -30,14 +179,44 @@ def build_parse_ollama_code():
     header = """const ollamaResp = $input.first().json;
 const job = $('Code: Build Ollama Payload').first().json;
 
-const fallback = (reason) => ({
+const classifyErrorFlag = (reason) => {
+  const lower = String(reason || '').toLowerCase();
+  if (
+    lower.includes('429') ||
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('resource_exhausted')
+  ) {
+    return 'Pipeline: Quota Error';
+  }
+  if (
+    lower.includes('500') ||
+    lower.includes('502') ||
+    lower.includes('503') ||
+    lower.includes('504') ||
+    lower.includes('llm router') ||
+    lower.includes('all providers failed') ||
+    lower.includes('timeout') ||
+    lower.includes('network') ||
+    lower.includes('request failed') ||
+    lower.includes('ollama')
+  ) {
+    return 'Pipeline: LLM Error';
+  }
+  return 'Pipeline: Parse Error';
+};
+
+const fallback = (reason, overrideFlag) => ({
   json: {
     id: job.id, title: job.title, company: job.company,
     url: job.url, source: job.source, location: job.location,
     salary: job.salary, tags: job.tags, scrapedAt: job.scrapedAt,
     fingerprint: job.fingerprint || '',
-    overall_score: 0, tech_stack_match: 0, seniority_match: 0,
-    red_flags: [reason.toLowerCase().includes('ollama') ? 'Pipeline: LLM Error' : 'Pipeline: Parse Error'],
+    overall_score: null, tech_stack_match: null, seniority_match: null,
+    status: 'Status: Error',
+    pipelineError: true,
+    red_flags: [overrideFlag || classifyErrorFlag(reason)],
     reason: `Error: ${reason}`,
     match: false
   }
@@ -45,16 +224,15 @@ const fallback = (reason) => ({
 
 if (ollamaResp?.error) {
   if (job.profileError) {
-    const failClosed = fallback('Notion profile unavailable');
-    failClosed.json.red_flags = ['Pipeline: Notion Error'];
+    const failClosed = fallback('Notion profile unavailable', 'Pipeline: Notion Error');
     failClosed.json.model = 'notion-profile';
     return [failClosed];
   }
-  return [fallback(`LLM Router error: ${JSON.stringify(ollamaResp.error).slice(0, 180)}`)];
+  return [fallback(`LLM Router error: ${JSON.stringify(ollamaResp.error).slice(0, 220)}`)];
 }
 
 const raw = ollamaResp?.message?.content || '';
-if (!raw) return [fallback('Empty LLM response')];
+if (!raw) return [fallback('Empty LLM response', 'Pipeline: Parse Error')];
 
 var exports = typeof exports !== 'undefined' ? exports : {};
 """
@@ -67,9 +245,16 @@ const evaluation = exports.evaluateJob(raw, {
   companyMeta: job.companyMeta
 }, job.scoringConfig);
 
+const isParseFallback = Array.isArray(evaluation.red_flags) && evaluation.red_flags.some(f => f.startsWith('Pipeline:'));
+
 return [{
   json: {
     ...evaluation,
+    overall_score: isParseFallback ? null : evaluation.overall_score,
+    tech_stack_match: isParseFallback ? null : evaluation.tech_stack_match,
+    seniority_match: isParseFallback ? null : evaluation.seniority_match,
+    status: isParseFallback ? 'Status: Error' : 'Evaluated',
+    pipelineError: isParseFallback,
     tags: job.tags,
     model: ollamaResp?.provider || 'gemini:gemini-2.5-flash-lite'
   }
@@ -104,10 +289,20 @@ def main():
     nodes = wf.get("nodes", [])
     patched_count = 0
 
-    # Ensure Code: Parse Ollama Response has full compiled scoring logic
+    # Ensure Code: Check Duplicate, Code: LLM Router, and Code: Parse Ollama Response are up-to-date
     for node in nodes:
         name = node.get("name", "")
-        if name == "Code: Parse Ollama Response":
+        if name == "Code: Check Duplicate":
+            params = node.setdefault("parameters", {})
+            params["jsCode"] = build_check_duplicate_code()
+            patched_count += 1
+            print("✅ Patched Code: Check Duplicate to deduplicate completed rejections (score 0) and only re-evaluate errors")
+        elif name == "Code: LLM Router":
+            params = node.setdefault("parameters", {})
+            params["jsCode"] = build_llm_router_code()
+            patched_count += 1
+            print("✅ Patched Code: LLM Router with exponential backoff retries (1s -> 2s -> 4s)")
+        elif name == "Code: Parse Ollama Response":
             params = node.setdefault("parameters", {})
             params["jsCode"] = build_parse_ollama_code()
             patched_count += 1
@@ -281,9 +476,19 @@ while (true) {
   }
 }
 
-const hotMatches = evaluatedJobs.filter(j => (j.overall_score || 0) >= 80);
-const reviews = evaluatedJobs.filter(j => (j.overall_score || 0) >= 50 && (j.overall_score || 0) < 80);
-const rejected = evaluatedJobs.filter(j => (j.overall_score || 0) < 50);
+const isErrorJob = (j) =>
+  j.pipelineError === true ||
+  j.status === 'Status: Error' ||
+  j.overall_score === null ||
+  j.overall_score === undefined ||
+  (Array.isArray(j.red_flags) && j.red_flags.some(f => String(f).startsWith('Pipeline:')));
+
+const llmErrors = evaluatedJobs.filter(isErrorJob);
+const validEvaluated = evaluatedJobs.filter(j => !isErrorJob(j));
+
+const hotMatches = validEvaluated.filter(j => (j.overall_score || 0) >= 80);
+const reviews = validEvaluated.filter(j => (j.overall_score || 0) >= 50 && (j.overall_score || 0) < 80);
+const rejected = validEvaluated.filter(j => (j.overall_score || 0) < 50);
 
 const dateStr = new Date().toLocaleDateString('ru-RU', { timeZone: 'Europe/Warsaw' });
 const timeStr = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' });
@@ -294,7 +499,8 @@ const text = `🏁 *AI Recruiter — Дайджест прогона*
 📥 *Получено от скрейпера:* ${totalReceived}
 👥 *Дубликаты в прогоне (кросс-постинг):* ${batchDuplicates}
 ♻️ *Дубликаты в базе Notion:* ${duplicatesCount}
-🤖 *Оценено нейросетью:* ${evaluatedJobs.length}
+🤖 *Оценено нейросетью:* ${validEvaluated.length}
+⚠️ *Ошибки LLM / парсинга:* ${llmErrors.length}
 ───────────────────────────
 🔥 *Горячие (Score >= 80):* ${hotMatches.length}
 👉 _отправлены в тему «Горячий мэтч»_
@@ -311,7 +517,8 @@ return [{
     totalReceived,
     batchDuplicates,
     duplicatesCount,
-    evaluatedCount: evaluatedJobs.length,
+    evaluatedCount: validEvaluated.length,
+    llmErrorsCount: llmErrors.length,
     hotCount: hotMatches.length,
     reviewCount: reviews.length,
     rejectedCount: rejected.length,

@@ -20,6 +20,27 @@ providers:
     label: "{{env.LLM_PROVIDER}}"
     config:
       temperature: 0
+      passthrough:
+        format:
+          type: object
+          required:
+            [
+              overall_score,
+              tech_stack_match,
+              seniority_match,
+              red_flags,
+              reason,
+              url,
+              company_dossier,
+            ]
+          properties:
+            overall_score: { type: number, minimum: 0, maximum: 100 }
+            tech_stack_match: { type: number, minimum: 0, maximum: 100 }
+            seniority_match: { type: number, minimum: 0, maximum: 100 }
+            red_flags: { type: array, items: { type: string } }
+            reason: { type: string }
+            url: { type: string }
+            company_dossier: { type: string }
       generationConfig:
         responseMimeType: "application/json"
         responseSchema:
@@ -32,6 +53,7 @@ providers:
               red_flags,
               reason,
               url,
+              company_dossier,
             ]
           properties:
             overall_score: { type: number, minimum: 0, maximum: 100 }
@@ -42,6 +64,7 @@ providers:
               items: { type: string }
             reason: { type: string }
             url: { type: string }
+            company_dossier: { type: string }
 
 # ─── Default Assertions ────────────────────────────────────
 defaultTest:

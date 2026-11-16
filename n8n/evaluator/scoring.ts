@@ -77,7 +77,6 @@ const CRITICAL_FLAGS = [
   "Industry: Gambling/Betting",
   "Industry: Agency/Outsourcing",
   "Salary: Below Hard Floor",
-  "Salary: Undisclosed / Non-Tier-1",
   "Process: Invasive Surveillance",
   "Stack: Legacy/Non-JS",
   "Stack: Non-JS Required",
@@ -120,37 +119,6 @@ export const TOXIC_OVERWORK_REGEX = new RegExp(
 /** Rotational on-call with explicit compensation / allowance is standard in enterprise and not penalized. */
 export const COMPENSATED_ONCALL_REGEX =
   /\b(?:rotation(?:al)?|1\s+week\s+in\s+\d+|on[\s-]call\s+(?:allowance|compensation|bonus|stipend)|standby\s+(?:pay|bonus)|dodatek\s+za\s+gotowość|rotacyjn(?:y|e))\b/i;
-
-export const DEFAULT_TIER1_COMPANIES: readonly string[] = [
-  "google",
-  "amazon",
-  "microsoft",
-  "meta",
-  "apple",
-  "netflix",
-  "snowflake",
-  "datadog",
-  "stripe",
-  "spotify",
-  "revolut",
-  "uber",
-  "booking",
-  "github",
-  "gitlab",
-  "atlassian",
-  "figma",
-  "canva",
-  "okta",
-  "twilio",
-  "palantir",
-  "airbnb",
-  "salesforce",
-  "adobe",
-  "dropbox",
-  "coinbase",
-  "elastic",
-  "mongodb",
-];
 
 const OUTSOURCING_KEYWORDS = [
   "epam",
@@ -303,10 +271,12 @@ function mapToStandardTag(rawTag: unknown): string {
 
   // Salary
   if (
-    text.includes("non-tier-1") ||
-    text.includes("undisclosed / non-tier-1")
+    text.includes("undisclosed") ||
+    text.includes("not disclosed") ||
+    text.includes("no salary") ||
+    text.includes("unspecified")
   ) {
-    return "Salary: Undisclosed / Non-Tier-1";
+    return "Salary: Undisclosed";
   }
   if (text.includes("below preferred") || text.includes("preferred range")) {
     return "Salary: Below Preferred";
@@ -402,19 +372,42 @@ function baseFields(job: JobForScoring) {
   };
 }
 
+export function classifyPipelineError(reason: string): string {
+  const lower = reason.toLowerCase();
+  if (
+    lower.includes("429") ||
+    lower.includes("quota") ||
+    lower.includes("rate limit") ||
+    lower.includes("too many requests") ||
+    lower.includes("resource_exhausted")
+  ) {
+    return "Pipeline: Quota Error";
+  }
+  if (
+    lower.includes("500") ||
+    lower.includes("502") ||
+    lower.includes("503") ||
+    lower.includes("504") ||
+    lower.includes("llm router") ||
+    lower.includes("all providers failed") ||
+    lower.includes("timeout") ||
+    lower.includes("network") ||
+    lower.includes("request failed") ||
+    lower.includes("ollama")
+  ) {
+    return "Pipeline: LLM Error";
+  }
+  return "Pipeline: Parse Error";
+}
+
 function fallbackResult(job: JobForScoring, reason: string): EvaluationResult {
-  // Ported verbatim: the live node only checks for "ollama" (a leftover from when
-  // Ollama was the only provider), not "llm" in general — so with today's providers
-  // (openrouter/gemini) this branch is effectively always false and these fallbacks
-  // always resolve to "Pipeline: Parse Error". Not widening this on purpose — the
-  // point of this module is to capture live reality, not what seems more "correct."
-  const isLlmError = reason.toLowerCase().includes("ollama");
+  const flag = classifyPipelineError(reason);
   return {
     ...baseFields(job),
     overall_score: 0,
     tech_stack_match: 0,
     seniority_match: 0,
-    red_flags: [isLlmError ? "Pipeline: LLM Error" : "Pipeline: Parse Error"],
+    red_flags: [flag],
     reason: `Error: ${reason}`,
     match: false,
     company_dossier: undefined,
@@ -454,36 +447,45 @@ function token(alternatives: string): RegExp {
   return new RegExp(`(?<![a-z])(?:${alternatives})(?![a-z])`, "i");
 }
 
+export const RATES_AS_OF_DATE = "2026-11-16";
+
 /**
  * Approximate conversion rates to PLN (PLN per 1 unit of currency).
  * Static approximations, not live FX data — good enough for a hard-floor gate.
  * Order matters: more specific patterns (e.g. "S$", "HK$", "CNY") must be
  * checked before generic ones ("$", "¥").
  */
-const CURRENCY_RATES_TO_PLN: ReadonlyArray<{ readonly code: string; readonly pattern: RegExp; readonly rate: number }> = [
-  { code: "PLN", pattern: /(?<![a-z])(?:pln|zl|zlotych)(?![a-z])|zł/i, rate: 1 },
-  { code: "EUR", pattern: /(?<![a-z])(?:eur|euro|euros)(?![a-z])|€/i, rate: 4.25 },
-  { code: "GBP", pattern: /(?<![a-z])gbp(?![a-z])|£/i, rate: 5.0 },
-  { code: "CHF", pattern: token("chf"), rate: 4.55 },
-  { code: "NZD", pattern: /(?<![a-z])(?:nzd|nz\$)/i, rate: 2.35 },
-  { code: "SGD", pattern: /(?<![a-z])(?:sgd(?![a-z])|s\$)/i, rate: 2.95 },
-  { code: "HKD", pattern: /(?<![a-z])(?:hkd(?![a-z])|hk\$)/i, rate: 0.51 },
-  { code: "CAD", pattern: /(?<![a-z])(?:cad(?![a-z])|c\$|ca\$)/i, rate: 2.85 },
-  { code: "AUD", pattern: /(?<![a-z])(?:aud(?![a-z])|a\$|au\$)/i, rate: 2.6 },
-  { code: "USD", pattern: /(?<![a-z])usd(?![a-z])|\$/i, rate: 3.95 },
-  { code: "SEK", pattern: token("sek"), rate: 0.38 },
-  { code: "NOK", pattern: token("nok"), rate: 0.37 },
-  { code: "DKK", pattern: token("dkk"), rate: 0.57 },
-  { code: "ISK", pattern: token("isk"), rate: 0.029 },
-  { code: "CZK", pattern: /(?<![a-z])czk(?![a-z])|kč/i, rate: 0.17 },
-  { code: "HUF", pattern: token("huf"), rate: 0.011 },
-  { code: "RON", pattern: token("ron"), rate: 0.85 },
-  { code: "BGN", pattern: token("bgn"), rate: 2.17 },
-  { code: "AED", pattern: token("aed|dirham|dirhams"), rate: 1.08 },
-  { code: "CNY", pattern: /(?<![a-z])(?:cny|rmb)(?![a-z])|元/i, rate: 0.55 },
-  // "¥" alone is ambiguous (JPY or CNY); treated as JPY because Japan is the target market.
-  { code: "JPY", pattern: /(?<![a-z])(?:jpy|yen)(?![a-z])|¥|円/i, rate: 0.026 },
-];
+export const CURRENCY_RATES_TO_PLN: ReadonlyArray<{
+  readonly code: string;
+  readonly pattern: RegExp;
+  readonly rate: number;
+}> & { readonly RATES_AS_OF_DATE: string } = Object.assign(
+  [
+    { code: "PLN", pattern: /(?<![a-z])(?:pln|zl|zlotych)(?![a-z])|zł/i, rate: 1 },
+    { code: "EUR", pattern: /(?<![a-z])(?:eur|euro|euros)(?![a-z])|€/i, rate: 4.25 },
+    { code: "GBP", pattern: /(?<![a-z])gbp(?![a-z])|£/i, rate: 5.0 },
+    { code: "CHF", pattern: token("chf"), rate: 4.55 },
+    { code: "NZD", pattern: /(?<![a-z])(?:nzd|nz\$)/i, rate: 2.35 },
+    { code: "SGD", pattern: /(?<![a-z])(?:sgd(?![a-z])|s\$)/i, rate: 2.95 },
+    { code: "HKD", pattern: /(?<![a-z])(?:hkd(?![a-z])|hk\$)/i, rate: 0.51 },
+    { code: "CAD", pattern: /(?<![a-z])(?:cad(?![a-z])|c\$|ca\$)/i, rate: 2.85 },
+    { code: "AUD", pattern: /(?<![a-z])(?:aud(?![a-z])|a\$|au\$)/i, rate: 2.6 },
+    { code: "USD", pattern: /(?<![a-z])usd(?![a-z])|\$/i, rate: 3.95 },
+    { code: "SEK", pattern: token("sek"), rate: 0.38 },
+    { code: "NOK", pattern: token("nok"), rate: 0.37 },
+    { code: "DKK", pattern: token("dkk"), rate: 0.57 },
+    { code: "ISK", pattern: token("isk"), rate: 0.029 },
+    { code: "CZK", pattern: /(?<![a-z])czk(?![a-z])|kč/i, rate: 0.17 },
+    { code: "HUF", pattern: token("huf"), rate: 0.011 },
+    { code: "RON", pattern: token("ron"), rate: 0.85 },
+    { code: "BGN", pattern: token("bgn"), rate: 2.17 },
+    { code: "AED", pattern: token("aed|dirham|dirhams"), rate: 1.08 },
+    { code: "CNY", pattern: /(?<![a-z])(?:cny|rmb)(?![a-z])|元/i, rate: 0.55 },
+    // "¥" alone is ambiguous (JPY or CNY); treated as JPY because Japan is the target market.
+    { code: "JPY", pattern: /(?<![a-z])(?:jpy|yen)(?![a-z])|¥|円/i, rate: 0.026 },
+  ] as const,
+  { RATES_AS_OF_DATE },
+);
 
 /**
  * Above this monthly PLN value a salary without an explicit period is assumed to be
@@ -663,32 +665,21 @@ export function evaluateJob(
   const salaryLower = (job.salary ?? "").toLowerCase();
   const isUop = salaryLower.includes("uop") || salaryLower.includes("prace") || salaryLower.includes("o pracę");
   const uopFloorPln = dynamicConfig?.minUopPlnFloor ?? 27000;
-  const b2bFloorPln = Math.max(23000, dynamicConfig?.minB2bPlnFloor ?? 23000);
+  const b2bFloorPln = dynamicConfig?.minB2bPlnFloor ?? 24000;
   const salaryFloorPln = isUop ? uopFloorPln : b2bFloorPln;
 
   let falseSalaryHardFloorRemoved = false;
 
-  const tier1Companies = dynamicConfig?.tier1Companies ?? DEFAULT_TIER1_COMPANIES;
-  const companyLower = (job.company ?? "").toLowerCase().trim();
-  const isTier1 = tier1Companies.some((t1) => companyLower.includes(t1));
-
   if (salaryUnspecified) {
-    if (!isTier1) {
-      if (!redFlags.includes("Salary: Undisclosed / Non-Tier-1")) {
-        redFlags.push("Salary: Undisclosed / Non-Tier-1");
+    // Missing or zero salary is NOT a rejection: evaluate normally and add informational badge
+    for (let i = 0; i < redFlags.length; i++) {
+      if (redFlags[i] === "Salary: Below Hard Floor") {
+        redFlags[i] = "Salary: Undisclosed";
+        falseSalaryHardFloorRemoved = true;
       }
-      overallScore = 0;
-    } else {
-      // Missing or zero salary for verified Tier-1 company: keep with informational warning
-      for (let i = 0; i < redFlags.length; i++) {
-        if (redFlags[i] === "Salary: Below Hard Floor") {
-          redFlags[i] = "Salary: Low/Unspecified";
-          falseSalaryHardFloorRemoved = true;
-        }
-      }
-      if (!redFlags.some((f) => f.startsWith("Salary:"))) {
-        redFlags.push("Salary: Low/Unspecified");
-      }
+    }
+    if (!redFlags.includes("Salary: Undisclosed")) {
+      redFlags.push("Salary: Undisclosed");
     }
   } else if (maxMonthlyPln !== undefined && maxMonthlyPln < salaryFloorPln) {
     if (!redFlags.includes("Salary: Below Hard Floor")) {

@@ -15,7 +15,6 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { DEFAULT_TIER1_COMPANIES } from "./scoring";
 
 export type CvSection =
   | "Role & Summary"
@@ -77,7 +76,6 @@ export interface DynamicScoringConfig {
   readonly tricityKeywords: readonly string[];
   readonly minB2bPlnFloor?: number;
   readonly minUopPlnFloor?: number;
-  readonly tier1Companies?: readonly string[];
 }
 
 // ─── Historical Provisioning Seed Data ──────────────────────────────────────
@@ -238,26 +236,25 @@ export const DEFAULT_CRITERIA_ENTRIES: readonly CriterionEntry[] = [
   },
   {
     id: "crit-salary-floor",
-    ruleName: "Hard Salary Floor (Min 18k PLN Net / ~23k B2B / ~27k UoP — Any Currency Converted to PLN)",
+    ruleName: "Hard Salary Floor (Min 24k PLN B2B / 27k PLN UoP — Any Currency Converted to PLN)",
     category: "Salary & Contract",
     enforcement: "Hard Gate (Code + Prompt)",
     ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords: "23000 B2B | 27000 UoP",
+    valueOrKeywords: "24000 B2B | 27000 UoP",
     description:
-      "Hard Floor (Strict Minimum for disclosed non-zero salaries): 18,000 PLN/month NET on hands. Strictly: UoP MINIMUM 27,000 PLN Gross / month; B2B MINIMUM 23,000 PLN Net (+VAT) / month (~5,200 EUR B2B, ~5,600 USD B2B, ~4,500 CHF B2B). Convert foreign currencies to monthly PLN before checking. Force reject (score = 0, red_flag: Low salary / below hard floor) when an explicitly disclosed non-zero salary converts to strictly below this floor.",
+      "Hard Floor (Strict Minimum for disclosed non-zero salaries): UoP MINIMUM 27,000 PLN Gross / month; B2B MINIMUM 24,000 PLN Net (+VAT) / month (~5,650 EUR B2B, ~6,080 USD B2B, ~4,800 GBP B2B, ~5,275 CHF B2B). Convert foreign currencies to monthly PLN before checking. Force reject (score = 0, red_flag: Low salary / below hard floor) ONLY when an explicitly disclosed non-zero MAX salary converts strictly below this floor. Missing or undisclosed salary is NOT a rejection: evaluate normally and add 'Salary: Undisclosed' to red_flags.",
     order: 2,
     active: true,
   },
   {
     id: "crit-salary-undisclosed",
-    ruleName: "Undisclosed or Zero Salary -> Reject unless Verified Tier-1 Product Company",
+    ruleName: "Undisclosed or Zero Salary -> Not a Rejection (Informational Badge Only)",
     category: "Salary & Contract",
-    enforcement: "Hard Gate (Code + Prompt)",
-    ruleType: "Force Reject (Score = 0)",
-    valueOrKeywords:
-      "google, amazon, microsoft, meta, apple, netflix, snowflake, datadog, stripe, spotify, revolut, uber, booking, github, gitlab, atlassian, figma, canva, okta, twilio, palantir, airbnb, salesforce, adobe, dropbox, coinbase, elastic, mongodb",
+    enforcement: "Prompt Rule (LLM Only)",
+    ruleType: "Target / Preference",
+    valueOrKeywords: "undisclosed, not disclosed, competitive, n/a, 0",
     description:
-      "Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty): ONLY keep if the employer is an internationally recognized Tier-1 product tech company (e.g. Google, Snowflake, Datadog, Stripe, Spotify, Revolut, Amazon, Uber, Microsoft, Booking, Netflix, GitHub, GitLab, Atlassian, Figma, Canva, etc.). For all other companies, unknown software houses, agencies, or local consultancies with undisclosed salary, FORCE REJECT (score = 0, red_flag: Salary: Undisclosed / Non-Tier-1).",
+      "Missing, Undisclosed, or Zero Salary ('0', 'Undisclosed', 'N/A', 'No salary', 'Competitive', or empty) is NOT a reason to reject a vacancy. Evaluate the role normally on stack, seniority, domain, and location, and include 'Salary: Undisclosed' in red_flags.",
     order: 3,
     active: true,
   },
@@ -491,7 +488,7 @@ export function compileDynamicScoringConfig(
     const genericNum = salaryGate.valueOrKeywords.replace(/\s+/g, "").match(/\d{4,6}/);
     const b2bVal = b2bExplicit ? Number(b2bExplicit[1]) : genericNum ? Number(genericNum[0]) : undefined;
     if (b2bVal !== undefined) {
-      minB2bPlnFloor = Math.max(23000, b2bVal);
+      minB2bPlnFloor = b2bVal;
     }
 
     if (minUopPlnFloor === undefined) {
@@ -504,33 +501,9 @@ export function compileDynamicScoringConfig(
     }
   }
 
-  const tier1Gate = activeGates.find(
-    (c) =>
-      c.id === "crit-salary-undisclosed" ||
-      c.ruleName.toLowerCase().includes("tier-1") ||
-      c.ruleName.toLowerCase().includes("undisclosed"),
-  );
-  let tier1Companies: string[] | undefined;
-  if (tier1Gate) {
-    const raw = tier1Gate.valueOrKeywords.replace(/^tier[-_]?1\s*:\s*/i, "");
-    const parsed = parseKeywordList(raw).filter(
-      (k) =>
-        !k.includes("red_flag") &&
-        k !== "undisclosed" &&
-        k !== "0" &&
-        k !== "no salary" &&
-        k !== "n/a" &&
-        k !== "competitive",
-    );
-    if (parsed.length > 0) {
-      tier1Companies = parsed;
-    }
-  }
-
   return {
-    minB2bPlnFloor: minB2bPlnFloor ?? 23000,
+    minB2bPlnFloor: minB2bPlnFloor ?? 24000,
     minUopPlnFloor: minUopPlnFloor ?? 27000,
-    tier1Companies: tier1Companies ?? [...DEFAULT_TIER1_COMPANIES],
     cryptoKeywords: findKeywords("crit-reject-crypto", "crypto", [
       "crypto",
       "web3",

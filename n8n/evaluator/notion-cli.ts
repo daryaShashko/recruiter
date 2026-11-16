@@ -216,7 +216,19 @@ function checkboxField(b: boolean) {
 
 async function runUpdateProfile(): Promise<void> {
   const token = requireNotionToken();
-  console.log("[notion-cli] Updating Notion pages with FDE / Team Lead profile and strict non-JS hard reject...");
+  console.log("[notion-cli] Updating Notion pages with FDE / Team Lead profile, salary floors (24k B2B / 27k UoP), and strict non-JS hard reject...");
+
+  // 0. Criteria: Hard Salary Floor -> 24000 PLN B2B, 27000 PLN UoP, Undisclosed not rejected (ADR-028 T4)
+  await patchNotionPage(token, "408747f7-ebec-814a-b93c-fea4b363b97c", {
+    "Rule Name": titleField("Hard Salary Floor: Convert Currency and Period to Monthly PLN"),
+    "Rule Type": selectField("Force Reject (Score = 0)"),
+    "Category": selectField("Salary & Contract"),
+    "Enforcement": selectField("Hard Gate (Code + Prompt)"),
+    "Value / Keywords": richTextField("24000 PLN B2B, 27000 PLN UoP, 5650 EUR, 6080 USD, 4800 GBP, 5275 CHF"),
+    "Rule Description (For Prompt)": richTextField(
+      "Reject (Score = 0, tag: Low salary) ONLY if explicitly disclosed MAX salary converts below monthly floor: < 24,000 PLN B2B net+VAT / < 27,000 PLN UoP Gross (< 5,650 EUR/mo, < 6,080 USD/mo, < 4,800 GBP/mo, < 5,275 CHF/mo; FX rates as of 2026-11-16: 1 EUR ≈ 4.25 PLN, 1 USD ≈ 3.95 PLN, 1 GBP ≈ 5.00 PLN, 1 CHF ≈ 4.55 PLN). For ranges (min-max), if MAX meets threshold, do NOT reject. Missing/undisclosed salary is NOT a rejection: evaluate normally, tag: Salary: Undisclosed."
+    ),
+  });
 
   // 1. Criteria: Non-JS Stack Required -> Force Reject (Score = 0)
   await patchNotionPage(token, "408747f7-ebec-81c3-8b31-c7b38b205c43", {

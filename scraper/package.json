@@ -23,7 +23,7 @@
     "eval:view": "npx promptfoo view",
     "eval:gemini": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-gemini.yaml",
     "eval:gemini:view": "npx promptfoo view",
-    "eval:smoke": "npx promptfoo eval -c ../n8n/prompts/promptfooconfig-smoke.yaml",
+    "eval:smoke": "LLM_PROVIDER=${LLM_PROVIDER:-ollama:chat:llama3.1:8b} npx promptfoo eval -c ../n8n/prompts/promptfooconfig-smoke.yaml",
     "check": "ts-node src/check-manual.ts",
     "generate:cv": "ts-node src/generator/cli.ts --target cv --dry-run",
     "generate:letter": "ts-node src/generator/cli.ts --target letter --dry-run",
