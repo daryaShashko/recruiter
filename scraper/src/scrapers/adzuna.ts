@@ -1,6 +1,7 @@
 import axios from "axios";
 import { JobOffer } from "../types";
 import { config } from "../config";
+import { calcFingerprint } from "../utils/fingerprint";
 import {
   evaluateGlobalFilter,
   GlobalFilterReason,
@@ -8,6 +9,7 @@ import {
   parseDate,
   sleep,
   stripHtml,
+  toIsoDate,
 } from "../utils/global-filter";
 
 const { apiBaseUrl, appId, appKey, countries, resultsPerPage, query, maxDaysOld } =
@@ -54,6 +56,7 @@ export function normalizeAdzunaJob(
   job: RawAdzunaJob,
   country: string,
 ): JobOffer {
+  const company = job.company?.display_name ?? "Unknown";
   const salary =
     job.salary_min && job.salary_max
       ? `${Math.round(job.salary_min)}–${Math.round(job.salary_max)} (${country.toUpperCase()}, Adzuna)`
@@ -61,7 +64,7 @@ export function normalizeAdzunaJob(
   return {
     id: `adzuna_${job.id}`,
     title: job.title,
-    company: job.company?.display_name ?? "Unknown",
+    company,
     // redirect_url is Adzuna's tracking link; it leads to the original posting.
     url: job.redirect_url ?? "",
     body: stripHtml(job.description ?? ""),
@@ -69,6 +72,8 @@ export function normalizeAdzunaJob(
     location: job.location?.display_name ?? "Unknown",
     salary,
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(job.created),
+    fingerprint: calcFingerprint(company, job.title),
   };
 }
 

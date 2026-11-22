@@ -52,6 +52,10 @@ export interface JobOffer {
   companyMeta?: CompanyMetadata;
   /** ISO timestamp when this offer was scraped */
   scrapedAt: string;
+  /** ISO timestamp when this offer was published by the employer/board, if known */
+  publishedAt?: string | null;
+  /** Deterministic semantic dedup fingerprint (16-char FNV-1a 64-bit hex of normalized company::title) */
+  fingerprint?: string;
 }
 
 /**
@@ -92,6 +96,10 @@ export interface EvaluationResult {
   company_dossier?: string;
   companyMeta?: CompanyMetadata;
 }
+
+export {
+  calcFingerprint as computeJobFingerprint,
+} from './utils/fingerprint';
 
 export {
   buildCompanySearchUrl,

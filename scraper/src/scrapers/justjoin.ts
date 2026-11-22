@@ -2,7 +2,8 @@ import axios from "axios";
 import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
 import { normalizeCompanyUrl } from "../utils/company";
-import { parseDate, passesAgeFilter } from "../utils/global-filter";
+import { calcFingerprint } from "../utils/fingerprint";
+import { parseDate, passesAgeFilter, toIsoDate } from "../utils/global-filter";
 
 export {
   buildCompanySearchUrl,
@@ -279,6 +280,8 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
     ],
     ...(companyMeta ? { companyMeta } : {}),
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(raw.publishedAt),
+    fingerprint: calcFingerprint(raw.companyName, raw.title),
   };
 }
 

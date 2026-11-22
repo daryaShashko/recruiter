@@ -12,20 +12,10 @@ import { closeBrowser } from "./utils/browser";
 import { enrichMissingSalaries } from "./utils/salary-enricher";
 import { filterValidLinks } from "./utils/link-check";
 import { funnelTracker } from "./utils/funnel";
+import { deduplicateOffers } from "./utils/deduplicateOffers";
 import { JobOffer } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "true";
-
-function deduplicateOffers(offers: JobOffer[]): JobOffer[] {
-  const seen = new Set<string>();
-  return offers.filter((offer) => {
-    if (seen.has(offer.id)) {
-      return false;
-    }
-    seen.add(offer.id);
-    return true;
-  });
-}
 
 function saveDryRunOutput(offers: JobOffer[]): void {
   const outputDir = path.resolve(__dirname, "../../output");

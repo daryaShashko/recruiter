@@ -1,6 +1,7 @@
 import axios from "axios";
 import { JobOffer } from "../types";
 import { config } from "../config";
+import { calcFingerprint } from "../utils/fingerprint";
 import {
   evaluateGlobalFilter,
   GlobalFilterReason,
@@ -10,6 +11,7 @@ import {
   passesTitleFilter,
   sleep,
   stripHtml,
+  toIsoDate,
 } from "../utils/global-filter";
 import { getAtsCompanyName } from "./ats-companies";
 
@@ -326,6 +328,8 @@ export function normalizeWorkable(
     source: "workable",
     location: location || (job.telecommuting ? "Remote" : "Unknown"),
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(job.published_on),
+    fingerprint: calcFingerprint(company, job.title),
   };
 }
 
@@ -333,6 +337,7 @@ export function normalizeRecruitee(
   slug: string,
   offer: RawRecruiteeOffer,
 ): JobOffer {
+  const company = offer.company_name ?? slug;
   const body =
     stripHtml(
       [offer.description, offer.requirements]
@@ -346,7 +351,7 @@ export function normalizeRecruitee(
   return {
     id: `recruitee_${slug}_${offer.id}`,
     title: offer.title,
-    company: offer.company_name ?? slug,
+    company,
     url:
       offer.careers_url ??
       `https://${slug}.recruitee.com/o/${offer.slug}`,
@@ -354,6 +359,8 @@ export function normalizeRecruitee(
     source: "recruitee",
     location: location || (offer.remote ? "Remote" : "Unknown"),
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(offer.published_at ?? offer.created_at),
+    fingerprint: calcFingerprint(company, offer.title),
   };
 }
 
@@ -361,15 +368,18 @@ export function normalizePersonio(
   slug: string,
   position: RawPersonioPosition,
 ): JobOffer {
+  const company = position.subcompany ?? slug;
   return {
     id: `personio_${slug}_${position.id}`,
     title: position.name,
-    company: position.subcompany ?? slug,
+    company,
     url: `https://${slug}.jobs.personio.de/job/${position.id}`,
     body: stripHtml(position.descriptions.join("\n")) || position.name,
     source: "personio",
     location: position.office ?? "Unknown",
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(position.createdAt),
+    fingerprint: calcFingerprint(company, position.name),
   };
 }
 
@@ -377,15 +387,18 @@ export function normalizeGreenhouse(
   slug: string,
   job: RawGreenhouseJob,
 ): JobOffer {
+  const company = job.company_name ?? slug;
   return {
     id: `greenhouse_${slug}_${job.id}`,
     title: job.title,
-    company: job.company_name ?? slug,
+    company,
     url: job.absolute_url ?? `https://boards.greenhouse.io/${slug}/jobs/${job.id}`,
     body: stripHtml(job.content ?? "") || job.title,
     source: "greenhouse",
     location: job.location?.name ?? "Unknown",
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(job.first_published ?? job.updated_at),
+    fingerprint: calcFingerprint(company, job.title),
   };
 }
 
@@ -516,6 +529,7 @@ export function normalizeLever(
   slug: string,
   posting: RawLeverPosting,
 ): JobOffer {
+  const company = getAtsCompanyName(slug);
   const body =
     stripHtml(
       posting.descriptionPlain ??
@@ -526,27 +540,32 @@ export function normalizeLever(
   return {
     id: `lever_${slug}_${posting.id}`,
     title: posting.text,
-    company: getAtsCompanyName(slug),
+    company,
     url: posting.hostedUrl ?? `https://jobs.lever.co/${slug}/${posting.id}`,
     body,
     source: "lever",
     location: posting.categories?.location ?? "Unknown",
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(posting.createdAt),
+    fingerprint: calcFingerprint(company, posting.text),
   };
 }
 
 export function normalizeAshby(slug: string, job: RawAshbyJob): JobOffer {
+  const company = getAtsCompanyName(slug);
   const salary = parseAshbyCompensation(job.compensation);
   return {
     id: `ashby_${slug}_${job.id}`,
     title: job.title,
-    company: getAtsCompanyName(slug),
+    company,
     url: job.jobUrl ?? `https://jobs.ashbyhq.com/${slug}/${job.id}`,
     body: stripHtml(job.descriptionPlain ?? job.descriptionHtml ?? "") || job.title,
     source: "ashby",
     location: job.location || (job.isRemote ? "Remote" : "Unknown"),
     ...(salary ? { salary } : {}),
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(job.publishedAt),
+    fingerprint: calcFingerprint(company, job.title),
   };
 }
 

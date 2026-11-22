@@ -1,12 +1,14 @@
 import axios from "axios";
 import { JobOffer } from "../types";
 import { config } from "../config";
+import { calcFingerprint } from "../utils/fingerprint";
 import {
   evaluateGlobalFilter,
   GlobalFilterReason,
   logFilterStats,
   parseDate,
   stripHtml,
+  toIsoDate,
 } from "../utils/global-filter";
 
 // SwissDevJobs publishes a plain XML feed meant for job aggregators (the
@@ -77,6 +79,8 @@ export function normalizeJob(job: RawSwissDevJob): JobOffer {
     location: job.city || job.location || "Switzerland",
     salary: job.salary,
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(job.pubdate),
+    fingerprint: calcFingerprint(job.company, job.title),
   };
 }
 

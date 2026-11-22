@@ -279,6 +279,11 @@ export function parseDate(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+/** Converts a raw date value (ISO string, epoch ms, or dd.mm.yyyy) to an ISO-8601 string, or null if absent/invalid. */
+export function toIsoDate(value: unknown): string | null {
+  return parseDate(value)?.toISOString() ?? null;
+}
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

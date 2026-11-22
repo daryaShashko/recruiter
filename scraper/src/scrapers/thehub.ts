@@ -1,6 +1,7 @@
 import axios from "axios";
 import { JobOffer } from "../types";
 import { config } from "../config";
+import { calcFingerprint } from "../utils/fingerprint";
 import {
   evaluateGlobalFilter,
   GlobalFilterReason,
@@ -9,6 +10,7 @@ import {
   passesTitleFilter,
   sleep,
   stripHtml,
+  toIsoDate,
 } from "../utils/global-filter";
 
 // api.thehub.io/v2/jobs and /jobs/single/{id} are the Nordic startup board
@@ -92,10 +94,11 @@ async function fetchAllListItemsForCountry(
 
 export function normalizeDetail(detail: RawTheHubJobDetail): JobOffer {
   const description = stripHtml(detail.description ?? "");
+  const company = detail.company?.name ?? "Unknown";
   return {
     id: `thehub_${detail.id}`,
     title: detail.title,
-    company: detail.company?.name ?? "Unknown",
+    company,
     // Fall back to the TheHub listing itself when the posting has no
     // external apply link (some postings only expose a contact email).
     url: detail.link ?? `${siteBaseUrl}/jobs/${detail.id}`,
@@ -107,6 +110,8 @@ export function normalizeDetail(detail: RawTheHubJobDetail): JobOffer {
         ? detail.salary
         : undefined,
     scrapedAt: new Date().toISOString(),
+    publishedAt: toIsoDate(detail.publishedAt ?? detail.approvedAt),
+    fingerprint: calcFingerprint(company, detail.title),
   };
 }
 
