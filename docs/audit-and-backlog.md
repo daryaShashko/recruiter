@@ -9,7 +9,7 @@
 
 | ID | Слайс (End-to-End) | `[TECH]` Архитектура | `[UX]` Удобство и психология | `[KPD]` КПД и ROI | Средний балл | Главный блокер ценности |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- |
-| **S1** | **Сбор и дедупликация вакансий**<br>(`Scrapers -> n8n Ingest -> Dedup`) | **6 / 10** | **5 / 10** | **7 / 10** | **6.0** | `justjoin.ts` и `nofluffjobs.ts` **не скачивают текст вакансии** (шлют синтетический слепок из 6 строк тегов), стоят первыми при дедупликации (затирая полные описания) и пропускают «зомби-вакансии» возрастом до 60–180 дней без даты публикации. |
+| **S1** | **Сбор и дедупликация вакансий**<br>(`Scrapers -> n8n Ingest -> Dedup`) | **6 / 10** | **5 / 10** | **7 / 10** | **6.0** | ✅ **`WP-1` закрыт:** `justjoin.ts` и `nofluffjobs.ts` догружают полный текст описания (`fetchOfferDetail` / `fetchPostingDetail`), работает Smart Cross-Board Merge (`deduplicateOffers`), пороги свежести снижены до `30`/`60` дней, `publishedAt` и `fingerprint` проброшены в n8n (`Code: Normalize Jobs`). *(Остаток в P2: пред-дедупликация `WP-6.3`, автоконтроль дрифта `WP-7.3`)*. |
 | **S2** | **Управление профилем и критериями**<br>(`Notion Databases -> Sync -> Config`) | **6 / 10** | **4 / 10** | **4 / 10** | **4.7** | ~2000 строк кода и 15 колонок в 2 таблицах Notion ради 12 правил одного кандидата; два дублирующих Notion-клиента противоречат друг другу (`NO Python` vs `Python backend`), а живой n8n качает профиль заново **на каждую вакансию** в цикле. |
 | **S3** | **ИИ-оценка и скоринг вакансий**<br>(`Prompt -> LLM Router -> Scoring -> Notion`) | **6 / 10** | **5 / 10** | **6 / 10** | **5.7** | Детерминированные отказы (галеры, крипта, низкая ЗП) проверяются **после** вызова LLM; промпт возвращает сухой английский отчёт робота-цензора вместо сути задач и продающего питча, а пустые описания вытягиваются на `>= 50` баллов. |
 | **S4** | **Доставка в Telegram и HITL-триаж**<br>(`Alerts -> Digest -> Inline Callbacks`) | **4 / 10** | **4 / 10** | **3 / 10** | **3.7** | Богатый HTML-форматтер в `telegram.ts` **не подключён к n8n** (в n8n захардкожен урезанный неэкранированный Markdown); воркфлоу обработки кнопок в n8n **выключен (`active=false`)**, а Топик 3 и опросы отказа заставляют работать дата-лейблером. |
@@ -41,9 +41,8 @@
 
 > **✅ Выполнено (проверено по `git diff`):**
 > - **S1-T1** (`53faedd`): поле `publishedAt?: string | null` в `JobOffer`, заполняется во всех 6 скрейперах (`toIsoDate`); FNV-1a64 `fingerprint` в `scraper/src/utils/fingerprint.ts`; тесты `published-at`, `job-offer-fields`, `deduplicate-offers`.
-> - **S1-T2**: `fingerprint` нормализован как в n8n `Code: Normalize Jobs` (юр. формы, регистр, seniority, `full-stack`/`node.js`, `(m/f/d)`); `deduplicateOffers` делает Smart Cross-Board Merge (самый длинный `body`, прямой URL вместо Adzuna-редиректа, самая свежая `publishedAt`, объединение `tags`, **все зарплаты с указанием бордов**: `25 000 PLN (via justjoin, greenhouse) | 24 000 PLN (via nofluffjobs)`); порядок в `index.ts`: `merge → enrichMissingSalaries → filterValidLinks`; удалён `closeBrowser()` из `index.ts`.
->
-> **⏳ Не сделано (было ошибочно отмечено ранее):** n8n (`patch-n8n-hitl-review.py`, `Code: Normalize Jobs`) не менялся. n8n по-прежнему считает свой `fingerprint` и отбрасывает поля `publishedAt`/`tags`.
+> - **S1-T2** (`d74e6e0`): `fingerprint` нормализован как в n8n `Code: Normalize Jobs` (юр. формы, регистр, seniority, `full-stack`/`node.js`, `(m/f/d)`); `deduplicateOffers` делает Smart Cross-Board Merge (самый длинный `body`, прямой URL вместо Adzuna-редиректа, самая свежая `publishedAt`, объединение `tags`, **все зарплаты с указанием бордов**: `25 000 PLN (via justjoin, greenhouse) | 24 000 PLN (via nofluffjobs)`); порядок в `index.ts`: `merge → enrichMissingSalaries → filterValidLinks`; удалён `closeBrowser()` из `index.ts`.
+> - **WP-1 (`WP-1.1`, `WP-1.2`, n8n `Code: Normalize Jobs`)**: `justjoin.ts` (`fetchOfferDetail`) и `nofluffjobs.ts` (`fetchPostingDetail`) догружают полный текст описания для прошедших пре-фильтр вакансий с fallback на `buildBody`; в `justjoin.ts` пагинация останавливается по `offers.every` вместо `offers.some`; в `nofluffjobs.ts` учитывается `posting.renewed ?? posting.posted` и устранена мутация входных объектов в `deduplicateByReference`; в `config.ts` пороги свежести снижены до `maxAgeDays: 30` и `atsMaxAgeDays: 60`; в `scripts/patch-n8n-hitl-review.py` добавлен патчинг ноды `Code: Normalize Jobs` (сохраняет `fingerprint`, `publishedAt`, `tags`, `companyMeta`).
 >
 > Процесс выполнения слайсов: [.agents/skills/execute-slice/SKILL.md](../.agents/skills/execute-slice/SKILL.md).
 
@@ -267,11 +266,11 @@
 
 ### 🔥 P0 — Разблокировка ежедневного использования (Чтоб хотелось читать и аплаиться)
 
-#### WP-1: Полноценные описания вакансий, свежие даты и умный мердж дублей (`Slice 1`)
+#### ✅ WP-1: Полноценные описания вакансий, свежие даты и умный мердж дублей (`Slice 1` — Выполнено)
 * **Проблема:** `justjoin.ts` и `nofluffjobs.ts` не качают текст описания вакансии (собирают только 6 строк из названия и тегов), стоят первыми в списке скрейперов (затирая полные описания при дедупликации в n8n) и пропускают вакансии возрастом до 60–180 дней, стирая дату публикации `publishedAt`. Из-за этого в карточках пусто (`О компании: Не знаю`), и приходится каждый раз ходить на сайт.
 * **Задачи:**
-  - [ ] **WP-1.1 (`justjoin.ts` & `nofluffjobs.ts`):** Для вакансий, прошедших `passesGlobalPreFilter`, догружать детальное описание вакансии (`detail API / page body`) вместо синтетического `buildBody()` из 6 строк тегов.
-  - [ ] **WP-1.2 (`types.ts`, `scrapers/*` & `config.ts`):** ~~Сохранять поле `publishedAt` в `JobOffer`~~ ✅ (S1-T1); ужесточить `maxAgeDays` (например, с 60/180 дней до 21–30 дней или явно передавать возраст вакансии `📅 Опубликовано: N дн. назад`), чтобы отсечь «зомби-вакансии».
+  - [x] **WP-1.1 (`justjoin.ts` & `nofluffjobs.ts`):** Для вакансий, прошедших `passesGlobalPreFilter` (`matchesPreFilter` / `matchesNFJPreFilter`), догружать детальное описание вакансии (`detail API / page body` через `fetchOfferDetail` и `fetchPostingDetail` с `stripHtml` и fallback на `buildBody()`), плюс фикс остановки пагинации `offers.every` в `justjoin.ts` и учёт `posting.renewed ?? posting.posted` без мутации входных объектов в `nofluffjobs.ts`.
+  - [x] **WP-1.2 (`types.ts`, `scrapers/*`, `config.ts` & `scripts/patch-n8n-hitl-review.py`):** Сохранять поле `publishedAt` в `JobOffer` (S1-T1); снизить `maxAgeDays` до `30` дней и `atsMaxAgeDays` до `60` дней в `config.ts`, чтобы отсечь «зомби-вакансии»; пробросить `fingerprint`, `publishedAt`, `tags` и `companyMeta` через ноду `Code: Normalize Jobs` в `scripts/patch-n8n-hitl-review.py`.
   - [x] **WP-1.3 (`salary-enricher.ts` / `index.ts`):** Сделать Smart Cross-Board Merge до отправки в n8n — при совпадении `company + normalizedTitle` с разных бордов объединять оффер, сохраняя **самый длинный/полный `body`**, **лучшую вилку зарплаты** и **прямой URL** (а не просто брать первую попавшуюся карточку с `JustJoin`).
 * **Критерий приёмки (Acceptance Checks):**
   - `npm test` в `scraper/` проходит; `npm run scrape:dry` для JustJoin и NoFluffJobs возвращает реальный текст описания проекта и задач (`body.length > 300`), а также валидный `publishedAt`.
@@ -358,6 +357,9 @@
 * **Задачи:**
   - [ ] **WP-7.1 (`notion-loader.ts` vs `notion-profile.ts`):** Переключить генератор откликов на единый источник данных профиля (`n8n/prompts/.notion-snapshot.json` / единый загрузчик), синхронизировать фоллбэк-буллеты (убрать упоминания Python из `notion-loader.ts`).
   - [ ] **WP-7.2 (`browser.ts`, `notion-cli.ts`):** ~~Удалить мёртвый вызов `closeBrowser()` из `scraper/src/index.ts`~~ ✅ (S1-T2) и убрать захардкоженные одноразовые миграции UUID из `notion-cli.ts`.
-  - [ ] **WP-7.3 (`check-n8n-drift.py`):** Расширить скрипт проверки дрифта на все ключевые кодовые ноды живого n8n, чтобы исключить рассинхрон между git и боевым инстансом.
+  - [ ] **WP-7.3 (`check-n8n-drift.py`, `patch-n8n-hitl-review.py`, `.githooks/pre-push`, `check-agent-surfaces.sh`):** Поставить патчинг и дрифт живого n8n под 100% автоматический контроль:
+    - Добавить в `scripts/patch-n8n-hitl-review.py` флаг `--check` (единый источник правды без ручных хеш-файлов): проверять, что `n8n/dist/evaluator/scoring.js` не старше `n8n/evaluator/scoring.ts` (защита от забытого `cd n8n && npm run build`), и посимвольно сверять все управляемые ноды живого n8n с кодом в git (`exit 1` при любом расхождении).
+    - Расширить проверку дрифта на все управляемые кодовые ноды (`Code: Normalize Jobs`, `Code: Dedup Batch`, `Code: Check Duplicate`, `Code: LLM Router`, `Code: Parse Ollama Response`, `Telegram: Send Alert`, `Telegram: Send Review Alert`, `Code: Prepare Digest`).
+    - Подключить автоматический вызов `python3 scripts/patch-n8n-hitl-review.py --check` в `.githooks/pre-push` (`git config core.hooksPath .githooks`) и в `scripts/check-agent-surfaces.sh` (при наличии `~/.n8n-recruiter-key` / `N8N_API_KEY`), чтобы ни агент, ни человек не могли пройти верификацию или запушить коммит, забыв пропатчить живой n8n.
 * **Критерий приёмки (Acceptance Checks):**
   - `npm run verify` в `scraper/` и `scripts/check-agent-surfaces.sh` проходят без ошибок; в кодовой базе остаётся единый непротиворечивый источник данных кандидата.

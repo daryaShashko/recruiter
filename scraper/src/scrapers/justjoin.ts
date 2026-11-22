@@ -3,7 +3,7 @@ import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
 import { normalizeCompanyUrl } from "../utils/company";
 import { calcFingerprint } from "../utils/fingerprint";
-import { parseDate, passesAgeFilter, toIsoDate } from "../utils/global-filter";
+import { parseDate, passesAgeFilter, stripHtml, toIsoDate } from "../utils/global-filter";
 
 export {
   buildCompanySearchUrl,
@@ -236,7 +236,86 @@ export function matchesPreFilter(offer: RawJustJoinOffer): boolean {
   return true;
 }
 
-export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null;
+}
+
+function extractDetailHtml(payload: unknown): string | undefined {
+  if (!isRecord(payload)) return undefined;
+
+  const root = isRecord(payload.data) ? payload.data : payload;
+  const chunks: string[] = [];
+
+  if (typeof root.body === "string" && root.body.trim().length > 0) {
+    chunks.push(root.body);
+  } else if (typeof root.description === "string" && root.description.trim().length > 0) {
+    chunks.push(root.description);
+  } else if (typeof payload.body === "string" && payload.body.trim().length > 0) {
+    chunks.push(payload.body);
+  } else if (typeof payload.description === "string" && payload.description.trim().length > 0) {
+    chunks.push(payload.description);
+  }
+
+  const sections = Array.isArray(root.sections)
+    ? root.sections
+    : Array.isArray(payload.sections)
+      ? payload.sections
+      : undefined;
+  if (sections) {
+    for (const section of sections) {
+      if (isRecord(section)) {
+        const title = typeof section.title === "string" ? section.title.trim() : "";
+        const body =
+          typeof section.body === "string"
+            ? section.body.trim()
+            : typeof section.content === "string"
+              ? section.content.trim()
+              : "";
+        if (title || body) {
+          chunks.push([title, body].filter(Boolean).join("\n"));
+        }
+      } else if (typeof section === "string" && section.trim().length > 0) {
+        chunks.push(section.trim());
+      }
+    }
+  }
+
+  const agreements =
+    typeof root.agreements === "string"
+      ? root.agreements.trim()
+      : typeof payload.agreements === "string"
+        ? payload.agreements.trim()
+        : "";
+  if (agreements) {
+    chunks.push(agreements);
+  }
+
+  if (chunks.length === 0) return undefined;
+  return chunks.join("\n\n");
+}
+
+export async function fetchOfferDetail(slug: string): Promise<string | undefined> {
+  try {
+    const response = await axios.get<unknown>(
+      `${JUSTJOIN_BASE_URL}${JUSTJOIN_API_PATH}/${encodeURIComponent(slug)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": config.playwright.userAgent,
+        },
+        timeout: config.playwright.requestTimeout,
+      },
+    );
+    const html = extractDetailHtml(response?.data);
+    if (!html) return undefined;
+    const stripped = stripHtml(html);
+    return stripped.length > 0 ? stripped : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function normalizeOffer(raw: RawJustJoinOffer, detailText?: string): JobOffer {
   const rawSize = raw.companySize ?? raw.company_size ?? raw.company?.size;
   const rawUrl = raw.companyUrl ?? raw.company_url ?? raw.company?.url;
   const size =
@@ -265,12 +344,18 @@ export function normalizeOffer(raw: RawJustJoinOffer): JobOffer {
         }
       : undefined;
 
+  const baseBody = buildBody(raw);
+  const cleanDetail =
+    typeof detailText === "string" && detailText.trim().length > 0
+      ? detailText.trim()
+      : undefined;
+
   return {
     id: `justjoin_${raw.slug}`,
     title: raw.title,
     company: raw.companyName,
     url: `${JUSTJOIN_BASE_URL}/job-offer/${raw.slug}`,
-    body: buildBody(raw),
+    body: cleanDetail ? `${baseBody}\n\n${cleanDetail}` : baseBody,
     source: "justjoin",
     location: extractLocation(raw),
     salary: extractSalary(raw.employmentTypes),
@@ -369,13 +454,13 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
         `[JustJoin] Page ${pageNum}: ${offers.length} offers (running total: ${rawOffers.length}, totalItems: ${totalItems})`,
       );
 
-      // Stop condition: offers older than 60 days
-      const hasExpiredOffers = offers.some(
+      // Stop condition: all offers on page are older than 60 days
+      const allOffersExpired = offers.every(
         (offer) => !passesAgeFilter(parseDate(offer.publishedAt)),
       );
-      if (hasExpiredOffers) {
+      if (allOffersExpired) {
         console.log(
-          `[JustJoin] Page ${pageNum} contains offers older than age limit. Stopping pagination.`,
+          `[JustJoin] Page ${pageNum} contains only offers older than age limit. Stopping pagination.`,
         );
         break;
       }
@@ -409,7 +494,17 @@ export async function scrapeJustJoin(): Promise<JobOffer[]> {
       `[JustJoin] Pre-filter (location + seniority): ${filtered.length}/${rawOffers.length} kept`,
     );
 
-    return filtered.map(normalizeOffer);
+    const normalized: JobOffer[] = [];
+    for (let i = 0; i < filtered.length; i++) {
+      if (i > 0) {
+        await sleep(100);
+      }
+      const rawOffer = filtered[i];
+      const detailText = await fetchOfferDetail(rawOffer.slug);
+      normalized.push(normalizeOffer(rawOffer, detailText));
+    }
+
+    return normalized;
   } catch (err) {
     console.error("[JustJoin] Scraper failed:", err);
     return [];

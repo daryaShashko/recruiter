@@ -77,9 +77,9 @@ export const config = {
   global: {
     // Drop postings older than this (by publish date)
     // Aggregator freshness threshold (JustJoin, NoFluffJobs, TheHub, SwissDevJobs, Adzuna)
-    maxAgeDays: 60,
+    maxAgeDays: 30,
     // Direct ATS board freshness threshold (Greenhouse, Lever, Ashby, Workable, Recruitee, Personio)
-    atsMaxAgeDays: 180,
+    atsMaxAgeDays: 60,
     // Polite delay between sequential requests to the same host (ms)
     requestDelayMs: 300,
     // Per-request timeout (ms)

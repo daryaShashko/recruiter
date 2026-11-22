@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
   extractSalary,
   extractLocation,
+  fetchOfferDetail,
   fetchOffersPage,
   matchesPreFilter,
   normalizeOffer,
@@ -382,25 +383,27 @@ describe('fetchOffersPage & scrapeJustJoin pagination', () => {
     const page2Offer = makeOffer({ slug: 'offer-2', workplaceType: 'remote', experienceLevel: 'senior' });
     const page3Offer = makeOffer({ slug: 'offer-3', workplaceType: 'remote', experienceLevel: 'senior' });
 
-    jest.spyOn(axios, 'get')
-      .mockResolvedValueOnce({
-        data: {
-          data: [page1Offer],
-          meta: { totalItems: 30, next: { cursor: 10 } },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          data: [page2Offer],
-          meta: { totalItems: 30, next: { cursor: 20 } },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          data: [page3Offer],
-          meta: { totalItems: 30, next: { cursor: null } },
-        },
-      });
+    jest.spyOn(axios, 'get').mockImplementation((url: string, reqConfig?: { params?: { from?: number } }) => {
+      if (url.endsWith('/api/candidate-api/offers')) {
+        const cursor = reqConfig?.params?.from ?? 0;
+        if (cursor === 0) {
+          return Promise.resolve({
+            data: { data: [page1Offer], meta: { totalItems: 30, next: { cursor: 10 } } },
+          });
+        }
+        if (cursor === 10) {
+          return Promise.resolve({
+            data: { data: [page2Offer], meta: { totalItems: 30, next: { cursor: 20 } } },
+          });
+        }
+        if (cursor === 20) {
+          return Promise.resolve({
+            data: { data: [page3Offer], meta: { totalItems: 30, next: { cursor: null } } },
+          });
+        }
+      }
+      return Promise.resolve({ data: { body: '<p>Detail body</p>' } });
+    });
 
     const offers = await scrapeJustJoin();
     expect(offers).toHaveLength(3);
@@ -409,19 +412,20 @@ describe('fetchOffersPage & scrapeJustJoin pagination', () => {
       'justjoin_offer-2',
       'justjoin_offer-3',
     ]);
-    expect(axios.get).toHaveBeenCalledTimes(3);
+    // 3 page GETs + 3 detail GETs (1 per filtered offer) = 6 calls
+    expect(axios.get).toHaveBeenCalledTimes(6);
   });
 
-  it('scrapeJustJoin stops pagination when an offer is older than 60 days', async () => {
-    const freshOffer = makeOffer({
-      slug: 'fresh-offer',
-      publishedAt: new Date().toISOString(),
+  it('scrapeJustJoin stops pagination when all offers on a page are older than maxAgeDays', async () => {
+    const expiredOffer1 = makeOffer({
+      slug: 'expired-offer-1',
+      publishedAt: '2023-01-01T00:00:00.000Z',
       workplaceType: 'remote',
       experienceLevel: 'senior',
     });
-    const expiredOffer = makeOffer({
-      slug: 'expired-offer',
-      publishedAt: '2023-01-01T00:00:00.000Z',
+    const expiredOffer2 = makeOffer({
+      slug: 'expired-offer-2',
+      publishedAt: '2023-01-02T00:00:00.000Z',
       workplaceType: 'remote',
       experienceLevel: 'senior',
     });
@@ -429,7 +433,7 @@ describe('fetchOffersPage & scrapeJustJoin pagination', () => {
     jest.spyOn(axios, 'get')
       .mockResolvedValueOnce({
         data: {
-          data: [freshOffer, expiredOffer],
+          data: [expiredOffer1, expiredOffer2],
           meta: { totalItems: 100, next: { cursor: 10 } },
         },
       })
@@ -441,26 +445,29 @@ describe('fetchOffersPage & scrapeJustJoin pagination', () => {
       });
 
     const offers = await scrapeJustJoin();
-    // Only 1 page fetched because expiredOffer triggered early termination
+    // Only 1 page fetched because all offers on the page were older than maxAgeDays (30d)
     expect(axios.get).toHaveBeenCalledTimes(1);
-    // matchesPreFilter also filters out the expiredOffer, so only freshOffer remains
-    expect(offers).toHaveLength(1);
-    expect(offers[0].id).toBe('justjoin_fresh-offer');
+    expect(offers).toHaveLength(0);
   });
 
   it('scrapeJustJoin stops when JUSTJOIN_MAX_PAGES is reached', async () => {
-    const spy = jest.spyOn(axios, 'get');
-    for (let i = 0; i < 55; i++) {
-      spy.mockResolvedValueOnce({
-        data: {
-          data: [makeOffer({ slug: `offer-${i}`, workplaceType: 'remote', experienceLevel: 'senior' })],
-          meta: { totalItems: 1000, next: { cursor: (i + 1) * 10 } },
-        },
-      });
-    }
+    const spy = jest.spyOn(axios, 'get').mockImplementation((url: string, reqConfig?: { params?: { from?: number } }) => {
+      if (url.endsWith('/api/candidate-api/offers')) {
+        const cursor = reqConfig?.params?.from ?? 0;
+        const pageIdx = cursor / 10;
+        return Promise.resolve({
+          data: {
+            data: [makeOffer({ slug: `offer-${pageIdx}`, workplaceType: 'remote', experienceLevel: 'senior' })],
+            meta: { totalItems: 1000, next: { cursor: cursor + 10 } },
+          },
+        });
+      }
+      return Promise.resolve({ data: { body: '<p>Detail body</p>' } });
+    });
 
     const offers = await scrapeJustJoin();
-    expect(spy).toHaveBeenCalledTimes(JUSTJOIN_MAX_PAGES);
+    // 50 page GETs + 50 detail GETs (1 offer per page) = 100 calls
+    expect(spy).toHaveBeenCalledTimes(JUSTJOIN_MAX_PAGES * 2);
     expect(offers).toHaveLength(JUSTJOIN_MAX_PAGES);
   });
 
@@ -474,5 +481,227 @@ describe('fetchOffersPage & scrapeJustJoin pagination', () => {
 
     const offers = await scrapeJustJoin();
     expect(offers).toEqual([]);
+  });
+});
+
+// ─── Detail enrichment & mixed-page pagination (WP-1.1a) ─────────────────────
+
+describe('JustJoin Scraper (WP-1.1a)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('fetchOfferDetail & body enrichment', () => {
+    it('fetches detail endpoint, strips HTML, and returns clean description text', async () => {
+      const longHtml = `
+        <div>
+          <h2>About the role</h2>
+          <p>We are looking for a Senior Fullstack Engineer with deep expertise in TypeScript, React, and Node.js to build scalable cloud-native distributed systems.</p>
+          <ul>
+            <li>Design and implement event-driven microservices and modern frontend applications</li>
+            <li>Collaborate with product managers and designers across international teams</li>
+            <li>Own architecture decisions, observability, CI/CD pipelines, and production reliability</li>
+          </ul>
+        </div>
+      `;
+
+      jest.spyOn(axios, 'get').mockResolvedValueOnce({
+        data: {
+          body: longHtml,
+        },
+      });
+
+      const detail = await fetchOfferDetail('acme-senior-fullstack-engineer');
+      expect(detail).toBeDefined();
+      expect(detail).toContain('About the role');
+      expect(detail).toContain('Senior Fullstack Engineer with deep expertise');
+      expect(detail).not.toContain('<div>');
+      expect(detail).not.toContain('<p>');
+      expect(axios.get).toHaveBeenCalledWith(
+        'https://justjoin.it/api/candidate-api/offers/acme-senior-fullstack-engineer',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Accept: 'application/json',
+          }),
+        }),
+      );
+    });
+
+    it('enriches offer.body in scrapeJustJoin with stripped HTML description (> 300 chars) and only fetches detail for pre-filtered offers', async () => {
+      const matchingOffer = makeOffer({
+        slug: 'matching-senior-ts',
+        title: 'Senior TypeScript Engineer',
+        workplaceType: 'remote',
+        experienceLevel: 'senior',
+      });
+      const rejectedOffer = makeOffer({
+        slug: 'rejected-junior-office',
+        title: 'Junior Developer',
+        workplaceType: 'office',
+        experienceLevel: 'junior',
+        city: 'Kraków',
+        locations: [{ city: 'Kraków', slug: 'krakow' }],
+      });
+
+      const richDetailHtml = `
+        <section>
+          <h3>Role Responsibilities</h3>
+          <p>Join our core platform engineering group building high-throughput TypeScript and Node.js services deployed on AWS with React frontends.</p>
+          <p>You will lead architectural initiatives, mentor engineers, optimize PostgreSQL queries, and work closely with product stakeholders.</p>
+          <p>Requirements include 5+ years of production experience with TypeScript, Node.js, React, Docker, and modern testing practices.</p>
+        </section>
+      `;
+
+      const spy = jest.spyOn(axios, 'get').mockImplementation((url: string) => {
+        if (url.endsWith('/api/candidate-api/offers')) {
+          return Promise.resolve({
+            data: {
+              data: [matchingOffer, rejectedOffer],
+              meta: { totalItems: 2, next: { cursor: null } },
+            },
+          });
+        }
+        if (url.endsWith('/api/candidate-api/offers/matching-senior-ts')) {
+          return Promise.resolve({
+            data: {
+              data: {
+                body: richDetailHtml,
+              },
+            },
+          });
+        }
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
+
+      const results = await scrapeJustJoin();
+
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('justjoin_matching-senior-ts');
+      expect(results[0].body).toContain('Position: Senior TypeScript Engineer');
+      expect(results[0].body).toContain('Role Responsibilities');
+      expect(results[0].body).toContain('high-throughput TypeScript and Node.js services');
+      expect(results[0].body.length).toBeGreaterThan(300);
+
+      // List call + 1 detail call (rejectedOffer was not fetched)
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls back gracefully to synthetic buildBody when detail fetch fails or returns empty', async () => {
+      const offer1 = makeOffer({
+        slug: 'offer-network-error',
+        title: 'Senior Node.js Engineer',
+      });
+      const offer2 = makeOffer({
+        slug: 'offer-empty-body',
+        title: 'Senior React Engineer',
+      });
+
+      jest.spyOn(axios, 'get').mockImplementation((url: string) => {
+        if (url.endsWith('/api/candidate-api/offers')) {
+          return Promise.resolve({
+            data: {
+              data: [offer1, offer2],
+              meta: { totalItems: 2, next: { cursor: null } },
+            },
+          });
+        }
+        if (url.endsWith('/api/candidate-api/offers/offer-network-error')) {
+          return Promise.reject(new Error('Request failed with status code 404'));
+        }
+        if (url.endsWith('/api/candidate-api/offers/offer-empty-body')) {
+          return Promise.resolve({
+            data: { body: '   <p>  </p>  ' },
+          });
+        }
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
+
+      const results = await scrapeJustJoin();
+
+      expect(results).toHaveLength(2);
+      expect(results[0].body).toBe(normalizeOffer(offer1).body);
+      expect(results[1].body).toBe(normalizeOffer(offer2).body);
+    });
+  });
+
+  describe('Pagination stop condition (offers.every)', () => {
+    it('continues pagination when a page has a mix of 1 old offer and 1 fresh offer, and stops when all offers on a page are expired', async () => {
+      const freshDate = new Date().toISOString();
+      const expiredDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+
+      const page1PinnedOld = makeOffer({
+        slug: 'pinned-old-offer',
+        title: 'Senior Fullstack Pinned',
+        publishedAt: expiredDate,
+      });
+      const page1Fresh = makeOffer({
+        slug: 'page1-fresh-offer',
+        title: 'Senior Fullstack Page 1',
+        publishedAt: freshDate,
+      });
+      const page2Fresh = makeOffer({
+        slug: 'page2-fresh-offer',
+        title: 'Senior Fullstack Page 2',
+        publishedAt: freshDate,
+      });
+      const page3Old1 = makeOffer({
+        slug: 'page3-old-1',
+        title: 'Senior Fullstack Old 1',
+        publishedAt: expiredDate,
+      });
+      const page3Old2 = makeOffer({
+        slug: 'page3-old-2',
+        title: 'Senior Fullstack Old 2',
+        publishedAt: expiredDate,
+      });
+
+      jest.spyOn(axios, 'get').mockImplementation((url: string, reqConfig?: { params?: { from?: number } }) => {
+        if (url.endsWith('/api/candidate-api/offers')) {
+          const cursor = reqConfig?.params?.from ?? 0;
+          if (cursor === 0) {
+            return Promise.resolve({
+              data: {
+                data: [page1PinnedOld, page1Fresh],
+                meta: { totalItems: 6, next: { cursor: 10 } },
+              },
+            });
+          }
+          if (cursor === 10) {
+            return Promise.resolve({
+              data: {
+                data: [page2Fresh],
+                meta: { totalItems: 6, next: { cursor: 20 } },
+              },
+            });
+          }
+          if (cursor === 20) {
+            return Promise.resolve({
+              data: {
+                data: [page3Old1, page3Old2],
+                meta: { totalItems: 6, next: { cursor: 30 } },
+              },
+            });
+          }
+          if (cursor === 30) {
+            throw new Error('Should not fetch cursor 30 after all-expired page 3');
+          }
+        }
+        // Detail endpoint calls
+        return Promise.resolve({
+          data: { body: '<p>Detailed description from detail endpoint.</p>' },
+        });
+      });
+
+      const results = await scrapeJustJoin();
+
+      expect(results.map((r) => r.id)).toEqual([
+        'justjoin_page1-fresh-offer',
+        'justjoin_page2-fresh-offer',
+      ]);
+    });
   });
 });

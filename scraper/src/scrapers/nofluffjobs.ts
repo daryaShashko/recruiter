@@ -3,7 +3,12 @@ import { CompanyMetadata, JobOffer } from "../types";
 import { config } from "../config";
 import { normalizeCompanyUrl } from "../utils/company";
 import { calcFingerprint } from "../utils/fingerprint";
-import { parseDate, passesAgeFilter, toIsoDate } from "../utils/global-filter";
+import {
+  parseDate,
+  passesAgeFilter,
+  stripHtml,
+  toIsoDate,
+} from "../utils/global-filter";
 
 export {
   buildCompanySearchUrl,
@@ -30,6 +35,7 @@ const NOFLUFFJOBS_CATEGORY_URL = `${NOFLUFFJOBS_BASE_URL}/pl/praca/javascript`;
 const NOFLUFFJOBS_PAGE_SIZE = 20;
 
 function sleep(ms: number): Promise<void> {
+  if (process.env.NODE_ENV === "test") return Promise.resolve();
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -194,7 +200,9 @@ export function matchesNFJPreFilter(posting: RawNoFluffPosting): boolean {
   if (!isRemote && !hasGdansk) return false;
 
   // Freshness gate (maxAgeDays, 60)
-  if (!passesAgeFilter(parseDate(posting.posted))) return false;
+  if (!passesAgeFilter(parseDate(posting.renewed ?? posting.posted))) {
+    return false;
+  }
 
   // Seniority gate: reject explicit junior/mid/intern levels
   const levels = posting.seniority.map((s) => s.toLowerCase());
@@ -207,7 +215,10 @@ export function matchesNFJPreFilter(posting: RawNoFluffPosting): boolean {
   return true;
 }
 
-export function normalizePosting(posting: RawNoFluffPosting): JobOffer {
+export function normalizePosting(
+  posting: RawNoFluffPosting,
+  detailText?: string,
+): JobOffer {
   const rawSize =
     posting.companySize ?? posting.company_size ?? posting.company?.size;
   const rawUrl =
@@ -238,19 +249,25 @@ export function normalizePosting(posting: RawNoFluffPosting): JobOffer {
         }
       : undefined;
 
+  const baseBody = buildBody(posting);
+  const cleanedDetail =
+    typeof detailText === "string" && detailText.trim().length > 0
+      ? detailText.trim()
+      : undefined;
+
   return {
     id: `nofluffjobs_${posting.reference}`, // use reference for stable unique ID
     title: posting.title,
     company: posting.name,
-    url: `${NOFLUFFJOBS_BASE_URL}/job/${posting.url.replace(/^\/+/, '')}`,
-    body: buildBody(posting),
+    url: `${NOFLUFFJOBS_BASE_URL}/job/${posting.url.replace(/^\/+/, "")}`,
+    body: cleanedDetail ? `${baseBody}\n\n${cleanedDetail}` : baseBody,
     source: "nofluffjobs",
     location: extractLocation(posting),
     salary: extractSalary(posting.salary),
     tags: extractTags(posting),
     ...(companyMeta ? { companyMeta } : {}),
     scrapedAt: new Date().toISOString(),
-    publishedAt: toIsoDate(posting.posted),
+    publishedAt: toIsoDate(posting.renewed ?? posting.posted),
     fingerprint: calcFingerprint(posting.name, posting.title),
   };
 }
@@ -267,7 +284,7 @@ export function deduplicateByReference(
   for (const posting of postings) {
     const existing = best.get(posting.reference);
     if (!existing) {
-      best.set(posting.reference, posting);
+      best.set(posting.reference, { ...posting });
       continue;
     }
 
@@ -300,35 +317,115 @@ export function deduplicateByReference(
     const industry =
       posting.industry ?? existing.industry;
 
-    if (size !== undefined) {
-      posting.companySize = size;
-      existing.companySize = size;
-    }
-    if (url !== undefined) {
-      posting.companyUrl = url;
-      existing.companyUrl = url;
-    }
-    if (advertiserType !== undefined) {
-      posting.advertiserType = advertiserType;
-      existing.advertiserType = advertiserType;
-    }
-    if (industry !== undefined) {
-      posting.industry = industry;
-      existing.industry = industry;
-    }
+    const mergedMeta: Partial<RawNoFluffPosting> = {
+      ...(size !== undefined ? { companySize: size } : {}),
+      ...(url !== undefined ? { companyUrl: url } : {}),
+      ...(advertiserType !== undefined ? { advertiserType } : {}),
+      ...(industry !== undefined ? { industry } : {}),
+    };
 
     // Prefer remote variant
     if (posting.location.fullyRemote && !existing.location.fullyRemote) {
-      best.set(posting.reference, posting);
+      best.set(posting.reference, { ...posting, ...mergedMeta });
       continue;
     }
     // Then prefer Gdańsk variant
     if (hasGdansk(posting) && !hasGdansk(existing)) {
-      best.set(posting.reference, posting);
+      best.set(posting.reference, { ...posting, ...mergedMeta });
+      continue;
     }
+
+    best.set(posting.reference, { ...existing, ...mergedMeta });
   }
 
   return Array.from(best.values());
+}
+
+// ─── Detail API client ────────────────────────────────────────────────────────
+
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null && !Array.isArray(val);
+}
+
+function extractTextBlocks(val: unknown): string[] {
+  if (typeof val === "string") {
+    const cleaned = stripHtml(val);
+    return cleaned.length > 0 ? [cleaned] : [];
+  }
+  if (Array.isArray(val)) {
+    return val.flatMap(extractTextBlocks);
+  }
+  if (isRecord(val)) {
+    const candidateKeys = ["value", "text", "body", "description"] as const;
+    return candidateKeys.flatMap((key) => extractTextBlocks(val[key]));
+  }
+  return [];
+}
+
+function collectContainerText(container: unknown): string[] {
+  if (typeof container === "string") {
+    return extractTextBlocks(container);
+  }
+  if (!isRecord(container)) {
+    return [];
+  }
+
+  const blocks: string[] = [];
+  blocks.push(...extractTextBlocks(container.sections));
+  blocks.push(...extractTextBlocks(container.dailyTasks));
+  blocks.push(...extractTextBlocks(container.description));
+
+  if (isRecord(container.requirements)) {
+    blocks.push(...extractTextBlocks(container.requirements.description));
+    blocks.push(...extractTextBlocks(container.requirements.musts));
+    blocks.push(...extractTextBlocks(container.requirements.nices));
+  } else {
+    blocks.push(...extractTextBlocks(container.requirements));
+  }
+
+  if (isRecord(container.details)) {
+    blocks.push(...extractTextBlocks(container.details.description));
+  } else {
+    blocks.push(...extractTextBlocks(container.details));
+  }
+
+  return blocks;
+}
+
+export async function fetchPostingDetail(
+  urlOrId: string,
+): Promise<string | undefined> {
+  const slug = urlOrId.replace(/^\/+/, "");
+  if (!slug) return undefined;
+
+  try {
+    const response = await axios.get<unknown>(
+      `${NOFLUFFJOBS_BASE_URL}/api/posting/${encodeURIComponent(slug)}`,
+      {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "User-Agent": config.playwright.userAgent,
+        },
+        timeout: config.playwright.requestTimeout,
+      },
+    );
+
+    const data: unknown = response.data;
+    if (!isRecord(data)) return undefined;
+
+    const blocks: string[] = [
+      ...collectContainerText(data.specs),
+      ...collectContainerText(data.body),
+      ...collectContainerText(data),
+    ];
+
+    const uniqueBlocks = [...new Set(blocks.filter((b) => b.length > 0))];
+    if (uniqueBlocks.length === 0) return undefined;
+
+    return uniqueBlocks.join("\n");
+  } catch {
+    return undefined;
+  }
 }
 
 // ─── Search API client ────────────────────────────────────────────────────────
@@ -454,7 +551,18 @@ export async function scrapeNoFluffJobs(): Promise<JobOffer[]> {
       `[NoFluffJobs] Pre-filter (location + seniority): ${filtered.length}/${uniquePostings.length} kept`,
     );
 
-    return filtered.map(normalizePosting);
+    const offers: JobOffer[] = [];
+    for (let i = 0; i < filtered.length; i++) {
+      if (i > 0) {
+        await sleep(200);
+      }
+      const posting = filtered[i];
+      const slug = posting.url.replace(/^\/+/, "") || posting.id;
+      const detailText = await fetchPostingDetail(slug);
+      offers.push(normalizePosting(posting, detailText));
+    }
+
+    return offers;
   } catch (err) {
     console.error("[NoFluffJobs] Scraper failed:", err);
     return [];

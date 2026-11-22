@@ -1,8 +1,10 @@
+import { config } from '../src/config';
 import {
   evaluateGlobalFilter,
   matchesRoleFamily,
   parseDate,
   passesAgeFilter,
+  passesGlobalFilter,
   passesTitleFilter,
   stripHtml,
 } from '../src/utils/global-filter';
@@ -62,21 +64,22 @@ describe('matchesRoleFamily', () => {
 });
 
 describe('passesAgeFilter', () => {
-  it('evaluates freshness with default 60 days for aggregators', () => {
+  it('evaluates freshness with default 30 days for aggregators (WP-1.2a)', () => {
+    expect(passesAgeFilter(daysAgo(29), NOW)).toBe(true);
     expect(passesAgeFilter(daysAgo(30), NOW)).toBe(true);
-    expect(passesAgeFilter(daysAgo(59), NOW)).toBe(true);
-    expect(passesAgeFilter(daysAgo(61), NOW)).toBe(false);
+    expect(passesAgeFilter(daysAgo(31), NOW)).toBe(false);
     expect(passesAgeFilter(daysAgo(100), NOW)).toBe(false);
   });
 
-  it('evaluates freshness with custom maxAgeDays (e.g. 180 days for ATS)', () => {
-    expect(passesAgeFilter(daysAgo(70), NOW, 180)).toBe(true);
-    expect(passesAgeFilter(daysAgo(179), NOW, 180)).toBe(true);
-    expect(passesAgeFilter(daysAgo(181), NOW, 180)).toBe(false);
+  it('evaluates freshness with custom maxAgeDays (e.g. 60 days for ATS)', () => {
+    expect(passesAgeFilter(daysAgo(45), NOW, 60)).toBe(true);
+    expect(passesAgeFilter(daysAgo(60), NOW, 60)).toBe(true);
+    expect(passesAgeFilter(daysAgo(61), NOW, 60)).toBe(false);
   });
 
   it('allows numeric maxAgeDays as second argument', () => {
-    expect(passesAgeFilter(daysAgo(70), 180)).toBe(true);
+    const fortyFiveDaysFromRealNow = new Date(Date.now() - 45 * 86_400_000);
+    expect(passesAgeFilter(fortyFiveDaysFromRealNow, 60)).toBe(true);
   });
 
   it('allows postings without publish date', () => {
@@ -125,35 +128,52 @@ describe('evaluateGlobalFilter', () => {
     ).toBe('ok');
   });
 
-  it('rejects postings older than maxAgeDays (default 60 days)', () => {
-    expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(61) }, NOW)).toBe('too-old');
+  it('rejects postings older than maxAgeDays (default 30 days)', () => {
+    expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(29) }, NOW)).toBe('ok');
+    expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(30), source: 'justjoin' }, NOW)).toBe('ok');
+    expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(31) }, NOW)).toBe('too-old');
+    expect(evaluateGlobalFilter({ ...base, publishedAt: daysAgo(45), source: 'thehub' }, NOW)).toBe('too-old');
   });
 
-  it('allows postings older than 60 days when atsMaxAgeDays (180 days) is used', () => {
+  it('allows postings older than 30 days when atsMaxAgeDays (60 days) is used', () => {
+    expect(config.global.maxAgeDays).toBe(30);
+    expect(config.global.atsMaxAgeDays).toBe(60);
     expect(
       evaluateGlobalFilter(
-        { ...base, publishedAt: daysAgo(90), maxAgeDays: 180 },
+        { ...base, publishedAt: daysAgo(45), maxAgeDays: 60 },
         NOW,
       ),
     ).toBe('ok');
     expect(
       evaluateGlobalFilter(
-        { ...base, publishedAt: daysAgo(90), source: 'ats' },
+        { ...base, publishedAt: daysAgo(45), source: 'ats' },
         NOW,
       ),
     ).toBe('ok');
     expect(
       evaluateGlobalFilter(
-        { ...base, publishedAt: daysAgo(90), source: 'greenhouse' },
+        { ...base, publishedAt: daysAgo(60), source: 'greenhouse' },
         NOW,
       ),
     ).toBe('ok');
     expect(
       evaluateGlobalFilter(
-        { ...base, publishedAt: daysAgo(181), source: 'greenhouse' },
+        { ...base, publishedAt: daysAgo(61), source: 'greenhouse' },
         NOW,
       ),
     ).toBe('too-old');
+    expect(
+      evaluateGlobalFilter(
+        { ...base, publishedAt: daysAgo(61), source: 'ats' },
+        NOW,
+      ),
+    ).toBe('too-old');
+    expect(
+      passesGlobalFilter(
+        { ...base, publishedAt: daysAgo(90), source: 'lever' },
+        NOW,
+      ),
+    ).toBe(false);
   });
 
   it('keeps postings without a publish date', () => {

@@ -21,6 +21,115 @@ def get_api_key():
     return key
 
 
+def build_normalize_jobs_code():
+    return r"""// Node: Code: Normalize Jobs
+// Preserves scraper fingerprint, publishedAt, tags, and companyMeta; applies unified normalization rules.
+
+const LEGAL_FORMS =
+  /\b(?:sp\.?\s*z\s*o\.?\s*o\.?|sp\.?\s*k\.?|s\.?\s*a\.?|inc\.?|ltd\.?|llc|gmbh|ag|corp\.?|corporation|plc|bv|oy|ab|as|aps)(?=\s|$|[^a-z0-9])/gi;
+
+const SENIORITY =
+  /\b(?:senior|sr|junior|jr|lead|principal|staff|mid|regular|intern|trainee)\b/gi;
+
+const GENDER_NOISE = /\((?:m\/f\/d|m\/w\/d|f\/m\/d|m\/f|k\/m|all genders)\)/gi;
+
+function normCompany(company) {
+  return String(company || '')
+    .toLowerCase()
+    .replace(LEGAL_FORMS, ' ')
+    .replace(/[^a-z0-9ąćęłńóśźż]+/gi, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function normTitle(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(GENDER_NOISE, ' ')
+    .replace(/\bfull[\s-]*stack\b/g, 'fullstack')
+    .replace(/\bfront[\s-]*end\b/g, 'frontend')
+    .replace(/\bback[\s-]*end\b/g, 'backend')
+    .replace(/\bnode[\s.]*js\b/g, 'nodejs')
+    .replace(/\breact[\s.]*js\b/g, 'react')
+    .replace(SENIORITY, ' ')
+    .replace(/[^a-z0-9ąćęłńóśźż#+]+/gi, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function fnv1a64(input) {
+  const fnvOffset = BigInt('0xcbf29ce484222325');
+  const fnvPrime = BigInt('0x100000001b3');
+  let hash = fnvOffset;
+  const str = String(input || '');
+  for (let i = 0; i < str.length; i++) {
+    hash ^= BigInt(str.charCodeAt(i));
+    hash = (hash * fnvPrime) & BigInt('0xFFFFFFFFFFFFFFFF');
+  }
+  return hash.toString(16).padStart(16, '0');
+}
+
+function normUrl(u) {
+  if (!u || typeof u !== 'string') return '';
+  const trimmed = u.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    return (parsed.origin + parsed.pathname).toLowerCase().replace(/\/+$/, '');
+  } catch (e) {
+    return trimmed.split(/[?#]/)[0].toLowerCase().replace(/\/+$/, '');
+  }
+}
+
+const payload = $input.first().json;
+const raw = payload.body || payload;
+const offers = Array.isArray(raw.offers)
+  ? raw.offers
+  : Array.isArray(raw.jobs)
+    ? raw.jobs
+    : Array.isArray(raw)
+      ? raw
+      : [raw];
+const batchStats = raw.meta?.stats || null;
+
+return offers
+  .filter((o) => o && typeof o === 'object' && (o.title || o.url))
+  .map((o) => {
+    const title = String(o.title || '').trim();
+    const company = String(o.company || '').trim();
+    const url = String(o.url || '').trim();
+    const urlNorm = normUrl(url);
+    const fingerprint =
+      typeof o.fingerprint === 'string' && /^[0-9a-f]{16}$/i.test(o.fingerprint)
+        ? o.fingerprint.toLowerCase()
+        : fnv1a64(normCompany(company) + '::' + normTitle(title));
+    const body = String(o.body ?? o.description ?? '').trim();
+
+    return {
+      json: {
+        ...o,
+        id: o.id || fingerprint,
+        title,
+        company,
+        url,
+        urlNorm,
+        fingerprint,
+        body,
+        description: o.description ?? body,
+        salary: o.salary || '',
+        location: o.location || '',
+        source: String(o.source || 'unknown').toLowerCase(),
+        tags: Array.isArray(o.tags) ? o.tags : [],
+        companyMeta: o.companyMeta && typeof o.companyMeta === 'object' ? o.companyMeta : null,
+        publishedAt: o.publishedAt || null,
+        scrapedAt: o.scrapedAt || new Date().toISOString(),
+        ...(batchStats ? { batchStats } : {}),
+      },
+    };
+  });
+"""
+
+
 def build_check_duplicate_code():
     return """const resp = $input.first().json;
 const job = $('Split In Batches: 1').item.json;
@@ -289,10 +398,15 @@ def main():
     nodes = wf.get("nodes", [])
     patched_count = 0
 
-    # Ensure Code: Check Duplicate, Code: LLM Router, and Code: Parse Ollama Response are up-to-date
+    # Ensure Code: Normalize Jobs, Code: Check Duplicate, Code: LLM Router, and Code: Parse Ollama Response are up-to-date
     for node in nodes:
         name = node.get("name", "")
-        if name == "Code: Check Duplicate":
+        if name == "Code: Normalize Jobs":
+            params = node.setdefault("parameters", {})
+            params["jsCode"] = build_normalize_jobs_code()
+            patched_count += 1
+            print("✅ Patched Code: Normalize Jobs to preserve scraper fingerprint, publishedAt, tags, and companyMeta")
+        elif name == "Code: Check Duplicate":
             params = node.setdefault("parameters", {})
             params["jsCode"] = build_check_duplicate_code()
             patched_count += 1
