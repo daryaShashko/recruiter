@@ -9,11 +9,11 @@
 
 | ID | Слайс (End-to-End) | `[TECH]` Архитектура | `[UX]` Удобство и психология | `[KPD]` КПД и ROI | Средний балл | Главный блокер ценности |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- |
-| **S1** | **Сбор и дедупликация вакансий**<br>(`Scrapers -> n8n Ingest -> Dedup`) | **6 / 10** | **5 / 10** | **7 / 10** | **6.0** | ✅ **`WP-1` закрыт:** `justjoin.ts` и `nofluffjobs.ts` догружают полный текст описания (`fetchOfferDetail` / `fetchPostingDetail`), работает Smart Cross-Board Merge (`deduplicateOffers`), пороги свежести снижены до `30`/`60` дней, `publishedAt` и `fingerprint` проброшены в n8n (`Code: Normalize Jobs`). *(Остаток в P2: пред-дедупликация `WP-6.3`, автоконтроль дрифта `WP-7.3`)*. |
-| **S2** | **Управление профилем и критериями**<br>(`Notion Databases -> Sync -> Config`) | **6 / 10** | **4 / 10** | **4 / 10** | **4.7** | ~2000 строк кода и 15 колонок в 2 таблицах Notion ради 12 правил одного кандидата; два дублирующих Notion-клиента противоречат друг другу (`NO Python` vs `Python backend`), а живой n8n качает профиль заново **на каждую вакансию** в цикле. |
-| **S3** | **ИИ-оценка и скоринг вакансий**<br>(`Prompt -> LLM Router -> Scoring -> Notion`) | **6 / 10** | **5 / 10** | **6 / 10** | **5.7** | Детерминированные отказы (галеры, крипта, низкая ЗП) проверяются **после** вызова LLM; промпт возвращает сухой английский отчёт робота-цензора вместо сути задач и продающего питча, а пустые описания вытягиваются на `>= 50` баллов. |
-| **S4** | **Доставка в Telegram и HITL-триаж**<br>(`Alerts -> Digest -> Inline Callbacks`) | **4 / 10** | **4 / 10** | **3 / 10** | **3.7** | Богатый HTML-форматтер в `telegram.ts` **не подключён к n8n** (в n8n захардкожен урезанный неэкранированный Markdown); воркфлоу обработки кнопок в n8n **выключен (`active=false`)**, а Топик 3 и опросы отказа заставляют работать дата-лейблером. |
-| **S5** | **Генерация отклика и резюме**<br>(`Pre-ranker -> CV PDF & Cover Letter`) | **4 / 10** | **3 / 10** | **3 / 10** | **3.3** | ~3000 строк локального симулятора: ранжирование буллетов в `cli.ts` **само себя отменяет** (`sortByCvOrder: true` без `limit`), `cover-letter.ts` всегда лепит одни и те же 3 захардкоженных буллета без LLM, а кнопка `🚀 Подготовить отклик` в Telegram ведёт в никуда. |
+| **S1** | **Сбор и дедупликация вакансий**<br>(`Scrapers -> n8n Ingest -> Dedup`) | **6 / 10** | **5 / 10** | **7 / 10** | **6.0** | ✅ **`WP-1`, `WP-6.3`, `WP-7.3` закрыты:** `justjoin.ts` и `nofluffjobs.ts` догружают полный текст описания (`fetchOfferDetail` / `fetchPostingDetail`), работает Smart Cross-Board Merge (`deduplicateOffers`), пред-дедупликация `fingerprint` до `filterValidLinks` (`scraper/src/index.ts`), пороги свежести `30`/`60` дней, `publishedAt` и `fingerprint` проброшены в n8n, а все управляемые ноды живого n8n под 100% автоконтролем `--check` + `.githooks/pre-push` + `check-agent-surfaces.sh`. |
+| **S2** | **Управление профилем и критериями**<br>(`Notion Databases -> Sync -> Config`) | **6 / 10** | **4 / 10** | **4 / 10** | **4.7** | ✅ **`WP-6.3`, `WP-7.1`, `WP-7.2` закрыты:** чтение `Read Candidate Profile` и `Notion: Read Matching Criteria` вынесено из цикла `Split In Batches: 1` (1 раз на батч), `notion-loader.ts` синхронизирован со снепшотом `.notion-snapshot.json` и очищен от Python, одноразовые UUID-миграции удалены из `notion-cli.ts`. |
+| **S3** | **ИИ-оценка и скоринг вакансий**<br>(`Prompt -> LLM Router -> Scoring -> Notion`) | **6 / 10** | **5 / 10** | **6 / 10** | **5.7** | ✅ **`WP-2.1`, `WP-2.2`, `WP-6.1`, `WP-6.2` закрыты:** Pre-LLM Hard Reject Gate (`preFilterJob`) отсекает хард-реджекты до LLM, в `Code: LLM Router` включён `responseMimeType: 'application/json'`, `stripCodeFence` и убраны фантомные модели, промпт и `evaluateJob` возвращают русскоязычные `project_summary`, `tasks_summary`, `match_pros`, `match_cons`, `pitch_hook` + `net_salary`, пустые описания отклоняются (`overall_score: 0`). |
+| **S4** | **Доставка в Telegram и HITL-триаж**<br>(`Alerts -> Digest -> Inline Callbacks`) | **4 / 10** | **4 / 10** | **3 / 10** | **3.7** | ✅ **`WP-2.3`, `WP-3.1..3.3`, `WP-4.1`, `WP-4.2` закрыты:** алерты в живом n8n переведены на `parse_mode: "HTML"` с `escapeHtml()` и богатой карточкой, дайджест стал витриной Top-3 с компактной строкой воронки, Топик 3 получил прямую кнопку `🚀 Подготовить отклик`, а `Telegram Callback Router` пропатчен и активирован (`active=true`) с обработкой `app:`, `applied:`, `prm:`, `dsc:`, `rej:`, `rfb:`. |
+| **S5** | **Генерация отклика и резюме**<br>(`Pre-ranker -> CV PDF & Cover Letter`) | **4 / 10** | **3 / 10** | **3 / 10** | **3.3** | ✅ **`WP-3.2`, `WP-5.1..5.3` закрыты:** реальное ранжирование `preRankBullets()` с `limit` и `sortByCvOrder: false` управляет составом/порядком буллетов и Summary в CV PDF, `cover-letter.ts` использует топ-буллеты и поддерживает `pitchHook`/`tasksSummary`/LLM-текст без хардкода `-15%`, пакет отклика выдаёт копируемый веб-формат (`cv.pdf` + `pitch.txt` + `cover_letter.txt`), статус `Applied` в Notion переводится только по кнопке `✅ Я отправила отклик`. |
 
 ---
 
@@ -277,34 +277,34 @@
 
 ---
 
-#### WP-2: «Сочная» карточка вакансии в Telegram вместо сухого отчёта цензора (`Slice 3 + Slice 4`)
+#### ✅ WP-2: «Сочная» карточка вакансии в Telegram вместо сухого отчёта цензора (`Slice 3 + Slice 4` — Выполнено)
 * **Проблема:** В `scraper/src/utils/telegram.ts` уже написан богатый HTML-рендеринг карточки (`net_salary` «на руки», `tasks_summary` — 3 буллета задач, `match_pros` / `match_cons`, стек `Core/Infra`), но LLM эти поля не генерирует, а `patch-n8n-hitl-review.py` шлёт в Telegram старый 10-строчный Markdown-шаблон (который ещё и падает с `HTTP 400` на неэкранированных символах `_` и `*`).
 * **Задачи:**
-  - [ ] **WP-2.1 (`prompt-builder.ts`, `evaluator-template.json`, `scoring.ts`):** Расширить JSON-схему ответа LLM (`EVALUATOR_OUTPUT_SCHEMA`) и парсер `evaluateJob` полями на русском языке:
+  - [x] **WP-2.1 (`prompt-builder.ts`, `evaluator-template.json`, `scoring.ts`):** Расширить JSON-схему ответа LLM (`EVALUATOR_OUTPUT_SCHEMA`) и парсер `evaluateJob` полями на русском языке:
     - `project_summary` / `company_dossier` (что за продукт и масштаб, без воды),
     - `tasks_summary` (2–3 конкретных буллета: что предстоит делать руками),
     - `match_pros` и `match_cons` (плюсы и минусы конкретно под профиль кандидата),
     - `pitch_hook` (1 фраза: каким опытом из резюме зацепить рекрутера этой компании),
     - плюс программный расчёт `net_salary` в `scoring.ts` (чистыми на руки в PLN/EUR).
-  - [ ] **WP-2.2 (`evaluator-template.json`, `scoring.ts`):** Убрать правило `Missing description rule` (не пропускать пустые вакансии без описания на `>= 50` баллов).
-  - [ ] **WP-2.3 (`scripts/patch-n8n-hitl-review.py`, `telegram.ts`):** Перевести ноды `Telegram: Send Alert` и `Telegram: Send Review Alert` в живом n8n с хрупкого `parse_mode: "Markdown"` на **`parse_mode: "HTML"`** с `escapeHtml()` и полным форматом карточки из `formatTelegramAlertMessage()` (`telegram.ts`).
+  - [x] **WP-2.2 (`evaluator-template.json`, `scoring.ts`):** Убрать правило `Missing description rule` (не пропускать пустые вакансии без описания на `>= 50` баллов).
+  - [x] **WP-2.3 (`scripts/patch-n8n-hitl-review.py`, `telegram.ts`):** Перевести ноды `Telegram: Send Alert` и `Telegram: Send Review Alert` в живом n8n с хрупкого `parse_mode: "Markdown"` на **`parse_mode: "HTML"`** с `escapeHtml()` и полным форматом карточки из `formatTelegramAlertMessage()` (`telegram.ts`).
 * **Критерий приёмки (Acceptance Checks):**
   - В Telegram приходит HTML-карточка, из которой за 5 секунд без перехода на внешний сайт понятны: зарплата на руки, 3 задачи на проекте, плюсы/минусы и хук для отклика. Ни одно сообщение не падает из-за спецсимволов `_` или `*`.
 
 ---
 
-#### WP-3: Оживление кнопки `🚀 Подготовить отклик` и мгновенная доставка питча + CV в Telegram (`Slice 4 + Slice 5`)
+#### ✅ WP-3: Оживление кнопки `🚀 Подготовить отклик` и мгновенная доставка питча + CV в Telegram (`Slice 4 + Slice 5` — Выполнено)
 * **Проблема:** Воркфлоу `Telegram Bot` (приём `callback_query`) в n8n выключен (`active=false`). Нажатие на `🚀 Подготовить отклик` (`app:<pageId>`), `👍 Берём в Hot Match` (`prm:<pageId>`) или `👎 В архив` (`rej:<pageId>`) в реальном Telegram ничего не делает.
 * **Задачи:**
-  - [ ] **WP-3.1 (`scripts/patch-n8n-hitl-review.py` / n8n callback workflow):** Пропатчить и **активировать (`active=true`)** в живом n8n воркфлоу обработки `callback_query` от Telegram-бота.
-  - [ ] **WP-3.2 (Обработка `app:<pageId>` в Telegram):** При нажатии на `🚀 Подготовить отклик` (доступна и в «Горячем мэтче», и при промоуте из «На ревью»):
+  - [x] **WP-3.1 (`scripts/patch-n8n-hitl-review.py` / n8n callback workflow):** Пропатчить и **активировать (`active=true`)** в живом n8n воркфлоу обработки `callback_query` от Telegram-бота.
+  - [x] **WP-3.2 (Обработка `app:<pageId>` в Telegram):** При нажатии на `🚀 Подготовить отклик` (доступна и в «Горячем мэтче», и при промоуте из «На ревью»):
     1. Загрузить данные вакансии из Notion по `pageId`.
     2. Сгенерировать через LLM короткий, живой, персонализированный питч / Cover Letter (на языке вакансии EN/PL, 3–5 предложений, опирающихся на конкретные задачи этой вакансии и релевантный опыт из Notion — вместо 3 захардкоженных абзацев).
     3. Отправить ответным сообщением прямо в тред Telegram:
        - Готовый PDF-файл резюме (`Darya_Shashko_CV.pdf`),
        - Короткий питч для формы отклика / сообщения рекрутеру в блоке `<pre><code>...</code></pre>` (копируется одним тапом на телефоне),
        - Кнопку `[ 🔗 Открыть форму вакансии ]` (URL) и кнопку `[ ✅ Я отправила отклик ]` (`applied:<pageId>`), которая переводит статус в Notion в `Applied` только после реальной отправки.
-  - [ ] **WP-3.3 (Обработка `prm:`, `dsc:`, `rej:`, `rfb:`):** Подключить в том же активном callback-воркфлоу обновление статуса страницы в Notion (`Hot Match` / `Rejected`) и обновление inline-клавиатуры в Telegram.
+  - [x] **WP-3.3 (Обработка `prm:`, `dsc:`, `rej:`, `rfb:`):** Подключить в том же активном callback-воркфлоу обновление статуса страницы в Notion (`Hot Match` / `Rejected`) и обновление inline-клавиатуры в Telegram.
 * **Критерий приёмки (Acceptance Checks):**
   - Тап по кнопке `🚀 Подготовить отклик` в Telegram на телефоне за 5–8 секунд присылает в чат PDF-резюме и готовый копируемый текст питча под эту вакансию.
 
@@ -312,25 +312,25 @@
 
 ### ⚡ P1 — Снятие когнитивной нагрузки и настоящая персонализация резюме
 
-#### WP-4: Убрать «работу модератором» из Дайджеста и Топика 3 (`Slice 3 + Slice 4`)
+#### ✅ WP-4: Убрать «работу модератором» из Дайджеста и Топика 3 (`Slice 3 + Slice 4` — Выполнено)
 * **Проблема:** Дайджест в Топике 1 выглядит как DevOps-лог дедупликации и каждый раз давит на чувство вины фразой *«💡 Внимание: в теме «На ревью» вас ждут N вакансий для проверки!»*, а отказ от вакансии требует 2 кликов с выбором причины из 6 кнопок.
 * **Задачи:**
-  - [ ] **WP-4.1 (`Code: Prepare Digest` в `scripts/patch-n8n-hitl-review.py`):** Переделать дайджест с «технического лога конвейера» на **продуктовую витрину прогона**:
+  - [x] **WP-4.1 (`Code: Prepare Digest` в `scripts/patch-n8n-hitl-review.py`):** Переделать дайджест с «технического лога конвейера» на **продуктовую витрину прогона**:
     - Показывать топ-3 лучшие новые вакансии прогона сразу с кликабельными заголовками, зарплатой и 1-строчным хуком.
     - Техническую статистику воронки (включая `payload.meta.stats` из `FunnelTracker`) свернуть в одну компактную строчку внизу.
     - Убрать навязчивый призыв модерировать тему «На ревью».
-  - [ ] **WP-4.2 (`telegram.ts` & n8n):** В карточках «На ревью» (Score 50–79) дать возможность сразу нажать `🚀 Подготовить отклик` без обязательного промежуточного шага `👍 Берём в Hot Match`, а удаление в архив сделать в 1 клик (опциональные теги причины отказа показывать ненавязчиво или только по желанию).
+  - [x] **WP-4.2 (`telegram.ts` & n8n):** В карточках «На ревью» (Score 50–79) дать возможность сразу нажать `🚀 Подготовить отклик` без обязательного промежуточного шага `👍 Берём в Hot Match`, а удаление в архив сделать в 1 клик (опциональные теги причины отказа показывать ненавязчиво или только по желанию).
 * **Критерий приёмки (Acceptance Checks):**
   - Дайджест читается за 3 секунды и сразу ведёт к лучшим офферам дня; триаж любой карточки требует не более 1 тапа.
 
 ---
 
-#### WP-5: Починить реальную адаптацию CV и генератор писем (`Slice 5`)
+#### ✅ WP-5: Починить реальную адаптацию CV и генератор писем (`Slice 5` — Выполнено)
 * **Проблема:** В `scraper/src/generator/cli.ts` результат `preRankBullets()` полностью обнуляется вызовом `assembleExperienceBullets(..., { sortByCvOrder: true })` без `limit`, а в `cover-letter.ts` функция `selectAchievementBullets()` всегда выбирает 3 захардкоженных буллета (`cv-ach-cost`, `cv-ach-migration`, `cv-ach-lead`).
 * **Задачи:**
-  - [ ] **WP-5.1 (`cli.ts`, `bullet-assembler.ts`, `cv-renderer.ts`):** Передавать реальный порядок и `limit` из `preRankBullets()` в сборщик резюме (внутри каждой роли поднимать наверх самые релевантные под стек вакансии буллеты и подсвечивать релевантное Summary), убрать захардкоженные метрики `-15% cloud costs`.
-  - [ ] **WP-5.2 (`cover-letter.ts`):** Заменить хардкод 3 буллетов `selectAchievementBullets()` на использование реально отранжированных топ-буллетов под вакансию + добавить режим генерации живого текста через LLM.
-  - [ ] **WP-5.3 (`email-package.ts`, `cli.ts`):** Убрать мёртвую блокировку `Live email sending is not yet implemented` и бесполезный `email_package.json` с пустым `to: ""`, заменив его на готовый к копированию пакет для веб-форм (`cv.pdf` + `pitch.txt` + `cover_letter.txt`).
+  - [x] **WP-5.1 (`cli.ts`, `bullet-assembler.ts`, `cv-renderer.ts`):** Передавать реальный порядок и `limit` из `preRankBullets()` в сборщик резюме (внутри каждой роли поднимать наверх самые релевантные под стек вакансии буллеты и подсвечивать релевантное Summary), убрать захардкоженные метрики `-15% cloud costs`.
+  - [x] **WP-5.2 (`cover-letter.ts`):** Заменить хардкод 3 буллетов `selectAchievementBullets()` на использование реально отранжированных топ-буллетов под вакансию + добавить режим генерации живого текста через LLM.
+  - [x] **WP-5.3 (`email-package.ts`, `cli.ts`):** Убрать мёртвую блокировку `Live email sending is not yet implemented` и бесполезный `email_package.json` с пустым `to: ""`, заменив его на готовый к копированию пакет для веб-форм (`cv.pdf` + `pitch.txt` + `cover_letter.txt`).
 * **Критерий приёмки (Acceptance Checks):**
   - Для двух разных вакансий (например, Backend Lead Node.js vs Full-Stack React/TypeScript) генератор создаёт заметно различающиеся акценты в Summary/порядке буллетов CV и разные сопроводительные письма.
 
@@ -338,26 +338,26 @@
 
 ### 🛠 P2 — Архитектурная гигиена, скорость пайплайна и экономия квот
 
-#### WP-6: Pre-LLM Gate, JSON-режим в `Code: LLM Router` и вынос чтения Notion из цикла (`Slice 1 + Slice 2 + Slice 3`)
+#### ✅ WP-6: Pre-LLM Gate, JSON-режим в `Code: LLM Router` и вынос чтения Notion из цикла (`Slice 1 + Slice 2 + Slice 3` — Выполнено)
 * **Проблема:**
   1. Живой n8n внутри цикла `Split In Batches: 1` на **каждую** вакансию заново скачивает из Notion профиль кандидата и правила (`Read Candidate Profile` + `Notion: Read Matching Criteria`).
   2. Вакансии с очевидным хард-реджектом (EPAM/Luxoft, крипта, гемблинг, ЗП ниже пола) сначала тратят квоту LLM, и только потом обнуляются в `scoring.ts`.
   3. Живой `Code: LLM Router` в `patch-n8n-hitl-review.py` вызывает Gemini без `responseMimeType: 'application/json'`, без `stripCodeFence` и содержит несуществующие модели `gemini-3.1-flash-lite` и `gemini-3.5-flash`.
 * **Задачи:**
-  - [ ] **WP-6.1 (Pre-LLM Hard Reject Gate в `scoring.ts` и n8n):** Вынести детерминированные проверки (`extractMaxMonthlyPln < floor`, `OUTSOURCING_KEYWORDS`, `CRYPTO_KEYWORDS`, `GAMBLING_KEYWORDS`, `BOSSWARE_SURVEILLANCE_REGEX` и прямую проверку текста на `Non-JS Required`) в быстрый фильтр **до** вызова `Code: LLM Router`.
-  - [ ] **WP-6.2 (`Code: LLM Router` в `scripts/patch-n8n-hitl-review.py`):** Включить `generationConfig: { responseMimeType: 'application/json' }`, добавить очистку ```` ```json ```` блоков (`stripCodeFence`) и убрать несуществующие модели `gemini-3.1-flash-lite` / `gemini-3.5-flash` из `PROVIDER_ORDER`.
-  - [ ] **WP-6.3 (Кэширование Notion в n8n и скрейпере):** Вынести чтение `Read Candidate Profile` и `Notion: Read Matching Criteria` за пределы поштучного цикла `Split In Batches: 1` (1 раз на батч) и добавить пред-дедупликацию `fingerprint` в скрейпере до тяжёлой проверки `filterValidLinks`.
+  - [x] **WP-6.1 (Pre-LLM Hard Reject Gate в `scoring.ts` и n8n):** Вынести детерминированные проверки (`extractMaxMonthlyPln < floor`, `OUTSOURCING_KEYWORDS`, `CRYPTO_KEYWORDS`, `GAMBLING_KEYWORDS`, `BOSSWARE_SURVEILLANCE_REGEX` и прямую проверку текста на `Non-JS Required`) в быстрый фильтр **до** вызова `Code: LLM Router`.
+  - [x] **WP-6.2 (`Code: LLM Router` в `scripts/patch-n8n-hitl-review.py`):** Включить `generationConfig: { responseMimeType: 'application/json' }`, добавить очистку ```` ```json ```` блоков (`stripCodeFence`) и убрать несуществующие модели `gemini-3.1-flash-lite` / `gemini-3.5-flash` из `PROVIDER_ORDER`.
+  - [x] **WP-6.3 (Кэширование Notion в n8n и скрейпере):** Вынести чтение `Read Candidate Profile` и `Notion: Read Matching Criteria` за пределы поштучного цикла `Split In Batches: 1` (1 раз на батч) и добавить пред-дедупликацию `fingerprint` в скрейпере до тяжёлой проверки `filterValidLinks`.
 * **Критерий приёмки (Acceptance Checks):**
   - Расход LLM-запросов на прогон падает на 40–60%, исчезают ошибки `Pipeline: Parse Error` из-за markdown-блоков, количество запросов к Notion API за прогон сокращается в разы.
 
 ---
 
-#### WP-7: Устранение дублирования Notion-загрузчиков и мёртвого кода (`Slice 1 + Slice 2 + Slice 5`)
+#### ✅ WP-7: Устранение дублирования Notion-загрузчиков и мёртвого кода (`Slice 1 + Slice 2 + Slice 5` — Выполнено)
 * **Проблема:** В репозитории живут два противоречащих друг другу Notion-загрузчика (`n8n/evaluator/notion-profile.ts` с запретом на Python и `scraper/src/generator/notion-loader.ts` с `Python backend delivery`), захардкоженные UUID в `notion-cli.ts` (`runUpdateProfile`) и неиспользуемый `scraper/src/utils/browser.ts`.
 * **Задачи:**
-  - [ ] **WP-7.1 (`notion-loader.ts` vs `notion-profile.ts`):** Переключить генератор откликов на единый источник данных профиля (`n8n/prompts/.notion-snapshot.json` / единый загрузчик), синхронизировать фоллбэк-буллеты (убрать упоминания Python из `notion-loader.ts`).
-  - [ ] **WP-7.2 (`browser.ts`, `notion-cli.ts`):** ~~Удалить мёртвый вызов `closeBrowser()` из `scraper/src/index.ts`~~ ✅ (S1-T2) и убрать захардкоженные одноразовые миграции UUID из `notion-cli.ts`.
-  - [ ] **WP-7.3 (`check-n8n-drift.py`, `patch-n8n-hitl-review.py`, `.githooks/pre-push`, `check-agent-surfaces.sh`):** Поставить патчинг и дрифт живого n8n под 100% автоматический контроль:
+  - [x] **WP-7.1 (`notion-loader.ts` vs `notion-profile.ts`):** Переключить генератор откликов на единый источник данных профиля (`n8n/prompts/.notion-snapshot.json` / единый загрузчик), синхронизировать фоллбэк-буллеты (убрать упоминания Python из `notion-loader.ts`).
+  - [x] **WP-7.2 (`browser.ts`, `notion-cli.ts`):** ~~Удалить мёртвый вызов `closeBrowser()` из `scraper/src/index.ts`~~ ✅ (S1-T2) и убрать захардкоженные одноразовые миграции UUID из `notion-cli.ts`.
+  - [x] **WP-7.3 (`check-n8n-drift.py`, `patch-n8n-hitl-review.py`, `.githooks/pre-push`, `check-agent-surfaces.sh`):** Поставить патчинг и дрифт живого n8n под 100% автоматический контроль:
     - Добавить в `scripts/patch-n8n-hitl-review.py` флаг `--check` (единый источник правды без ручных хеш-файлов): проверять, что `n8n/dist/evaluator/scoring.js` не старше `n8n/evaluator/scoring.ts` (защита от забытого `cd n8n && npm run build`), и посимвольно сверять все управляемые ноды живого n8n с кодом в git (`exit 1` при любом расхождении).
     - Расширить проверку дрифта на все управляемые кодовые ноды (`Code: Normalize Jobs`, `Code: Dedup Batch`, `Code: Check Duplicate`, `Code: LLM Router`, `Code: Parse Ollama Response`, `Telegram: Send Alert`, `Telegram: Send Review Alert`, `Code: Prepare Digest`).
     - Подключить автоматический вызов `python3 scripts/patch-n8n-hitl-review.py --check` в `.githooks/pre-push` (`git config core.hooksPath .githooks`) и в `scripts/check-agent-surfaces.sh` (при наличии `~/.n8n-recruiter-key` / `N8N_API_KEY`), чтобы ни агент, ни человек не могли пройти верификацию или запушить коммит, забыв пропатчить живой n8n.
