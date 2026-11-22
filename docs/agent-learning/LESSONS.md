@@ -12,3 +12,10 @@ Add an entry only when an observed result supports a reusable instruction or reg
 - **Evidence:** At the initial workflow review, `docs/agents/README.md` described those files as reference prompts for Zed profiles; the repository had no `.agents/skills/` or `.codex/agents/` directories. Current Codex documentation places repository skills under `.agents/skills/` and custom subagent definitions under `.codex/agents/*.toml`.
 - **Lesson:** Do not treat `docs/agents/*.md` as discoverable Codex skills or runnable Codex subagents. Use `.agents/skills/` for reusable skill workflows and `.codex/agents/*.toml` only for intentionally configured spawned roles.
 - **Verification:** Confirmed by reading the repository README and filesystem, then checking the official [Codex skills](https://developers.openai.com/codex/skills/) and [subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) documentation on 2026-09-27.
+
+### L-002 — Slice orchestration requires disjoint subagent file ownership and diff-backed doc review
+
+- **Scope:** Multi-file slice execution across subagents (`.agents/skills/execute-slice/SKILL.md`).
+- **Evidence:** In `S1-T1` (`53faedd`), parallel subagents edited the same scraper files, causing duplicate exports, and `docs/audit-and-backlog.md` marked `closeBrowser()` removal and n8n patching as done when neither was in `git diff`. In `S1-T2` (`d74e6e0`), the coordinator implemented and verified changes directly instead of delegating to atomic subagents.
+- **Lesson:** For backlog slices, the coordinator must not write code or tests; each subagent must own 1–2 disjoint files; testing (`npm run verify`) and doc-claim verification (comparing `[x]` / `✅` lines against `git diff`) must run in separate subagents.
+- **Verification:** Encoded in `.agents/skills/execute-slice/SKILL.md` and `AGENTS.md`; validated with `scripts/check-agent-surfaces.sh` on 2026-11-22.

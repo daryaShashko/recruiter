@@ -42,6 +42,7 @@ Stop conditions: <unknowns, failures, or actions requiring the user>
 ```
 
 ## Slice Completion & Deployment Protocol
+- **Slice Execution via Subagents**: Backlog slices follow `.agents/skills/execute-slice/SKILL.md` (mandatory rules). The coordinator never writes code or tests itself; each atomic task (1–2 files, one verifiable goal) goes to its own subagent with disjoint file ownership; testing and review (`git diff` vs doc claims) are done by separate subagents; implementation starts only after explicit plan approval.
 - **Explicit Commit & Push Status**: Never silently leave finished slice or feature changes uncommitted in the working tree. Always explicitly inform the user whether changes are committed, report git status, and ask to commit & push to `origin/main`.
 - **n8n Live Workflow Sync**: When changes affect scoring rules, hard thresholds, evaluation prompts, or Telegram alert templates (e.g. in `n8n/evaluator/scoring.ts` or `scraper/src/utils/telegram.ts`):
   1. Rebuild n8n dist: `cd n8n && npm run build`
