@@ -29,3 +29,11 @@ test('normalizeOffer populates publishedAt and fingerprint', () => {
   expect(offer.publishedAt).toBe('2023-01-15T12:00:00.000Z');
   expect(offer.fingerprint).toBe(computeJobFingerprint('TechCo', 'Backend Engineer'));
 });
+
+test('computeJobFingerprint is invariant to legal forms, case, seniority and spelling variants', () => {
+  const base = computeJobFingerprint('Acme', 'Fullstack Engineer');
+  expect(computeJobFingerprint('ACME Sp. z o.o.', 'Senior Full-Stack Engineer')).toBe(base);
+  expect(computeJobFingerprint('Acme GmbH', 'Full Stack Engineer (m/f/d)')).toBe(base);
+  expect(computeJobFingerprint('Acme', 'Backend Engineer')).not.toBe(base);
+  expect(computeJobFingerprint('Other', 'Fullstack Engineer')).not.toBe(base);
+});

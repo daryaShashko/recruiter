@@ -8,7 +8,6 @@ import { scrapeAts } from "./scrapers/ats";
 import { scrapeAdzuna } from "./scrapers/adzuna";
 import { sendToWebhook } from "./sender";
 import { validateConfig } from "./config";
-import { closeBrowser } from "./utils/browser";
 import { enrichMissingSalaries } from "./utils/salary-enricher";
 import { filterValidLinks } from "./utils/link-check";
 import { funnelTracker } from "./utils/funnel";
@@ -94,11 +93,15 @@ async function main(): Promise<void> {
     }
   });
 
-  const deduplicated = await filterValidLinks(deduplicateOffers(allOffers));
-  const { offers: enrichedOffers, enrichedCount } =
-    enrichMissingSalaries(deduplicated);
+  // Order matters: merge cross-board duplicates first (keeps every salary with the
+  // board it came from), then enrich remaining gaps via fuzzy title matching, and
+  // only then spend HTTP on link checks for unique offers.
+  const merged = deduplicateOffers(allOffers);
+  const { offers: salaryEnriched, enrichedCount } =
+    enrichMissingSalaries(merged);
+  const enrichedOffers = await filterValidLinks(salaryEnriched);
   console.log(
-    `\nTotal: ${allOffers.length} collected, ${allOffers.length - deduplicated.length} duplicates removed, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
+    `\nTotal: ${allOffers.length} collected, ${allOffers.length - merged.length} duplicates merged, ${merged.length - enrichedOffers.length} dead links dropped, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
   );
 
   const stats = funnelTracker.finalizeSent(enrichedOffers);
@@ -109,7 +112,6 @@ async function main(): Promise<void> {
       "ERROR: 0 job offers collected after deduplication.\n" +
         "Possible causes: scraper API broken, site structure changed, or network issues.\n",
     );
-    await closeBrowser();
     process.exit(1);
   }
 
@@ -124,8 +126,6 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error("Failed to send to webhook:", err);
       process.exit(1);
-    } finally {
-      await closeBrowser();
     }
   }
 
