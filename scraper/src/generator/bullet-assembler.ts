@@ -11,6 +11,11 @@
 import { CandidateBullet } from './types';
 import { CV_SLUGS } from './notion-loader';
 
+/**
+ * Default number of top-ranked experience bullets to include in a tailored CV.
+ */
+export const DEFAULT_CV_BULLET_LIMIT = 5;
+
 export interface BulletAssemblerOptions {
   /**
    * If true, sorts the assembled bullets by their Master CV order ascending.
@@ -125,17 +130,18 @@ export function assembleExperienceBullets(
       }));
   }
 
-  // Sort by Master CV order if explicitly requested
+  // Apply limit to top-ranked bullets first so slicing always retains highest-relevance items
+  const limited =
+    typeof options?.limit === 'number' && options.limit > 0
+      ? assembled.slice(0, options.limit)
+      : assembled;
+
+  // Sort by Master CV order only if explicitly requested
   if (options?.sortByCvOrder) {
-    assembled.sort((a, b) => a.order - b.order);
+    limited.sort((a, b) => a.order - b.order);
   }
 
-  // Apply limit if specified
-  if (typeof options?.limit === 'number' && options.limit > 0) {
-    return assembled.slice(0, options.limit);
-  }
-
-  return assembled;
+  return limited;
 }
 
 /**

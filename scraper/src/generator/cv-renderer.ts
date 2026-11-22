@@ -21,9 +21,18 @@ import {
   RenderCvResult,
 } from './types';
 import { DEFAULT_RODO_CLAUSE } from './notion-loader';
+import { preRankBullets } from './pre-ranker';
 import { buildSkillsMatrix, renderSkillsMatrixHtml } from './skills-matrix';
 
 export { RenderCvOptions, RenderCvResult };
+
+export interface CvJobTailoringContext {
+  title?: string;
+  company?: string;
+  body?: string;
+  tags?: string[];
+  matchedTags?: string[];
+}
 
 // ── 1. HTML Escaping Utility ────────────────────────────────────────────────
 
@@ -176,7 +185,128 @@ export function sanitizeEmployerSummary(summary?: string): string {
   if (!summary) return '';
   return summary
     .replace(/\s*Strictly\s+NO\s+Junior,\s*Mid-level,\s*or\s*Regular\s+positions\.?/gi, '')
+    .replace(/\s*Strictly\s+works\s+with\s+JavaScript,\s*TypeScript,\s*and\s*Node\.js\s*\(no\s+[^)]*\)\.?/gi, '')
+    .replace(/\s*Not\s+seeking\s+roles\s+setting\s+up\s+infrastructure\s+or\s+DevOps\s+from\s+scratch\.?/gi, '')
     .trim();
+}
+
+/**
+ * Tailors and highlights the Professional Summary based on top-ranked bullet signals
+ * and optional job context so different target stacks produce distinct summary emphasis.
+ */
+export function tailorEmployerSummary(
+  summary?: string,
+  selectedBullets?: CandidateBullet[],
+  jobContext?: CvJobTailoringContext
+): string {
+  const base = sanitizeEmployerSummary(summary);
+  if (!base) return '';
+  if (base.includes('Tailored Focus:')) return base;
+
+  const bullets = Array.isArray(selectedBullets) ? selectedBullets : [];
+  if (bullets.length === 0 && !jobContext) {
+    return base;
+  }
+
+  // Rank bullets against jobContext when provided, otherwise preserve already-ranked bullet order
+  let orderedBullets = bullets;
+  const matchedFromRanker: string[] = [];
+  if (jobContext && (jobContext.title || jobContext.body || (jobContext.tags && jobContext.tags.length > 0)) && bullets.length > 0) {
+    const ranked = preRankBullets(
+      bullets,
+      jobContext.title || '',
+      jobContext.body || '',
+      jobContext.tags
+    );
+    const byId = new Map<string, CandidateBullet>();
+    for (const b of bullets) {
+      byId.set(b.id, b);
+      if (b.slug) byId.set(b.slug, b);
+    }
+    const reordered: CandidateBullet[] = [];
+    for (const r of ranked) {
+      const b = byId.get(r.bulletId);
+      if (b && !reordered.includes(b)) {
+        reordered.push(b);
+      }
+      for (const t of r.matchedTags) {
+        if (!matchedFromRanker.includes(t)) {
+          matchedFromRanker.push(t);
+        }
+      }
+    }
+    if (reordered.length > 0) {
+      orderedBullets = reordered;
+    }
+  }
+
+  const isCleanTag = (t: unknown): t is string =>
+    typeof t === 'string' && /^[A-Za-z0-9.+/# -]{2,30}$/.test(t.trim());
+
+  const candidateTags: string[] = [];
+  const pushTag = (t: unknown) => {
+    if (!isCleanTag(t)) return;
+    const trimmed = t.trim();
+    if (!candidateTags.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())) {
+      candidateTags.push(trimmed);
+    }
+  };
+
+  if (jobContext?.matchedTags) {
+    jobContext.matchedTags.forEach(pushTag);
+  }
+  matchedFromRanker.forEach(pushTag);
+  if (jobContext?.tags) {
+    jobContext.tags.forEach(pushTag);
+  }
+  for (const b of orderedBullets.slice(0, 2)) {
+    if (Array.isArray(b.tags)) {
+      b.tags.forEach(pushTag);
+    }
+  }
+
+  const topTags = candidateTags.slice(0, 4);
+  if (topTags.length < 2) {
+    return base;
+  }
+
+  const topBullet = orderedBullets[0];
+  const combinedSignals = [
+    jobContext?.title || '',
+    topTags.join(' '),
+    topBullet?.title || '',
+    topBullet?.section || '',
+    topBullet?.tags?.join(' ') || '',
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  const isBackendFocus =
+    /\b(backend|nestjs|postgresql|mysql|java migration|microservices|redis)\b/i.test(combinedSignals) &&
+    !/\b(frontend|react native|ui stream|microfrontends)\b/i.test(jobContext?.title || topBullet?.tags?.slice(0, 2).join(' ') || '');
+
+  const isFrontendFocus =
+    /\b(frontend|react|next\.js|nextjs|microfrontends|ui|redux|react native|wcag)\b/i.test(combinedSignals) &&
+    !/\b(backend|java migration)\b/i.test(jobContext?.title || '');
+
+  const isAiFocus =
+    /\b(llm|promptfoo|genai|ai|n8n|cursor|copilot)\b/i.test(combinedSignals) &&
+    /\b(ai|llm|genai|promptfoo)\b/i.test(
+      `${jobContext?.title || ''} ${topBullet?.section || ''} ${topTags.slice(0, 2).join(' ')}`
+    );
+
+  let focusSentence: string;
+  if (isBackendFocus) {
+    focusSentence = `Tailored Focus: Backend & Systems Architecture (${topTags.join(', ')}) — scalable Node.js/TypeScript services, PostgreSQL data layer, and legacy modernization.`;
+  } else if (isAiFocus) {
+    focusSentence = `Tailored Focus: AI-Native Product Engineering & LLM Evaluation (${topTags.join(', ')}) — deterministic evaluation pipelines and multi-agent workflows.`;
+  } else if (isFrontendFocus) {
+    focusSentence = `Tailored Focus: Frontend & Full-Stack UI Architecture (${topTags.join(', ')}) — scalable React/TypeScript applications, microfrontends, and shared UI component systems.`;
+  } else {
+    focusSentence = `Tailored Focus: Full-Stack Engineering & Technical Leadership (${topTags.join(', ')}).`;
+  }
+
+  return `${base} ${focusSentence}`.trim();
 }
 
 export function sanitizeEmployerBullet(bullet: CandidateBullet): CandidateBullet {
@@ -214,15 +344,63 @@ export function sanitizeEmployerBullet(bullet: CandidateBullet): CandidateBullet
 
 /**
  * Groups candidate bullets by title/period into cohesive role items,
- * guaranteeing Google XYZ verbatim highlights and a dedicated "Environment / Tech Stack:" line.
+ * keeping the most relevant bullets for the job's stack at the top of each role,
+ * and guaranteeing Google XYZ verbatim highlights and a dedicated "Environment / Tech Stack:" line.
  */
-export function groupBulletsIntoRoles(bullets: CandidateBullet[]): BulletRoleGroup[] {
+export function groupBulletsIntoRoles(
+  bullets: CandidateBullet[],
+  jobContext?: CvJobTailoringContext
+): BulletRoleGroup[] {
   if (!bullets || bullets.length === 0) return [];
+
+  // If jobContext is provided, rank bullets by relevance so top-matching bullets lead each role
+  let effectiveBullets = bullets;
+  const prioritizedTagSet = new Set<string>();
+  if (jobContext && (jobContext.title || jobContext.body || (jobContext.tags && jobContext.tags.length > 0))) {
+    const ranked = preRankBullets(
+      bullets,
+      jobContext.title || '',
+      jobContext.body || '',
+      jobContext.tags
+    );
+    const byId = new Map<string, CandidateBullet>();
+    for (const b of bullets) {
+      if (!b) continue;
+      byId.set(b.id, b);
+      if (b.slug) byId.set(b.slug, b);
+    }
+    const ordered: CandidateBullet[] = [];
+    for (const r of ranked) {
+      const matched = byId.get(r.bulletId);
+      if (matched && !ordered.includes(matched)) {
+        ordered.push(matched);
+      }
+      for (const t of r.matchedTags) {
+        prioritizedTagSet.add(t.toLowerCase());
+      }
+    }
+    for (const b of bullets) {
+      if (b && !ordered.includes(b)) {
+        ordered.push(b);
+      }
+    }
+    effectiveBullets = ordered;
+  }
+  if (jobContext?.tags) {
+    for (const t of jobContext.tags) {
+      if (typeof t === 'string') prioritizedTagSet.add(t.toLowerCase().trim());
+    }
+  }
+  if (jobContext?.matchedTags) {
+    for (const t of jobContext.matchedTags) {
+      if (typeof t === 'string') prioritizedTagSet.add(t.toLowerCase().trim());
+    }
+  }
 
   const groups: BulletRoleGroup[] = [];
   const map = new Map<string, BulletRoleGroup>();
 
-  for (const rawBullet of bullets) {
+  for (const rawBullet of effectiveBullets) {
     const bullet = sanitizeEmployerBullet(rawBullet);
     const roleTitle = bullet.title || bullet.section || 'Key Experience';
     const key = `${roleTitle}__${bullet.period || ''}`;
@@ -248,16 +426,30 @@ export function groupBulletsIntoRoles(bullets: CandidateBullet[]): BulletRoleGro
     }
   }
 
+  // Put job-matching tags first in each role's Environment / Tech Stack line
+  if (prioritizedTagSet.size > 0) {
+    for (const group of groups) {
+      group.tags.sort((a, b) => {
+        const aMatch = prioritizedTagSet.has(a.toLowerCase()) ? 1 : 0;
+        const bMatch = prioritizedTagSet.has(b.toLowerCase()) ? 1 : 0;
+        return bMatch - aMatch;
+      });
+    }
+  }
+
   return groups;
 }
 
 /**
  * Renders the Experience section with role blocks, Google XYZ bullets, and Environment line.
  */
-export function formatExperienceHtml(bullets: CandidateBullet[]): string {
+export function formatExperienceHtml(
+  bullets: CandidateBullet[],
+  jobContext?: CvJobTailoringContext
+): string {
   if (!bullets || bullets.length === 0) return '';
 
-  const roleGroups = groupBulletsIntoRoles(bullets);
+  const roleGroups = groupBulletsIntoRoles(bullets, jobContext);
 
   const itemsHtml = roleGroups
     .map((role) => {
@@ -522,21 +714,25 @@ export function getCvCss(options?: { compact?: boolean }): string {
   `;
 }
 
+export interface ExtendedRenderCvOptions extends RenderCvOptions {
+  job?: CvJobTailoringContext;
+}
+
 /**
  * Generates ATS Single-Column Strict HTML string from candidate data and selected bullets.
  */
 export function generateCvHtml(
   cvData: CandidateCvData,
   selectedBullets: CandidateBullet[],
-  options?: Partial<RenderCvOptions & { compact?: boolean }>
+  options?: Partial<ExtendedRenderCvOptions & { compact?: boolean }>
 ): string {
   const language = options?.language || 'pl';
   const compact = options?.compact ?? false;
 
   const contactsHtml = formatContactLinks(cvData.contacts);
   const skillsHtml = formatSkillsMatrixHtml(cvData.skills);
-  const experienceHtml = formatExperienceHtml(selectedBullets);
-  const cleanSummary = sanitizeEmployerSummary(cvData.summary);
+  const experienceHtml = formatExperienceHtml(selectedBullets, options?.job);
+  const cleanSummary = tailorEmployerSummary(cvData.summary, selectedBullets, options?.job);
   const css = getCvCss({ compact });
 
   // Use Polish RODO clause by default or English based on language selection
@@ -651,7 +847,7 @@ export async function acquireBrowserSession(
 export async function renderCvToPdf(
   cvData: CandidateCvData,
   selectedBullets: CandidateBullet[],
-  options: RenderCvOptions,
+  options: ExtendedRenderCvOptions,
   injectedBrowser?: Browser
 ): Promise<RenderCvResult> {
   if (!options || !options.outputPath) {

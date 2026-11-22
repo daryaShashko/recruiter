@@ -38,24 +38,42 @@ export interface ExtendedBuildEmailPackageParams extends Omit<BuildEmailPackageP
   candidateName?: string;
   fallbackEmail?: string;
   customSubject?: string;
+  pitch?: string;
+  pitchPath?: string;
+  coverLetterPath?: string;
   attachments?: string[];
   validateAttachmentExists?: boolean;
 }
 
+export interface ExtendedEmailPackageMetadata extends EmailPackageMetadata {
+  pitchPath?: string;
+  coverLetterPath?: string;
+  pitchWordCount?: number;
+  applyUrl?: string;
+  deliveryMode?: 'web_form' | 'email_apply';
+}
+
+export interface ExtendedEmailPackage extends EmailPackage {
+  pitch?: string;
+  metadata: ExtendedEmailPackageMetadata;
+}
+
 /**
- * Extracts and sanitizes recipient email from job metadata.
+ * Extracts and sanitizes recipient email or web-form destination from job metadata.
  * Hierarchy:
  * 1. job.email (stripping mailto: and query parameters)
- * 2. job.applyUrl (if starting with mailto:)
- * 3. job.url (if starting with mailto:)
- * 4. fallbackEmail (defaults to empty string)
+ * 2. job.applyUrl / job.url (if starting with mailto:)
+ * 3. fallbackEmail (if explicitly provided)
+ * 4. job.applyUrl / job.url (web-form URL destination for job boards without direct email)
+ * 5. 'web_form' (eliminating empty `to: ""` blocker)
  */
 export function extractRecipientEmail(
   job: { email?: string; applyUrl?: string; url?: string; [key: string]: unknown },
   fallbackEmail = ''
 ): string {
+  const cleanFallback = typeof fallbackEmail === 'string' ? fallbackEmail.trim() : '';
   if (!job || typeof job !== 'object') {
-    return fallbackEmail.trim();
+    return cleanFallback || 'web_form';
   }
 
   if (job.email && typeof job.email === 'string') {
@@ -83,7 +101,17 @@ export function extractRecipientEmail(
     }
   }
 
-  return fallbackEmail.trim();
+  if (cleanFallback.length > 0) {
+    return cleanFallback;
+  }
+
+  for (const candidate of urlCandidates) {
+    if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return 'web_form';
 }
 
 /**
@@ -118,11 +146,11 @@ export function validatePdfAttachment(
 }
 
 /**
- * Builds the canonical EmailPackage conforming to domain contracts.
+ * Builds the canonical Email / Web-Form Application Package conforming to domain contracts.
  */
 export function buildEmailPackage(
   params: BuildEmailPackageParams | ExtendedBuildEmailPackageParams
-): EmailPackage {
+): ExtendedEmailPackage {
   if (!params) {
     throw new TypeError('buildEmailPackage requires a params object');
   }
@@ -155,24 +183,39 @@ export function buildEmailPackage(
     formatSubjectLine(candidateName, title);
 
   const to = extractRecipientEmail(job, extended.fallbackEmail);
+  const isDirectEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to);
+  const applyUrl =
+    (typeof job.applyUrl === 'string' && job.applyUrl.trim()) ||
+    (typeof job.url === 'string' && job.url.trim()) ||
+    undefined;
 
   const attachments: string[] = [pdfPath];
-  if (Array.isArray(extended.attachments)) {
-    for (const att of extended.attachments) {
-      if (typeof att === 'string' && att.trim() && !attachments.includes(att.trim())) {
-        attachments.push(att.trim());
-      }
+  const extraFiles = [
+    extended.pitchPath,
+    extended.coverLetterPath,
+    ...(Array.isArray(extended.attachments) ? extended.attachments : []),
+  ];
+  for (const att of extraFiles) {
+    if (typeof att === 'string' && att.trim() && !attachments.includes(att.trim())) {
+      attachments.push(att.trim());
     }
   }
 
   const dryRun = params.dryRun !== undefined ? Boolean(params.dryRun) : true;
   const coverLetterWordCount = countWords(coverLetter);
+  const pitchText = typeof extended.pitch === 'string' ? extended.pitch : undefined;
+  const pitchWordCount = pitchText ? countWords(pitchText) : undefined;
 
-  const metadata: EmailPackageMetadata = {
+  const metadata: ExtendedEmailPackageMetadata = {
     company,
     jobTitle: title,
     coverLetterWordCount,
     pdfPath,
+    ...(extended.pitchPath ? { pitchPath: extended.pitchPath } : {}),
+    ...(extended.coverLetterPath ? { coverLetterPath: extended.coverLetterPath } : {}),
+    ...(pitchWordCount !== undefined ? { pitchWordCount } : {}),
+    ...(applyUrl ? { applyUrl } : {}),
+    deliveryMode: isDirectEmail ? 'email_apply' : 'web_form',
     channel: 'email_apply',
     dryRun,
     generatedAt: new Date().toISOString(),
@@ -182,6 +225,7 @@ export function buildEmailPackage(
     to,
     subject,
     body: coverLetter,
+    ...(pitchText !== undefined ? { pitch: pitchText } : {}),
     attachments,
     metadata,
   };

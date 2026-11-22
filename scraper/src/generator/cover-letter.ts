@@ -4,8 +4,8 @@
  *
  * Responsibilities:
  * 1. Generates a tailored 3-block Cover Letter strictly between 130 and 180 words:
- *    - Block 1: Hook under JD challenge (Senior Full-Stack Engineer, zero clichés).
- *    - Block 2: 2–3 quantified achievement bullets (Migration, GenAI/-15% cost, Team Lead).
+ *    - Block 1: Hook under JD challenge (Senior Full-Stack Engineer, zero clichés, stack-tailored).
+ *    - Block 2: 2–3 dynamically ranked achievement bullets matched to the job via preRankBullets().
  *    - Block 3: Poland/EU logistics (Gdańsk/Remote, EU work right, B2B JDG/UoP),
  *               language proficiency note (EN C1 + PL B1/B2 if Polish), and intro call CTA.
  * 2. Scans and eliminates 10 forbidden stop words/phrases and formulaic opening clichés.
@@ -142,7 +142,7 @@ export const POLISH_BULLET_TRANSLATIONS: Record<string, string> = {
   'cv-recent-6m':
     'Jako Senior Product Engineer i Stream Lead prowadzę 6-osobowy zespół techniczny na platformie inwestycyjnej AI, wdrażając bibliotekę współdzielonych komponentów UI.',
   'cv-primary-stack':
-    'Posiadam biegłą znajomość ekosystemu JavaScript, TypeScript, React, Next.js, Node.js, NestJS, Python oraz relacyjnych baz PostgreSQL.',
+    'Posiadam biegłą znajomość ekosystemu JavaScript, TypeScript, React, Next.js, Node.js, NestJS oraz relacyjnych baz PostgreSQL.',
   'cv-target-balance':
     'Specjalizuję się w tworzeniu nowoczesnych rozwiązań Full-Stack z silnym naciskiem na architekturę TypeScript i usługi chmurowe.',
   'cv-leadership':
@@ -457,69 +457,64 @@ export function validateCoverLetter(
 
 // ── 7. Bullet Selection Helper ──────────────────────────────────────────────
 
+export interface ExtendedCoverLetterJobInput {
+  title: string;
+  company: string;
+  body: string;
+  tags?: string[];
+  pitch_hook?: string;
+  pitchHook?: string;
+  tasks_summary?: string[];
+  tasksSummary?: string[];
+  project_summary?: string;
+  projectSummary?: string;
+}
+
+export interface ExtendedCoverLetterOptions extends Omit<CoverLetterOptions, 'job'> {
+  job: ExtendedCoverLetterJobInput;
+  rankedBulletIds?: string[];
+  pitchHook?: string;
+  tasksSummary?: string[];
+  customText?: string;
+  llmText?: string;
+}
+
+export interface ExtendedLinkedInPitchOptions extends LinkedInPitchOptions {
+  rankedBulletIds?: string[];
+  pitchHook?: string;
+  tasksSummary?: string[];
+  customText?: string;
+  llmText?: string;
+}
+
 /**
- * Selects 2–3 quantified achievement bullets matching R2 criteria:
- * 1. Migration / backend optimization case
- * 2. Quantified cost reduction (-15%) & GenAI practice
- * 3. Team leadership & greenfield architecture match
+ * Selects top 2–3 relevant achievement/experience bullets dynamically ranked for the job
+ * via `preRankBullets()` (or explicit `rankedBulletIds` passed in), eliminating static
+ * hardcoded bullet triads.
  */
 export function selectAchievementBullets(
   cvData: CandidateCvData,
   job: { title: string; body: string; tags?: string[] },
-  language: 'en' | 'pl'
+  language: 'en' | 'pl',
+  rankedBulletIds?: string[]
 ): { id: string; text: string }[] {
   let bullets = cvData?.bullets?.length ? cvData.bullets : DEFAULT_CANDIDATE_CV_DATA.bullets;
   if (!bullets || bullets.length === 0) {
     bullets = DEFAULT_CANDIDATE_CV_DATA.bullets;
   }
 
-  const bulletMap = new Map<string, CandidateBullet>(bullets.map((b) => [b.id, b]));
+  const bulletMap = new Map<string, CandidateBullet>();
+  for (const b of bullets) {
+    if (!b) continue;
+    if (b.id) bulletMap.set(b.id, b);
+    if (b.slug) bulletMap.set(b.slug, b);
+  }
+
   const ranked = preRankBullets(bullets, job.title, job.body, job.tags);
 
-  const selectedIds: string[] = [];
+  const selectedBullets: CandidateBullet[] = [];
+  const seenBulletKeys = new Set<string>();
 
-  const addBullet = (id?: string) => {
-    if (id && bulletMap.has(id) && !selectedIds.includes(id) && selectedIds.length < 3) {
-      selectedIds.push(id);
-      return true;
-    }
-    return false;
-  };
-
-  // 1. Try to find GenAI optimization & cost reduction bullet
-  const metricBullet = bullets.find(
-    (b) =>
-      b.id === 'cv-ach-cost' ||
-      b.slug === 'cv-ach-cost' ||
-      (b.section === 'Key Achievement' && /\d+%/.test(b.highlight))
-  );
-  if (metricBullet) {
-    addBullet(metricBullet.id);
-  }
-
-  // 2. Try to find backend migration bullet
-  const stackBullet = bullets.find(
-    (b) =>
-      b.id === 'cv-ach-migration' ||
-      b.slug === 'cv-ach-migration' ||
-      (b.section === 'Key Achievement' && /migrat/i.test(b.highlight))
-  );
-  if (stackBullet) {
-    addBullet(stackBullet.id);
-  }
-
-  // 3. Try to find leadership / greenfield architecture bullet
-  const leadBullet = bullets.find(
-    (b) =>
-      b.id === 'cv-ach-lead' ||
-      b.slug === 'cv-ach-lead' ||
-      (b.section === 'Key Achievement' && /\b(lead|led)\b/i.test(`${b.title} ${b.highlight}`))
-  );
-  if (leadBullet) {
-    addBullet(leadBullet.id);
-  }
-
-  // 4. Fill from pre-ranked achievement/experience bullets first (excluding raw stack lists)
   const metadataSections = new Set([
     'Primary Stack',
     'Secondary Stack',
@@ -527,31 +522,49 @@ export function selectAchievementBullets(
     'Target Role & Leadership',
     'Languages',
   ]);
-  for (const r of ranked) {
-    if (selectedIds.length >= 3) break;
-    const candidate = bulletMap.get(r.bulletId);
-    if (candidate && !metadataSections.has(candidate.section)) {
-      addBullet(r.bulletId);
+
+  const addCandidate = (idOrSlug?: string, allowMetadata = false): boolean => {
+    if (!idOrSlug || selectedBullets.length >= 3) return false;
+    const candidate = bulletMap.get(idOrSlug);
+    if (!candidate) return false;
+    if (!allowMetadata && metadataSections.has(candidate.section)) return false;
+    const canonicalKey = candidate.id || candidate.slug || idOrSlug;
+    if (seenBulletKeys.has(canonicalKey)) return false;
+    seenBulletKeys.add(canonicalKey);
+    selectedBullets.push(candidate);
+    return true;
+  };
+
+  // 1. Honor explicit pre-ranked bullet IDs if provided by caller
+  if (Array.isArray(rankedBulletIds) && rankedBulletIds.length > 0) {
+    for (const id of rankedBulletIds) {
+      if (selectedBullets.length >= 3) break;
+      addCandidate(id, false);
     }
   }
 
-  // 5. Fill from any remaining pre-ranked bullets if still fewer than 3
+  // 2. Select top pre-ranked achievement/experience bullets by actual job relevance
   for (const r of ranked) {
-    if (selectedIds.length >= 3) break;
-    addBullet(r.bulletId);
+    if (selectedBullets.length >= 3) break;
+    addCandidate(r.bulletId, false);
   }
 
-  // 6. Fill from remaining candidate bullets if fewer than 3
+  // 3. Fallback: fill from any remaining pre-ranked bullets if still fewer than 3
+  for (const r of ranked) {
+    if (selectedBullets.length >= 3) break;
+    addCandidate(r.bulletId, true);
+  }
+
+  // 4. Fallback: fill from remaining candidate bullets if fewer than 3
   for (const b of bullets) {
-    if (selectedIds.length >= 3) break;
-    addBullet(b.id);
+    if (selectedBullets.length >= 3) break;
+    addCandidate(b.id || b.slug, true);
   }
 
-  // Ensure at least 2 bullets (R2: "2–3 буллета")
-  return selectedIds.slice(0, 3).map((id) => {
-    const bullet = bulletMap.get(id);
-    let bulletText = bullet?.highlight || '';
-    const lookupKey = bullet?.slug || id;
+  return selectedBullets.slice(0, 3).map((bullet) => {
+    const id = bullet.id || bullet.slug || 'bullet';
+    const lookupKey = bullet.slug || id;
+    let bulletText = bullet.highlight || '';
     if (language === 'pl' && (POLISH_BULLET_TRANSLATIONS[id] || POLISH_BULLET_TRANSLATIONS[lookupKey])) {
       bulletText = POLISH_BULLET_TRANSLATIONS[id] || POLISH_BULLET_TRANSLATIONS[lookupKey];
     } else if (
@@ -562,7 +575,7 @@ export function selectAchievementBullets(
       bulletText =
         ENGLISH_COVER_LETTER_BULLET_SUMMARIES[id] || ENGLISH_COVER_LETTER_BULLET_SUMMARIES[lookupKey];
     }
-    return { id, text: bulletText };
+    return { id: lookupKey, text: bulletText };
   });
 }
 
@@ -597,6 +610,70 @@ function buildRoleHookPl(company: string, jobTitle?: string): string {
 }
 
 /**
+ * Sanitizes custom/LLM-provided hook or pitch text by stripping forbidden stop words and clichés.
+ */
+function sanitizeHookText(raw?: string): string {
+  if (!raw || typeof raw !== 'string') return '';
+  let cleaned = raw.trim();
+  for (const pattern of Object.values(STOP_WORDS_PATTERNS)) {
+    cleaned = cleaned.replace(new RegExp(pattern.source, 'gi'), 'reliable');
+  }
+  for (const { pattern } of FORBIDDEN_OPENING_CLICHES) {
+    cleaned = cleaned.replace(new RegExp(pattern.source, 'gi'), '');
+  }
+  return cleaned.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Builds a job-specific specialization sentence for Block 1 (Hook) based on job stack,
+ * tasks, or custom pitch hook so different stacks produce distinct cover letters.
+ */
+function buildStackTailoredFocusSentence(
+  job: ExtendedCoverLetterJobInput,
+  language: 'en' | 'pl',
+  customPitchHook?: string,
+  customTasks?: string[]
+): string {
+  const hookNote = sanitizeHookText(customPitchHook || job.pitchHook || job.pitch_hook);
+  const tasks = customTasks || job.tasksSummary || job.tasks_summary || [];
+  const signals = `${job.title || ''} ${job.body || ''} ${(job.tags || []).join(' ')} ${tasks.join(' ')}`.toLowerCase();
+
+  if (language === 'pl') {
+    if (hookNote && /[ąćęłńóśźż]/i.test(hookNote) && hookNote.split(/\s+/).length <= 22) {
+      return `Posiadam ponad 8 lat komercyjnego doświadczenia w ekosystemie TypeScript, React oraz Node.js. ${hookNote}`;
+    }
+    if (/\b(backend|nestjs|postgresql|mikroserwis|microservices|redis|sql)\b/i.test(signals) && !/\b(frontend|react native)\b/i.test(job.title || '')) {
+      return 'Posiadam ponad 8 lat komercyjnego doświadczenia w Node.js, TypeScript i PostgreSQL, specjalizując się w architekturze usług backendowych, migracjach systemów oraz integracjach API.';
+    }
+    if (/\b(frontend|react|next\.js|nextjs|ui|microfrontend|design system)\b/i.test(signals) && !/\b(backend)\b/i.test(job.title || '')) {
+      return 'Posiadam ponad 8 lat komercyjnego doświadczenia w React, Next.js i TypeScript, specjalizując się w architekturze mikrofrontendów, bibliotekach komponentów UI oraz wydajności aplikacji.';
+    }
+    if (/\b(ai|llm|genai|agent|promptfoo)\b/i.test(signals)) {
+      return 'Posiadam ponad 8 lat doświadczenia w TypeScript, React i Node.js, budując produkcyjne platformy zintegrowane z AI, potoki ewaluacji LLM oraz skalowalne aplikacje.';
+    }
+    return 'Posiadam ponad 8 lat komercyjnego doświadczenia w ekosystemie TypeScript, React oraz Node.js, specjalizując się w tworzeniu wydajnych aplikacji webowych oraz skalowalnych architektur backendowych.';
+  }
+
+  if (hookNote && !/[а-яё]/i.test(hookNote) && hookNote.split(/\s+/).length <= 22) {
+    return `With 8+ years of production experience across TypeScript, React, and Node.js, ${hookNote.charAt(0).toLowerCase() + hookNote.slice(1).replace(/\.?$/, '.')}`;
+  }
+  if (/\b(backend|nestjs|postgresql|microservices|redis|kafka|sql|database)\b/i.test(signals) && !/\b(frontend|react native|ui)\b/i.test(job.title || '')) {
+    return 'With 8+ years of production experience across Node.js, TypeScript, NestJS, and PostgreSQL, I specialize in backend service architecture, legacy system migrations, and high-throughput APIs.';
+  }
+  if (/\b(frontend|react|next\.js|nextjs|ui|design system|microfrontend)\b/i.test(signals) && !/\b(backend)\b/i.test(job.title || '')) {
+    return 'With 8+ years of production experience across React, TypeScript, Next.js, and Node.js, I specialize in scalable frontend architecture, shared UI component systems, and end-to-end product delivery.';
+  }
+  if (/\b(ai|llm|genai|agent|promptfoo|evaluation)\b/i.test(signals)) {
+    return 'With 8+ years of production experience across TypeScript, React, and Node.js, I specialize in AI-integrated product engineering, LLM evaluation pipelines, and scalable full-stack architectures.';
+  }
+  if (/\b(lead|manager|principal|staff|architect)\b/i.test(job.title || '')) {
+    return 'With 8+ years of production experience across TypeScript, React, and Node.js, I combine hands-on full-stack architecture with leading engineering streams, code reviews, and technical delivery.';
+  }
+
+  return 'With 8+ years of production experience across TypeScript, React, and Node.js, I specialize in building maintainable web applications and scalable backend services that accelerate product delivery.';
+}
+
+/**
  * Assembles cover letter text with 3 semantic blocks.
  */
 function assembleLetter(
@@ -606,12 +683,16 @@ function assembleLetter(
   language: 'en' | 'pl',
   extraIntro?: string,
   extraLogistics?: string,
-  jobTitle?: string
+  jobTitle?: string,
+  focusSentence?: string
 ): string {
   if (language === 'pl') {
     const salutation = `Szanowny Zespole ${company},`;
     const roleSentence = buildRoleHookPl(company, jobTitle);
-    const hook = `${roleSentence} Posiadam ponad 8 lat komercyjnego doświadczenia w ekosystemie TypeScript, React oraz Node.js, specjalizując się w tworzeniu wydajnych aplikacji webowych oraz skalowalnych architektur backendowych.${extraIntro ? ' ' + extraIntro : ''}`;
+    const coreFocus =
+      focusSentence ||
+      'Posiadam ponad 8 lat komercyjnego doświadczenia w ekosystemie TypeScript, React oraz Node.js, specjalizując się w tworzeniu wydajnych aplikacji webowych oraz skalowalnych architektur backendowych.';
+    const hook = `${roleSentence} ${coreFocus}${extraIntro ? ' ' + extraIntro : ''}`;
     const achievementsHeader = 'Kluczowe osiągnięcia z mojej dotychczasowej praktyki inżynierskiej:';
     const bulletLines = bullets.map((b) => `- ${b.text}`).join('\n');
     const achievements = `${achievementsHeader}\n${bulletLines}`;
@@ -624,7 +705,10 @@ function assembleLetter(
   // English (default)
   const salutation = `Dear ${company} Team,`;
   const roleSentence = buildRoleHookEn(company, jobTitle);
-  const hook = `${roleSentence} With 8+ years of production experience across TypeScript, React, and Node.js, I specialize in building maintainable web applications and scalable backend services that accelerate product delivery.${extraIntro ? ' ' + extraIntro : ''}`;
+  const coreFocus =
+    focusSentence ||
+    'With 8+ years of production experience across TypeScript, React, and Node.js, I specialize in building maintainable web applications and scalable backend services that accelerate product delivery.';
+  const hook = `${roleSentence} ${coreFocus}${extraIntro ? ' ' + extraIntro : ''}`;
   const achievementsHeader = 'Key accomplishments from my background that align with your requirements:';
   const bulletLines = bullets.map((b) => `- ${b.text}`).join('\n');
   const achievements = `${achievementsHeader}\n${bulletLines}`;
@@ -638,37 +722,77 @@ function assembleLetter(
  * Generates an EU/Poland standard personalized Cover Letter strictly between 130 and 180 words.
  *
  * Architecture:
- * - Block 1: The Hook tailored to JD (Senior Full-Stack Engineer, zero clichés).
- * - Block 2: 2–3 quantified bullets directly from Master CV (zero hallucination).
+ * - Block 1: The Hook tailored to JD (Senior Full-Stack Engineer, stack focus, zero clichés).
+ * - Block 2: 2–3 ranked bullets directly from Master CV matched via preRankBullets() (zero hallucination).
  * - Block 3: Gdańsk/Remote, EU work right without visa, B2B/UoP, language note (if PL), and intro call CTA.
  *
  * Guarantees:
  * - Strict length enforcement (130 <= wordCount <= 180) via dynamic elastic guardrails.
  * - Complete absence of 10 forbidden stop words and opening clichés.
- * - 100% offline determinism without external LLM calls.
+ * - Supports custom/LLM text or pitchHook overrides while maintaining deterministic offline fallback.
  *
  * @param cvData - Candidate CV data (from Notion loader or snapshot)
- * @param options - Cover letter generation options (job title, company, body, language)
+ * @param options - Cover letter generation options (job title, company, body, language, custom/LLM hooks)
  * @returns CoverLetterResult conforming to generator types contract
  */
 export function generateCoverLetter(
   cvData: CandidateCvData,
-  options: CoverLetterOptions
+  options: CoverLetterOptions | ExtendedCoverLetterOptions
 ): CoverLetterResult {
-  const job = options.job;
-  const language = options.language ?? detectLanguage(job);
+  const extOptions = options as ExtendedCoverLetterOptions;
+  const job = extOptions.job;
+  const language = extOptions.language ?? detectLanguage(job);
   const company = job.company?.trim() || 'Hiring';
   const candidateName = cvData?.contacts?.name || DEFAULT_CANDIDATE_CV_DATA.contacts.name;
 
-  let bullets = selectAchievementBullets(cvData, job, language);
-  let text = assembleLetter(company, candidateName, bullets, language, undefined, undefined, job.title);
+  // Support direct custom/LLM cover letter text if provided and valid
+  const rawCustom = sanitizeHookText(extOptions.customText || extOptions.llmText);
+  if (rawCustom) {
+    const customValidation = validateCoverLetter(rawCustom);
+    if (customValidation.isValid) {
+      return {
+        text: rawCustom,
+        wordCount: customValidation.wordCount,
+        language,
+        isValid: true,
+        validationErrors: [],
+      };
+    }
+  }
+
+  const focusSentence = buildStackTailoredFocusSentence(
+    job,
+    language,
+    extOptions.pitchHook,
+    extOptions.tasksSummary
+  );
+
+  let bullets = selectAchievementBullets(cvData, job, language, extOptions.rankedBulletIds);
+  let text = assembleLetter(
+    company,
+    candidateName,
+    bullets,
+    language,
+    undefined,
+    undefined,
+    job.title,
+    focusSentence
+  );
   let currentWords = countWords(text);
 
   // Elastic Guardrail: Overflow compression (wordCount > 180)
   if (currentWords > 180 && bullets.length > 2) {
-    // Compress by keeping top 2 quantified bullets (fulfills R2 "2–3 буллета")
     bullets = bullets.slice(0, 2);
-    text = assembleLetter(company, candidateName, bullets, language, undefined, undefined, job.title);
+    text = assembleLetter(
+      company,
+      candidateName,
+      bullets,
+      language,
+      undefined,
+      undefined,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -676,7 +800,16 @@ export function generateCoverLetter(
   let effectiveCompany = company;
   if (currentWords > 180 && company.split(/\s+/).length > 3) {
     effectiveCompany = company.split(/\s+/).slice(0, 3).join(' ');
-    text = assembleLetter(effectiveCompany, candidateName, bullets, language);
+    text = assembleLetter(
+      effectiveCompany,
+      candidateName,
+      bullets,
+      language,
+      undefined,
+      undefined,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -686,7 +819,16 @@ export function generateCoverLetter(
       const firstSentence = b.text.split(/(?<=[.!?])\s+/)[0];
       return { id: b.id, text: firstSentence || b.text };
     });
-    text = assembleLetter(effectiveCompany, candidateName, bullets, language);
+    text = assembleLetter(
+      effectiveCompany,
+      candidateName,
+      bullets,
+      language,
+      undefined,
+      undefined,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -703,7 +845,16 @@ export function generateCoverLetter(
       }
       return b;
     });
-    text = assembleLetter(effectiveCompany, candidateName, bullets, language);
+    text = assembleLetter(
+      effectiveCompany,
+      candidateName,
+      bullets,
+      language,
+      undefined,
+      undefined,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -713,7 +864,16 @@ export function generateCoverLetter(
       language === 'pl'
         ? 'W codziennej pracy stawiam na wysoką jakość kodu, testy automatyczne oraz skalowalną architekturę chmurową.'
         : 'My engineering approach emphasizes high code quality, test-driven development, and scalable cloud integrations.';
-    text = assembleLetter(company, candidateName, bullets, language, extraIntro, undefined, job.title);
+    text = assembleLetter(
+      company,
+      candidateName,
+      bullets,
+      language,
+      extraIntro,
+      undefined,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -726,7 +886,16 @@ export function generateCoverLetter(
       language === 'pl'
         ? 'Jestem dostępna do podjęcia współpracy w standardowym okresie wypowiedzenia i chętnie przedstawię referencje.'
         : 'I am available to start within a standard notice period and happy to provide references upon request.';
-    text = assembleLetter(company, candidateName, bullets, language, extraIntro, extraLogistics, job.title);
+    text = assembleLetter(
+      company,
+      candidateName,
+      bullets,
+      language,
+      extraIntro,
+      extraLogistics,
+      job.title,
+      focusSentence
+    );
     currentWords = countWords(text);
   }
 
@@ -741,41 +910,76 @@ export function generateCoverLetter(
   };
 }
 
-// ── 12. LinkedIn Outreach Pitch Generator (Slice 3) ─────────────────────────
+// ── 12. LinkedIn & Web-Form Outreach Pitch Generator (Slice 3 / WP-5) ───────
 
 /**
- * Generates a concise, high-impact LinkedIn outreach pitch (60–80 words)
- * for direct communication with recruiters or hiring managers.
+ * Generates a concise, high-impact LinkedIn / web-form outreach pitch (60–80 words)
+ * dynamically tailored to the job's top-ranked CV achievement and stack.
  */
 export function generateLinkedInPitch(
   cvData: CandidateCvData,
-  options: LinkedInPitchOptions
+  options: LinkedInPitchOptions | ExtendedLinkedInPitchOptions
 ): LinkedInPitchResult {
-  const job = options.job;
-  const language = options.language || detectLanguage(job.body || job.title);
-  const candidateName = cvData.contacts.name || 'Darya Shashko';
+  const extOptions = options as ExtendedLinkedInPitchOptions;
+  const job = extOptions.job;
+  const language = extOptions.language || detectLanguage(job.body || job.title);
+  const candidateName = cvData?.contacts?.name || 'Darya Shashko';
   const cleanTitle = (job.title || 'Senior Software Engineer').trim();
   const cleanCompany = (job.company || 'your team').trim();
+
+  const rawCustom = sanitizeHookText(extOptions.customText || extOptions.llmText);
+  if (rawCustom) {
+    const customWordCount = countWords(rawCustom);
+    const customStops = findStopWords(rawCustom);
+    if (customWordCount >= 45 && customWordCount <= 95 && customStops.length === 0) {
+      return {
+        text: rawCustom,
+        wordCount: customWordCount,
+        language,
+        isValid: true,
+        validationErrors: [],
+      };
+    }
+  }
+
+  const rankedAchievements = selectAchievementBullets(
+    cvData,
+    {
+      title: cleanTitle,
+      body: job.body || '',
+      tags: job.tags,
+    },
+    language,
+    extOptions.rankedBulletIds
+  );
+
+  const customHook = sanitizeHookText(extOptions.pitchHook);
+  const topAchievementText = customHook || rankedAchievements[0]?.text || '';
+  const conciseWin = topAchievementText
+    ? topAchievementText.split(/(?<=[.!?])\s+/)[0]
+    : language === 'pl'
+    ? 'Przeprowadziłam migrację kluczowego backendu do Node.js i PostgreSQL oraz wdrożyłam architekturę mikrofrontendów.'
+    : 'Led enterprise backend migrations to Node.js and PostgreSQL and delivered shared React UI architectures.';
 
   let text: string;
 
   if (language === 'pl') {
-    const greeting = options.contactName ? `Dzień dobry ${options.contactName},` : 'Dzień dobry,';
+    const greeting = extOptions.contactName ? `Dzień dobry ${extOptions.contactName},` : 'Dzień dobry,';
     text = `${greeting}
 
-Zauważyłam ofertę na stanowisko ${cleanTitle} w ${cleanCompany}. Od ponad 8 lat tworzę skalowalne aplikacje w TypeScript, React i Node.js, łącząc programowanie z prowadzeniem zespołów inżynierskich. Ostatnio zoptymalizowałam koszty chmurowe o 15% oraz wdrożyłam architekturę mikrofrontendów z wysoką dostępnością.
+Zauważyłam ofertę na stanowisko ${cleanTitle} w ${cleanCompany}. Od ponad 8 lat tworzę skalowalne aplikacje w TypeScript, React i Node.js, łącząc programowanie z prowadzeniem zespołów inżynierskich. ${conciseWin}
 
-Mieszkam w Trójmieście (obywatelstwo UE, B2B/UoP). W załączeniu przesyłam moje CV — chętnie porozmawiam podczas 10-minutowej rozmowy wstępnej.
+Mieszkam w Trójmieście (pełne prawo do pracy w UE, B2B/UoP). W załączeniu przesyłam dopasowane CV — chętnie porozmawiam podczas 10-minutowej rozmowy wstępnej.
 
 Pozdrawiam,
 ${candidateName}`;
   } else {
-    const greeting = options.contactName ? `Hi ${options.contactName},` : 'Hi there,';
+    const greeting = extOptions.contactName ? `Hi ${extOptions.contactName},` : 'Hi there,';
     text = `${greeting}
 
-Saw your ${cleanTitle} opening at ${cleanCompany}. With 8+ years building enterprise TypeScript, React, and Node.js systems, I lead technical teams and design resilient cloud architectures. Recently, I cut cloud infrastructure costs by 15% and delivered scalable microservices with zero downtime.
+Saw your ${cleanTitle} opening at ${cleanCompany}. With 8+ years building production TypeScript, React, and Node.js systems, I combine hands-on full-stack architecture with technical stream leadership. ${conciseWin}
 
-Based in Poland (EU citizen, B2B/UoP ready). Attached is my tailored ATS CV — would love to connect for a quick 10-minute intro chat!
+Based in Poland (permanent EU work authorization, B2B/UoP ready). Attached is my tailored ATS CV — would love to connect for a quick 10-minute intro chat!
 
 Best,
 ${candidateName}`;

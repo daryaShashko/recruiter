@@ -24,13 +24,17 @@ import {
   CandidateBullet,
   RenderCvResult,
   CoverLetterResult,
+  LinkedInPitchResult,
   EmailPackage,
 } from './types';
 import { loadCandidateCvData } from './notion-loader';
 import { preRankBullets } from './pre-ranker';
-import { assembleExperienceBullets } from './bullet-assembler';
+import {
+  assembleExperienceBullets,
+  DEFAULT_CV_BULLET_LIMIT,
+} from './bullet-assembler';
 import { renderCvToPdf } from './cv-renderer';
-import { generateCoverLetter } from './cover-letter';
+import { generateCoverLetter, generateLinkedInPitch } from './cover-letter';
 import {
   buildEmailPackage,
   saveEmailPackage,
@@ -48,9 +52,15 @@ export interface CliOptions {
   cvOnly?: boolean;
   letterOnly?: boolean;
   pageLimit?: 1 | 2;
+  bulletLimit?: number;
   validateAttachmentExists?: boolean;
   candidateName?: string;
   fallbackEmail?: string;
+  contactName?: string;
+  pitchHook?: string;
+  tasksSummary?: string[];
+  customCoverLetter?: string;
+  customPitch?: string;
 }
 
 export interface CliRunResult {
@@ -61,13 +71,16 @@ export interface CliRunResult {
   artifacts: {
     cvPdf?: string;
     coverLetter?: string;
+    pitch?: string;
     emailPackage?: string;
   };
   pdfPath?: string;
   coverLetterPath?: string;
+  pitchPath?: string;
   emailPackagePath?: string;
   manifestPath?: string;
   emailPackage?: EmailPackage;
+  selectedBulletIds?: string[];
   error?: string;
 }
 
@@ -318,19 +331,18 @@ export function loadMockJob(jobArg?: string | JobOffer | Record<string, unknown>
 }
 
 /**
- * Main application runner: coordinates generation of ATS CV, Cover Letter, and Email Package.
+ * Main application runner: coordinates generation of tailored ATS CV, Cover Letter,
+ * copy-ready Pitch (`pitch.txt`), and Web-Form / Email Application Package.
  */
 export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
   const dryRun = options.dryRun !== undefined ? Boolean(options.dryRun) : true;
-  if (!dryRun) {
-    throw new Error('Live email sending is not yet implemented. Only --dry-run is currently supported.');
-  }
 
   let target: 'all' | 'cv' | 'letter' = options.target || 'all';
   if (options.cvOnly) target = 'cv';
   if (options.letterOnly) target = 'letter';
 
   const job = loadMockJob(options.job);
+  const jobRecord = job as unknown as Record<string, unknown>;
   const companySlug = slugify(job.company);
   const jobSlug = slugify(job.title);
   const applicationSlug = `${companySlug}-${jobSlug}`;
@@ -342,19 +354,14 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
     fs.mkdirSync(applicationDir, { recursive: true });
   }
 
-  console.log(`[cli] Running Application Generator in dry-run mode...`);
+  console.log(`[cli] Running Application Generator (${dryRun ? 'dry-run' : 'web-form package'} mode)...`);
   console.log(`[cli] Target: ${target} | Company: ${job.company} | Role: ${job.title}`);
   console.log(`[cli] Output Directory: ${applicationDir}`);
 
-  // 1. Load Candidate CV Data (100% offline fallback)
+  // 1. Load Candidate CV Data (unified snapshot with 100% offline fallback)
   const cvData: CandidateCvData = await loadCandidateCvData(true);
 
-  // 2. Pre-rank bullets deterministically
-  const ranked = preRankBullets(cvData.bullets, job.title, job.body, job.tags);
-  const rankedIds = ranked.map((r) => r.bulletId);
-
-  // 3. Assemble verbatim experience bullets from Master CV
-  // Exclude metadata/stack-summary sections already represented in Professional Summary & Technical Skills
+  // 2. Filter out metadata sections and pre-rank experience bullets deterministically with limit
   const excludedCvSections = new Set([
     'Role & Summary',
     'Primary Stack',
@@ -368,32 +375,57 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
   const effectiveSourceBullets =
     experienceSourceBullets.length > 0 ? experienceSourceBullets : cvData.bullets;
 
+  const bulletLimit = options.bulletLimit ?? DEFAULT_CV_BULLET_LIMIT;
+  const ranked = preRankBullets(
+    effectiveSourceBullets,
+    job.title,
+    job.body,
+    job.tags,
+    { limit: bulletLimit }
+  );
+  const rankedIds = ranked.map((r) => r.bulletId);
+  const matchedTags = Array.from(new Set(ranked.flatMap((r) => r.matchedTags)));
+
+  // 3. Assemble verbatim experience bullets preserving real pre-ranker relevance order & limit
   const selectedBullets: CandidateBullet[] = assembleExperienceBullets(
     rankedIds,
     effectiveSourceBullets,
-    { sortByCvOrder: true, fallbackToAllIfEmpty: true }
+    { sortByCvOrder: false, fallbackToAllIfEmpty: true, limit: bulletLimit }
   );
 
-  const artifacts: { cvPdf?: string; coverLetter?: string; emailPackage?: string } = {};
+  const artifacts: {
+    cvPdf?: string;
+    coverLetter?: string;
+    pitch?: string;
+    emailPackage?: string;
+  } = {};
   const language = options.language || options.lang;
 
-  // 4. Render ATS CV PDF
+  // 4. Render Tailored ATS CV PDF
   if (target === 'all' || target === 'cv') {
     const pdfPath = path.join(applicationDir, 'cv.pdf');
-    console.log(`[cli] Rendering ATS CV to vector PDF: ${pdfPath}...`);
+    console.log(`[cli] Rendering tailored ATS CV to vector PDF: ${pdfPath}...`);
     const cvResult: RenderCvResult = await renderCvToPdf(cvData, selectedBullets, {
       outputPath: pdfPath,
       language,
       pageLimit: options.pageLimit ?? 2,
+      job: {
+        title: job.title,
+        company: job.company,
+        body: job.body,
+        tags: job.tags,
+        matchedTags,
+      },
     });
     artifacts.cvPdf = cvResult.pdfPath;
     console.log(`[cli] CV PDF rendered successfully (${cvResult.pageCount} page(s), ${cvResult.bufferSize} bytes).`);
   }
 
-  // 5. Generate Tailored Cover Letter
+  // 5. Generate Tailored Cover Letter & Web-Form Pitch
   let letterResult: CoverLetterResult | undefined;
+  let pitchResult: LinkedInPitchResult | undefined;
   if (target === 'all' || target === 'letter') {
-    console.log(`[cli] Generating EU/Poland tailored Cover Letter...`);
+    console.log(`[cli] Generating tailored Cover Letter and Web-Form Pitch...`);
     letterResult = generateCoverLetter(cvData, {
       job: {
         title: job.title,
@@ -402,6 +434,10 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
         tags: job.tags,
       },
       language,
+      rankedBulletIds: rankedIds,
+      pitchHook: options.pitchHook,
+      tasksSummary: options.tasksSummary,
+      customText: options.customCoverLetter,
     });
     if (letterResult && !letterResult.isValid) {
       throw new Error(`Cover Letter validation failed: ${letterResult.validationErrors.join('; ')}`);
@@ -409,31 +445,59 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
     const letterPath = path.join(applicationDir, 'cover_letter.txt');
     fs.writeFileSync(letterPath, letterResult.text, 'utf-8');
     artifacts.coverLetter = letterPath;
-    console.log(`[cli] Cover letter generated successfully (${letterResult.wordCount} words, language: ${letterResult.language}).`);
+
+    pitchResult = generateLinkedInPitch(cvData, {
+      job: {
+        title: job.title,
+        company: job.company,
+        body: job.body,
+        tags: job.tags,
+      },
+      language: letterResult.language,
+      contactName: options.contactName,
+      rankedBulletIds: rankedIds,
+      pitchHook: options.pitchHook,
+      tasksSummary: options.tasksSummary,
+      customText: options.customPitch,
+    });
+    const pitchPath = path.join(applicationDir, 'pitch.txt');
+    fs.writeFileSync(pitchPath, pitchResult.text, 'utf-8');
+    artifacts.pitch = pitchPath;
+
+    console.log(
+      `[cli] Cover letter (${letterResult.wordCount} words) & pitch (${pitchResult.wordCount} words) generated successfully (language: ${letterResult.language}).`
+    );
   }
 
   let emailPkg: EmailPackage | undefined;
 
-  // 6. Build and Save Email Package Manifest
+  // 6. Build and Save Web-Form / Email Application Package Manifest
   if (target === 'all') {
     if (!artifacts.cvPdf || !letterResult) {
-      throw new Error('Both CV PDF and Cover Letter are required to build the Email Package.');
+      throw new Error('Both CV PDF and Cover Letter are required to build the Application Package.');
     }
 
-    console.log(`[cli] Assembling Email Apply package manifest...`);
+    console.log(`[cli] Assembling web-form application package manifest...`);
+    const jobEmail = typeof jobRecord.email === 'string' ? jobRecord.email : undefined;
+    const jobApplyUrl =
+      typeof jobRecord.applyUrl === 'string' ? jobRecord.applyUrl : job.url;
+
     const emailJobInput = {
       title: job.title,
       company: job.company,
-      email: (job as any).email,
-      applyUrl: (job as any).applyUrl || job.url,
+      email: jobEmail,
+      applyUrl: jobApplyUrl,
       url: job.url,
     };
 
     emailPkg = buildEmailPackage({
       job: emailJobInput,
       coverLetter: letterResult.text,
+      pitch: pitchResult?.text,
       pdfPath: artifacts.cvPdf,
-      dryRun: true,
+      pitchPath: artifacts.pitch,
+      coverLetterPath: artifacts.coverLetter,
+      dryRun,
       candidateName: options.candidateName,
       fallbackEmail: options.fallbackEmail,
       validateAttachmentExists: options.validateAttachmentExists !== false,
@@ -441,10 +505,10 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
 
     const manifestPath = saveEmailPackage(emailPkg, applicationDir, DEFAULT_MANIFEST_FILENAME);
     artifacts.emailPackage = manifestPath;
-    console.log(`[cli] Email package saved to manifest: ${manifestPath}`);
+    console.log(`[cli] Application package saved to manifest: ${manifestPath}`);
   }
 
-  console.log(`[cli] Dry-run completed successfully with 0 network calls.`);
+  console.log(`[cli] Application bundle ready in ${applicationDir} with 0 network calls.`);
 
   return {
     success: true,
@@ -454,9 +518,11 @@ export async function runCli(options: CliOptions = {}): Promise<CliRunResult> {
     artifacts,
     pdfPath: artifacts.cvPdf,
     coverLetterPath: artifacts.coverLetter,
+    pitchPath: artifacts.pitch,
     manifestPath: artifacts.emailPackage,
     emailPackagePath: artifacts.emailPackage,
     emailPackage: emailPkg,
+    selectedBulletIds: selectedBullets.map((b) => b.slug || b.id),
   };
 }
 

@@ -51,7 +51,6 @@ export const DEFAULT_SKILLS_MATRIX: Record<string, string[]> = {
     'React',
     'Next.js',
     'NestJS',
-    'Python',
   ],
   'State & Databases': [
     'PostgreSQL',
@@ -104,29 +103,29 @@ export const CV_SLUGS: Record<number, string> = {
   12: 'cv-ach-mobile',
 };
 
-// ── Default Master CV Bullets (Seed Rows from Notion DB) ─────────────────────
+// ── Default Master CV Bullets (Synchronized with n8n/evaluator/notion-profile.ts) ──
 
 export const DEFAULT_CV_BULLETS: CandidateBullet[] = [
   {
     id: 'cv-role-summary',
     slug: 'cv-role-summary',
-    title: 'Senior Full-Stack & Product Engineer | Tech Stream Lead',
+    title: 'Senior Forward Deployed & Full-Stack Engineer | Team Lead (Frontend & Full-Stack)',
     section: 'Role & Summary',
     order: 1,
     highlight:
-      'Senior Full-Stack & Product Engineer with 10 years of commercial experience in the JS/TS ecosystem, combining deep React/Next.js frontend expertise with scalable Node.js/NestJS and Python backend delivery. Proven track record of leading technical streams (up to 6 engineers), driving Frontend-to-Full-Stack team transitions, and executing complex legacy migrations (Java/MySQL to Node.js/PostgreSQL). Experienced in AI-native product engineering, multi-agent development workflows, and resolving critical stakeholder escalations through structured architecture and shared UI systems.',
-    tags: ['TypeScript', 'React', 'Node.js', 'Next.js', 'NestJS', 'Python', 'Architecture'],
+      'Senior Forward Deployed & Full-Stack Engineer with 10 years of commercial experience in the JS/TS ecosystem (React, Next.js, Node.js, NestJS). Operates as a Product / Forward Deployed Engineer with spec-driven delivery (PRD, ADR, feature files, tests, ticket slicing, and implementation). Proven track record of leading technical streams (up to 6 engineers), driving Frontend-to-Full-Stack team transitions, and executing complex legacy migrations (Java/MySQL to Node.js/PostgreSQL).',
+    tags: ['TypeScript', 'React', 'Node.js', 'Next.js', 'NestJS', 'Forward Deployed', 'Product Engineer', 'Team Lead', 'Architecture'],
     period: 'Core Profile',
   },
   {
     id: 'cv-recent-6m',
     slug: 'cv-recent-6m',
-    title: 'FinTech Investment Platform / EPAM Systems — Senior Product Engineer & UI Stream Lead',
+    title: 'FinTech Investment Platform / EPAM Systems — Forward Deployed Engineer & UI Stream Lead',
     section: 'Recent Experience (Last 6m)',
     order: 2,
     highlight:
-      'Operate as a Product / Forward-Deployed Engineer on an AI-integrated investment platform (TypeScript, React, Python, AI stack), owning ambiguous feature scopes end-to-end from direct customer discovery to production release. Stepped in to lead a 6-engineer technical stream following a critical customer design-alignment escalation; partnered with the Chief Designer to architect and deliver a Shared UI Component Library that unblocked parallel feature teams, while leading backlog slicing, refinement, and sprint demos.',
-    tags: ['TypeScript', 'React', 'Python', 'Node.js', 'GenAI', 'Team Lead', 'Architecture'],
+      'Operate as a Product / Forward Deployed Engineer on an AI-integrated investment platform (TypeScript, React, Node.js, AI tooling), owning ambiguous feature scopes end-to-end from customer discovery, PRD, and ADR to feature files, tests, ticket slicing, and production release. Stepped in to lead a 6-engineer technical stream following a customer design escalation; partnered with Chief Designer to architect and deliver a Shared UI Component Library, while leading backlog slicing and sprint demos.',
+    tags: ['TypeScript', 'React', 'Node.js', 'GenAI', 'Forward Deployed', 'Product Engineer', 'Team Lead', 'Architecture'],
     period: 'July 2026 – Present',
   },
   {
@@ -136,8 +135,8 @@ export const DEFAULT_CV_BULLETS: CandidateBullet[] = [
     section: 'Primary Stack',
     order: 3,
     highlight:
-      'JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, Python (working knowledge), HTML5, CSS3, SCSS.',
-    tags: ['JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'NestJS', 'PostgreSQL', 'Python'],
+      'JavaScript, TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, HTML5, CSS3, SCSS.',
+    tags: ['JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'NestJS', 'PostgreSQL'],
     period: 'Daily Production',
   },
   {
@@ -169,7 +168,7 @@ export const DEFAULT_CV_BULLETS: CandidateBullet[] = [
     section: 'Languages',
     order: 6,
     highlight:
-      'English: Professional (fluent reading/writing, professional speaking). Russian: Native. Polish: Intermediate (job postings in Polish are acceptable, but fluent spoken Polish must NOT be a hard requirement).',
+      'English: Professional (fluent reading/writing, professional speaking). Russian: Native. Polish: Intermediate.',
     tags: ['English B2/C1', 'Russian Native', 'Polish B1'],
     period: 'Current',
   },
@@ -180,19 +179,19 @@ export const DEFAULT_CV_BULLETS: CandidateBullet[] = [
     section: 'Target Role & Leadership',
     order: 7,
     highlight:
-      'Ideal role is Full-Stack (50/50 to 70/30 in favor of Frontend), Product Engineer, or Node.js/TS Backend-heavy where Senior JS/TS skills apply. Leverage elite Frontend & UI architecture expertise while actively contributing to Node.js/NestJS/Python backend & AI engineering.',
-    tags: ['Full-Stack', 'Frontend', 'Backend', 'Node.js', 'React'],
+      'Ideal role is Forward Deployed Engineer, Product Engineer, Team Lead (Frontend/Full-Stack), or Full-Stack (50/50 to 70/30 in favor of Frontend) in JS/TS ecosystem. Leverage elite Frontend & UI architecture expertise combined with Node.js/NestJS backend delivery.',
+    tags: ['Forward Deployed', 'Product Engineer', 'Full-Stack', 'Frontend', 'Backend', 'Node.js', 'React'],
     period: 'Target Role',
   },
   {
     id: 'cv-leadership',
     slug: 'cv-leadership',
-    title: 'Leadership, Management & Hands-On Ratio (Tech Lead / Team Lead)',
+    title: 'Leadership, Management & Hands-On Ratio (Team Lead / FDE)',
     section: 'Target Role & Leadership',
     order: 8,
     highlight:
-      'Strong communication and stakeholder management skills; actively leads technical streams (up to 6 engineers), customer demos, and escalations (Tech Lead / Team Lead / Product Engineer roles). Preferred hands-on coding ratio is 50% to 70% (NO 100% people management without coding, and NO zero-impact pure coder role).',
-    tags: ['Tech Lead', 'Team Lead', 'Architecture', 'Mentoring'],
+      'Strong communication and team leadership skills; experienced Team Lead for Frontend and Full-Stack teams (up to 6 engineers), running PRD/ADR workflows, 1:1s, code reviews, and stakeholder alignment. Preferred hands-on coding ratio is 50% to 70% in established frameworks.',
+    tags: ['Team Lead', 'Tech Lead', 'Forward Deployed', 'Product Engineer', 'Architecture', 'Mentoring'],
     period: 'Target Role',
   },
   {
@@ -248,7 +247,7 @@ export const DEFAULT_FALLBACK_BULLETS = DEFAULT_CV_BULLETS;
 export const DEFAULT_CANDIDATE_CV_DATA: CandidateCvData = {
   contacts: DEFAULT_CANDIDATE_CONTACTS,
   summary:
-    'Senior Full-Stack & Product Engineer with 10 years of commercial experience in the JS/TS ecosystem, combining deep React/Next.js frontend expertise with scalable Node.js/NestJS and Python backend delivery. Proven track record of leading technical streams (up to 6 engineers), driving Frontend-to-Full-Stack team transitions, and executing complex legacy migrations (Java/MySQL to Node.js/PostgreSQL). Experienced in AI-native product engineering, multi-agent development workflows, and resolving critical stakeholder escalations through structured architecture and shared UI systems. Based in Gdańsk, Poland; eligible for B2B JDG / UoP.',
+    'Senior Forward Deployed & Full-Stack Engineer with 10 years of commercial experience in the JS/TS ecosystem, combining deep React/Next.js frontend expertise with scalable Node.js/NestJS backend delivery. Proven track record of leading technical streams (up to 6 engineers), driving Frontend-to-Full-Stack team transitions, and executing complex legacy migrations (Java/MySQL to Node.js/PostgreSQL). Experienced in AI-native product engineering, spec-driven multi-agent development workflows, and resolving critical stakeholder escalations through structured architecture and shared UI systems. Based in Gdańsk, Poland; eligible for B2B JDG / UoP.',
   bullets: DEFAULT_CV_BULLETS,
   skills: DEFAULT_SKILLS_MATRIX,
   rodoClause: DEFAULT_RODO_CLAUSE,
@@ -303,6 +302,34 @@ function extractNumber(prop: unknown, fallback: number): number {
 }
 
 /**
+ * Strips internal evaluator negative guardrails (e.g. "no Java, Python, C#, or Go")
+ * and ensures strictly JS/TS/Node.js/React/NestJS/AWS employer-facing profile text.
+ */
+export function sanitizeProfileHighlightText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\s*Strictly\s+works\s+with\s+JavaScript,\s*TypeScript,\s*and\s*Node\.js\s*\(no\s+[^)]*\)\.?/gi, '')
+    .replace(/\s*Strictly\s+JavaScript\/TypeScript\s+ecosystem\s+only\s*\(no\s+[^)]*\)\.?/gi, '')
+    .replace(/\s*No\s+non-JS\s+backends\s*\(no\s+[^)]*\)\.?/gi, '')
+    .replace(/\s*Not\s+seeking\s+roles\s+setting\s+up\s+infrastructure\s+or\s+DevOps\s+from\s+scratch\.?/gi, '')
+    .replace(/\s*\(job\s+postings\s+in\s+Polish\s+are\s+acceptable,\s*but\s+fluent\s+spoken\s+Polish\s+must\s+NOT\s+be\s+a\s+hard\s+requirement\)/gi, '')
+    .replace(/\s*\(NO\s+greenfield\s+DevOps\s*\/\s*infra\s+from\s+scratch,\s*and\s+NO\s+100%\s+pure\s+people\s+management\s+without\s+code\)/gi, '')
+    .replace(/\s*\(no\s+(?:Java,\s*Python|Python,\s*Java)[^)]*\)/gi, '')
+    .replace(/\s*,\s*Python\s*\(working\s+knowledge\)/gi, '')
+    .replace(/\s+and\s+Python\b/gi, '')
+    .replace(/\/Python\b/gi, '')
+    .replace(/\s*,\s*Python\b/gi, '')
+    .trim();
+}
+
+export function sanitizeProfileTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    .filter((t) => !/^python$/i.test(t.trim()));
+}
+
+/**
  * Fetch active rows directly from the Notion Candidate CV database.
  */
 export async function fetchNotionCandidateData(
@@ -350,15 +377,15 @@ export async function fetchNotionCandidateData(
       slug,
       title: extractTitle(p['Title']),
       section: extractSelect(p['Section'], 'Role & Summary'),
-      highlight: extractRichText(p['Highlight / Summary']),
-      tags: extractMultiSelect(p['Tech Tags']),
+      highlight: sanitizeProfileHighlightText(extractRichText(p['Highlight / Summary'])),
+      tags: sanitizeProfileTags(extractMultiSelect(p['Tech Tags'])),
       period: extractRichText(p['Period']),
       order,
     };
   });
 
   const summaryRow = bullets.find((b) => b.section === 'Role & Summary');
-  const rawSummary = summaryRow?.highlight || '';
+  const rawSummary = sanitizeProfileHighlightText(summaryRow?.highlight || '');
   const summary =
     rawSummary && !/strictly\s+no\s+junior/i.test(rawSummary)
       ? rawSummary
@@ -380,6 +407,7 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
 
   const candidate = parsed as Partial<CandidateCvData> & {
     cvEntries?: RawCvEntrySnapshot[];
+    rawCv?: RawCvEntrySnapshot[];
   };
 
   // Case A: Directly valid CandidateCvData object with bullets array
@@ -390,7 +418,7 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
     if (validBullets.length > 0) {
       return {
         contacts: { ...DEFAULT_CANDIDATE_CONTACTS, ...candidate.contacts },
-        summary: candidate.summary || DEFAULT_CANDIDATE_CV_DATA.summary,
+        summary: sanitizeProfileHighlightText(candidate.summary || DEFAULT_CANDIDATE_CV_DATA.summary),
         bullets: validBullets.map((b, idx) => {
           const order = typeof b.order === 'number' ? b.order : idx + 1;
           const slug = b.slug || CV_SLUGS[order];
@@ -399,8 +427,8 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
             slug,
             title: b.title || '',
             section: b.section || 'Experience',
-            highlight: b.highlight || '',
-            tags: Array.isArray(b.tags) ? b.tags : [],
+            highlight: sanitizeProfileHighlightText(b.highlight || ''),
+            tags: sanitizeProfileTags(b.tags),
             period: b.period,
             order,
           };
@@ -411,17 +439,27 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
     }
   }
 
-  // Case B: Array of CvEntry / RawCvEntrySnapshot (from .notion-snapshot.json or raw array)
-  const entries: RawCvEntrySnapshot[] = Array.isArray(parsed)
-    ? (parsed as RawCvEntrySnapshot[])
+  // Case B: Array of CvEntry / RawCvEntrySnapshot (from n8n/prompts/.notion-snapshot.json or raw array)
+  const rawEntries: unknown[] = Array.isArray(parsed)
+    ? parsed
     : Array.isArray(candidate.cvEntries)
     ? candidate.cvEntries
+    : Array.isArray(candidate.rawCv)
+    ? candidate.rawCv
     : [];
+
+  const entries: RawCvEntrySnapshot[] = rawEntries.filter(
+    (e): e is RawCvEntrySnapshot => Boolean(e && typeof e === 'object')
+  );
 
   if (entries.length > 0) {
     const activeEntries = entries
       .filter((e) => e.active !== false)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    if (activeEntries.length === 0) {
+      return null;
+    }
 
     const bullets: CandidateBullet[] = activeEntries.map((e, idx) => {
       const order = typeof e.order === 'number' ? e.order : idx + 1;
@@ -431,15 +469,15 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
         slug,
         title: e.title || '',
         section: e.section || 'Experience',
-        highlight: e.highlight || '',
-        tags: Array.isArray(e.tags) ? e.tags : [],
+        highlight: sanitizeProfileHighlightText(e.highlight || ''),
+        tags: sanitizeProfileTags(e.tags),
         period: e.period,
         order,
       };
     });
 
     const summaryEntry = activeEntries.find((e) => e.section === 'Role & Summary');
-    const rawSummary = summaryEntry?.highlight || '';
+    const rawSummary = sanitizeProfileHighlightText(summaryEntry?.highlight || '');
     const summary =
       rawSummary && !/strictly\s+no\s+junior/i.test(rawSummary)
         ? rawSummary
@@ -457,11 +495,29 @@ export function normalizeSnapshotData(parsed: unknown): CandidateCvData | null {
   return null;
 }
 
+/**
+ * Resolves candidate paths for the unified Notion snapshot `n8n/prompts/.notion-snapshot.json`.
+ */
+export function resolveUnifiedSnapshotPaths(customPath?: string): string[] {
+  if (customPath) {
+    return [customPath];
+  }
+  return [
+    path.resolve(process.cwd(), 'n8n/prompts/.notion-snapshot.json'),
+    path.resolve(process.cwd(), '../n8n/prompts/.notion-snapshot.json'),
+    path.resolve(process.cwd(), '.notion-snapshot.json'),
+    path.resolve(__dirname, '../../../n8n/prompts/.notion-snapshot.json'),
+    path.resolve(__dirname, '../../n8n/prompts/.notion-snapshot.json'),
+    path.resolve(__dirname, '../../.notion-snapshot.json'),
+  ];
+}
+
 // ── Main Entrypoint: loadCandidateCvData ─────────────────────────────────────
 
 /**
  * Load Candidate CV Data preserving Notion as the sole source of truth,
- * with graceful offline fallback to local snapshot and built-in seed dataset.
+ * reading from the unified `n8n/prompts/.notion-snapshot.json` snapshot when available,
+ * and falling back 100% deterministically to the synchronized no-Python seed dataset.
  *
  * @param offlineOnly - If true, skips network requests to Notion entirely.
  * @param options - Optional loader configuration (custom tokens, DB IDs, snapshot path).
@@ -494,15 +550,8 @@ export async function loadCandidateCvData(
     }
   }
 
-  // 2. Local Snapshot Resolution
-  const candidateSnapshotPaths: string[] = [
-    options?.snapshotPath,
-    path.resolve(process.cwd(), 'n8n/prompts/.notion-snapshot.json'),
-    path.resolve(process.cwd(), '.notion-snapshot.json'),
-    path.resolve(__dirname, '../../../n8n/prompts/.notion-snapshot.json'),
-    path.resolve(__dirname, '../../n8n/prompts/.notion-snapshot.json'),
-    path.resolve(__dirname, '../../.notion-snapshot.json'),
-  ].filter(Boolean) as string[];
+  // 2. Unified Local Snapshot Resolution (`n8n/prompts/.notion-snapshot.json`)
+  const candidateSnapshotPaths = resolveUnifiedSnapshotPaths(options?.snapshotPath);
 
   for (const snapshotPath of candidateSnapshotPaths) {
     if (fs.existsSync(snapshotPath)) {

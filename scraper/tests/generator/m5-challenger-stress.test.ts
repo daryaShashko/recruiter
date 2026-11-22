@@ -323,10 +323,13 @@ describe('Empirical Challenger Tier 5: White-Box Adversarial Coverage Hardening 
       expect(unknown.id).toBe(DEFAULT_MOCK_JOB.id);
     });
 
-    test('1.8 runCli rejects live sends (dryRun: false) to prevent unauthorized network delivery', async () => {
-      await expect(runCli({ dryRun: false })).rejects.toThrow(
-        'Live email sending is not yet implemented. Only --dry-run is currently supported.'
-      );
+    test('1.8 runCli succeeds with dryRun: false and produces copy-ready web-form bundle without dead email blocker', async () => {
+      const res = await runCli({ dryRun: false, outDir: tempDir, target: 'letter' });
+      expect(res.success).toBe(true);
+      expect(res.artifacts.coverLetter).toBeDefined();
+      expect(res.artifacts.pitch).toBeDefined();
+      expect(fs.existsSync(res.artifacts.coverLetter!)).toBe(true);
+      expect(fs.existsSync(res.artifacts.pitch!)).toBe(true);
     });
   });
 
