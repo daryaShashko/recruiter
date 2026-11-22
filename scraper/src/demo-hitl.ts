@@ -114,6 +114,7 @@ async function runDemo() {
     job: {
       title: sampleOffer.title,
       company: sampleOffer.company,
+      url: sampleOffer.url,
       body: sampleOffer.reason,
       tags: ['TypeScript', 'React', 'Node.js'],
     },
@@ -125,9 +126,15 @@ async function runDemo() {
 
   console.log(`\n2. Текстовое сообщение в тред Telegram:`);
   console.log(appPackage.telegramMessages.textMessageHtml);
+  console.log('   Кнопки доставки:');
+  appPackage.replyMarkup.inline_keyboard.forEach((row, i) => {
+    console.log(`     Ряд ${i + 1}: ` + row.map((b) => `[ ${b.text} (${b.callback_data || b.url}) ]`).join(' '));
+  });
 
-  console.log(`\n3. Обновление статуса в Notion:`);
-  console.log('   Payload:', JSON.stringify(appPackage.notionStatusPatch));
+  console.log(`\n3. Отложенное обновление статуса в Notion (по клику «✅ Я отправила отклик»):`);
+  console.log('   Payload при превью (app:):', JSON.stringify(appPackage.notionStatusPatch));
+  const appliedPatch = buildEvaluationLogFeedbackPatch('applied');
+  console.log('   Payload после отправки (applied:):', JSON.stringify(appliedPatch));
 
   console.log('\n✅ Слайс 3 проверен: CV PDF, LinkedIn-питч, Cover Letter и статус Applied работают.');
   console.log(divider + '\n');

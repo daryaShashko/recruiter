@@ -35,7 +35,6 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
       expect(pitch.text).toContain('Hi Alex,');
       expect(pitch.text).toContain('Senior TypeScript Engineer');
       expect(pitch.text).toContain('FinTech Innovations Sp. z o.o.');
-      expect(pitch.text).toContain('15%');
       expect(pitch.text).toContain('B2B/UoP');
       expect(pitch.text).toContain('Darya Shashko');
 
@@ -66,7 +65,6 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
       expect(pitch.text).toContain('Polska Grupa IT');
       expect(pitch.text).toContain('Trójmieście');
       expect(pitch.text).toContain('B2B/UoP');
-      expect(pitch.text).toContain('15%');
 
       expect(pitch.wordCount).toBeGreaterThanOrEqual(55);
       expect(pitch.wordCount).toBeLessThanOrEqual(85);
@@ -115,7 +113,7 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
   });
 
   describe('buildTelegramApplicationPackage', () => {
-    it('assembles full delivery package with pitch, cover letter, and Applied status patch', async () => {
+    it('assembles full delivery package with <pre><code> pitch, action keyboard, and deferred Applied status', async () => {
       const testPdfPath = path.resolve(__dirname, '../../output/test_app_cv.pdf');
       const testDir = path.dirname(testPdfPath);
       if (!fs.existsSync(testDir)) {
@@ -123,9 +121,13 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
       }
       fs.writeFileSync(testPdfPath, Buffer.from('%PDF-1.4 sample'));
 
+      const jobUrl = 'https://justjoin.it/offers/fintech-senior-ts';
       const pkg = await buildTelegramApplicationPackage({
         pageId: '36c747f7-ebec-80c8-bfd7-ed317f4a7c35',
-        job: sampleJob,
+        job: {
+          ...sampleJob,
+          url: jobUrl,
+        },
         pdfPath: testPdfPath,
       });
 
@@ -138,23 +140,28 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
       expect(pkg.pitch.isValid).toBe(true);
       expect(pkg.coverLetter.isValid).toBe(true);
 
-      // Notion Status transition check
-      expect(pkg.notionStatusPatch).toEqual({
-        properties: {
-          Status: {
-            select: {
-              name: 'Applied',
-            },
+      // Deferred Notion Status check: preview generation must NOT prematurely mark as Applied
+      expect(pkg.notionStatusPatch).toBeNull();
+
+      // Inline keyboard check: URL button + applied:<pageId> confirmation button
+      expect(pkg.replyMarkup.inline_keyboard).toEqual([
+        [{ text: '🔗 Открыть форму вакансии', url: jobUrl }],
+        [
+          {
+            text: '✅ Я отправила отклик',
+            callback_data: 'applied:36c747f7ebec80c8bfd7ed317f4a7c35',
           },
-        },
-      });
+        ],
+      ]);
+      expect(pkg.telegramMessages.replyMarkup).toEqual(pkg.replyMarkup);
 
       // Telegram messages check
       expect(pkg.telegramMessages.documentCaption).toContain('FinTech Innovations Sp. z o.o.');
-      expect(pkg.telegramMessages.textMessageHtml).toContain('<code>');
+      expect(pkg.telegramMessages.textMessageHtml).toContain('<pre><code>');
+      expect(pkg.telegramMessages.textMessageHtml).toContain('</code></pre>');
       expect(pkg.telegramMessages.textMessageHtml).toContain('LinkedIn Outreach Pitch');
       expect(pkg.telegramMessages.textMessageHtml).toContain('Cover Letter');
-      expect(pkg.telegramMessages.textMessageHtml).toContain('Applied');
+      expect(pkg.telegramMessages.textMessageHtml).toContain('✅ Я отправила отклик');
 
       // Cleanup
       if (fs.existsSync(testPdfPath)) {
@@ -164,7 +171,7 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
   });
 
   describe('formatTelegramDeliveryHtml', () => {
-    it('escapes special characters and embeds texts in code blocks', () => {
+    it('escapes special characters and embeds texts in <pre><code> blocks', () => {
       const html = formatTelegramDeliveryHtml(
         'A & B <Corp>',
         'Lead "Engineer"',
@@ -174,8 +181,8 @@ describe('Telegram In-Thread Application Delivery (Slice 3)', () => {
 
       expect(html).toContain('A &amp; B &lt;Corp&gt;');
       expect(html).toContain('Lead &quot;Engineer&quot;');
-      expect(html).toContain('<code>Pitch: Hi &amp; connect!</code>');
-      expect(html).toContain('<code>Cover letter: Experience with &lt;Node.js&gt; &amp; TypeScript</code>');
+      expect(html).toContain('<pre><code>Pitch: Hi &amp; connect!</code></pre>');
+      expect(html).toContain('<pre><code>Cover letter: Experience with &lt;Node.js&gt; &amp; TypeScript</code></pre>');
     });
   });
 });

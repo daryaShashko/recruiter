@@ -1,5 +1,7 @@
 import {
+  buildApplicationDeliveryKeyboard,
   buildDismissedKeyboard,
+  buildEvaluationLogFeedbackPatch,
   buildNotionStatusUpdatePayload,
   buildPromotedKeyboard,
   buildTopic2HotMatchKeyboard,
@@ -56,11 +58,20 @@ describe('Telegram HITL Protocol & Keyboard Builders (Slice 2)', () => {
       });
     });
 
-    it('encodes apply and reject callbacks correctly', () => {
+    it('encodes apply, applied, and reject callbacks correctly', () => {
       const appCb = encodeCallback('app', sampleCompactId);
       expect(appCb).toBe(`app:${sampleCompactId}`);
       expect(parseCallbackData(appCb)).toEqual({
         action: 'app',
+        pageId: sampleCompactId,
+      });
+
+      const appliedCb = encodeCallback('applied', sampleUuid);
+      expect(appliedCb).toBe(`applied:${sampleCompactId}`);
+      expect(Buffer.byteLength(appliedCb, 'utf8')).toBe(40);
+      expect(Buffer.byteLength(appliedCb, 'utf8')).toBeLessThanOrEqual(64);
+      expect(parseCallbackData(appliedCb)).toEqual({
+        action: 'applied',
         pageId: sampleCompactId,
       });
 
@@ -101,21 +112,46 @@ describe('Telegram HITL Protocol & Keyboard Builders (Slice 2)', () => {
   describe('Keyboards Generation', () => {
     const jobUrl = 'https://justjoin.it/offers/senior-fullstack-dev';
 
-    it('builds Topic 3 review keyboard with required buttons', () => {
+    it('builds Topic 3 review keyboard with direct apply, promote, archive, and url buttons', () => {
       const kb = buildTopic3ReviewKeyboard(sampleUuid, jobUrl);
-      expect(kb.inline_keyboard).toHaveLength(2);
+      expect(kb.inline_keyboard).toHaveLength(3);
 
-      // Row 1: [ 👍 Берём в Hot Match ] and [ 👎 В архив ]
-      expect(kb.inline_keyboard[0]).toHaveLength(2);
-      expect(kb.inline_keyboard[0][0].text).toContain('👍 Берём в Hot Match');
-      expect(kb.inline_keyboard[0][0].callback_data).toBe(`prm:${sampleCompactId}`);
-      expect(kb.inline_keyboard[0][1].text).toContain('👎 В архив');
-      expect(kb.inline_keyboard[0][1].callback_data).toBe(`dsc:${sampleCompactId}`);
+      // Row 1: [ 🚀 Подготовить отклик ] (direct apply without intermediate promote)
+      expect(kb.inline_keyboard[0]).toHaveLength(1);
+      expect(kb.inline_keyboard[0][0].text).toContain('🚀 Подготовить отклик');
+      expect(kb.inline_keyboard[0][0].callback_data).toBe(`app:${sampleCompactId}`);
 
-      // Row 2: [ 🔗 Вакансия ]
-      expect(kb.inline_keyboard[1]).toHaveLength(1);
-      expect(kb.inline_keyboard[1][0].text).toContain('🔗 Вакансия');
-      expect(kb.inline_keyboard[1][0].url).toBe(jobUrl);
+      // Row 2: [ 👍 Берём в Hot Match ] and [ 👎 В архив ] (1-click archive)
+      expect(kb.inline_keyboard[1]).toHaveLength(2);
+      expect(kb.inline_keyboard[1][0].text).toContain('👍 Берём в Hot Match');
+      expect(kb.inline_keyboard[1][0].callback_data).toBe(`prm:${sampleCompactId}`);
+      expect(kb.inline_keyboard[1][1].text).toContain('👎 В архив');
+      expect(kb.inline_keyboard[1][1].callback_data).toBe(`dsc:${sampleCompactId}`);
+
+      // Row 3: [ 🔗 Вакансия ]
+      expect(kb.inline_keyboard[2]).toHaveLength(1);
+      expect(kb.inline_keyboard[2][0].text).toContain('🔗 Вакансия');
+      expect(kb.inline_keyboard[2][0].url).toBe(jobUrl);
+    });
+
+    it('builds Application Delivery keyboard with job form URL and applied confirmation button', () => {
+      const kbWithUrl = buildApplicationDeliveryKeyboard(sampleUuid, jobUrl);
+      expect(kbWithUrl.inline_keyboard).toHaveLength(2);
+      expect(kbWithUrl.inline_keyboard[0][0]).toEqual({
+        text: '🔗 Открыть форму вакансии',
+        url: jobUrl,
+      });
+      expect(kbWithUrl.inline_keyboard[1][0]).toEqual({
+        text: '✅ Я отправила отклик',
+        callback_data: `applied:${sampleCompactId}`,
+      });
+
+      const kbWithoutUrl = buildApplicationDeliveryKeyboard(sampleUuid);
+      expect(kbWithoutUrl.inline_keyboard).toHaveLength(1);
+      expect(kbWithoutUrl.inline_keyboard[0][0]).toEqual({
+        text: '✅ Я отправила отклик',
+        callback_data: `applied:${sampleCompactId}`,
+      });
     });
 
     it('builds Topic 2 Hot Match keyboard with command post buttons', () => {
@@ -344,9 +380,28 @@ describe('Telegram HITL Protocol & Keyboard Builders (Slice 2)', () => {
       });
       expect(msg2).toContain('💵 20 000 PLN  (на руки ~15 000 PLN)');
     });
+
+    it('renders pitch_hook with HTML escaping when provided (WP-2.3)', () => {
+      const msg = formatTelegramAlertMessage({
+        title: 'Senior Node.js Engineer',
+        company: 'PayFlow Sp. z o.o.',
+        source: 'justjoin',
+        url: 'https://justjoin.it/offers/payflow-senior-node',
+        overall_score: 88,
+        project_summary: 'Платёжный шлюз для <B2B> мерчантов в ЕС.',
+        pitch_hook:
+          'Сделай упор на миграцию Java/MySQL -> Node.js/PostgreSQL и лидерство 6 инженеров в FinTech & AI.',
+        isHotMatch: true,
+      });
+
+      expect(msg).toContain('• Что делает: Платёжный шлюз для &lt;B2B&gt; мерчантов в ЕС.');
+      expect(msg).toContain(
+        '🪝 <b>Хук для отклика:</b> Сделай упор на миграцию Java/MySQL -&gt; Node.js/PostgreSQL и лидерство 6 инженеров в FinTech &amp; AI.',
+      );
+    });
   });
 
-  describe('buildNotionStatusUpdatePayload', () => {
+  describe('buildNotionStatusUpdatePayload and buildEvaluationLogFeedbackPatch', () => {
     it('creates Notion page property patch payload', () => {
       const hotMatchPatch = buildNotionStatusUpdatePayload('Hot Match');
       expect(hotMatchPatch).toEqual({
@@ -361,6 +416,20 @@ describe('Telegram HITL Protocol & Keyboard Builders (Slice 2)', () => {
 
       const rejectedPatch = buildNotionStatusUpdatePayload('Rejected');
       expect(rejectedPatch.properties.Status.select.name).toBe('Rejected');
+    });
+
+    it('transitions Notion status to Applied when buildEvaluationLogFeedbackPatch is called with applied (WP-3.2)', () => {
+      const appliedPatch = buildEvaluationLogFeedbackPatch('applied');
+      expect(appliedPatch.properties.Status).toEqual({
+        select: {
+          name: 'Applied',
+        },
+      });
+      expect(appliedPatch.properties['Human Verdict']).toEqual({
+        select: {
+          name: 'Applied',
+        },
+      });
     });
   });
 });

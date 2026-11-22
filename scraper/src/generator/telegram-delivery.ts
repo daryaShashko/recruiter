@@ -20,7 +20,12 @@ import {
 import { DEFAULT_CANDIDATE_CV_DATA } from './notion-loader';
 import { generateCoverLetter, generateLinkedInPitch } from './cover-letter';
 import { getBaseCvPdf } from './cv-renderer';
-import { compactNotionPageId, escapeHtml } from '../utils/telegram';
+import {
+  buildApplicationDeliveryKeyboard,
+  compactNotionPageId,
+  escapeHtml,
+  TelegramInlineKeyboardMarkup,
+} from '../utils/telegram';
 
 export interface ApplicationDeliveryOptions {
   pageId: string;
@@ -38,10 +43,22 @@ export interface ApplicationDeliveryOptions {
 
 /**
  * Builds the complete Application Delivery package for Telegram in-thread fulfillment.
+ * Does NOT prematurely transition Notion status to "Applied" — that happens only when
+ * the user presses the "✅ Я отправила отклик" (`applied:<pageId>`) button.
  */
 export async function buildTelegramApplicationPackage(
   options: ApplicationDeliveryOptions
-): Promise<TelegramApplicationPackage> {
+): Promise<
+  Omit<TelegramApplicationPackage, 'notionStatusPatch' | 'telegramMessages'> & {
+    telegramMessages: {
+      documentCaption: string;
+      textMessageHtml: string;
+      replyMarkup: TelegramInlineKeyboardMarkup;
+    };
+    replyMarkup: TelegramInlineKeyboardMarkup;
+    notionStatusPatch: null;
+  }
+> {
   const pageId = compactNotionPageId(options.pageId);
   const data = options.cvData || DEFAULT_CANDIDATE_CV_DATA;
   const company = (options.job.company || 'Company').trim();
@@ -81,8 +98,9 @@ export async function buildTelegramApplicationPackage(
     }
   }
 
-  // 4. Format Telegram In-Thread Message HTML
+  // 4. Format Telegram In-Thread Message HTML & Action Keyboard
   const textMessageHtml = formatTelegramDeliveryHtml(company, jobTitle, pitch.text, coverLetter.text);
+  const replyMarkup = buildApplicationDeliveryKeyboard(pageId, options.job.url);
 
   return {
     pageId,
@@ -94,21 +112,15 @@ export async function buildTelegramApplicationPackage(
     telegramMessages: {
       documentCaption: `📄 Резюме (ATS CV) — ${escapeHtml(company)}: ${escapeHtml(jobTitle)}`,
       textMessageHtml,
+      replyMarkup,
     },
-    notionStatusPatch: {
-      properties: {
-        Status: {
-          select: {
-            name: 'Applied',
-          },
-        },
-      },
-    },
+    replyMarkup,
+    notionStatusPatch: null,
   };
 }
 
 /**
- * Formats Telegram HTML message containing copy-ready pitch and cover letter inside code blocks.
+ * Formats Telegram HTML message containing copy-ready pitch and cover letter inside <pre><code> blocks.
  */
 export function formatTelegramDeliveryHtml(
   company: string,
@@ -120,11 +132,11 @@ export function formatTelegramDeliveryHtml(
     `🚀 <b>Пакет отклика готов:</b> <b>${escapeHtml(company)}</b> — ${escapeHtml(title)}`,
     '',
     '💬 <b>LinkedIn Outreach Pitch (кликните для копирования):</b>',
-    `<code>${escapeHtml(pitchText)}</code>`,
+    `<pre><code>${escapeHtml(pitchText)}</code></pre>`,
     '',
     '✉️ <b>Cover Letter (кликните для копирования):</b>',
-    `<code>${escapeHtml(coverLetterText)}</code>`,
+    `<pre><code>${escapeHtml(coverLetterText)}</code></pre>`,
     '',
-    '✅ <i>Статус вакансии в Notion переведён в <b>Applied</b>.</i>',
+    '👇 <i>После отправки нажмите <b>«✅ Я отправила отклик»</b>, чтобы перевести статус в Notion в <b>Applied</b>.</i>',
   ].join('\n');
 }

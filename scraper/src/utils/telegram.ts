@@ -3,7 +3,7 @@
  * Strict compliance with Telegram Bot API (callback_data <= 64 bytes).
  */
 
-export type TelegramActionType = 'prm' | 'dsc' | 'app' | 'rej' | 'rfb';
+export type TelegramActionType = 'prm' | 'dsc' | 'app' | 'applied' | 'rej' | 'rfb';
 
 export interface TelegramCallbackAction {
   readonly action: TelegramActionType;
@@ -66,7 +66,7 @@ export function parseCallbackData(data?: string | null): TelegramCallbackAction 
   if (parts.length < 2) return null;
 
   const action = parts[0] as TelegramActionType;
-  if (!['prm', 'dsc', 'app', 'rej', 'rfb'].includes(action)) {
+  if (!['prm', 'dsc', 'app', 'applied', 'rej', 'rfb'].includes(action)) {
     return null;
   }
 
@@ -87,15 +87,20 @@ export function parseCallbackData(data?: string | null): TelegramCallbackAction 
 /**
  * Builds the inline keyboard for Topic 3 («На ревью»).
  * Buttons:
- * Row 1: [ 👍 Берём в Hot Match ] (prm:id) | [ 👎 В архив ] (dsc:id)
- * Row 2: [ 🔗 Вакансия ] (url)
+ * Row 1: [ 🚀 Подготовить отклик ] (app:id)
+ * Row 2: [ 👍 Берём в Hot Match ] (prm:id) | [ 👎 В архив ] (dsc:id)
+ * Row 3: [ 🔗 Вакансия ] (url)
  */
 export function buildTopic3ReviewKeyboard(notionPageId: string, jobUrl: string): TelegramInlineKeyboardMarkup {
+  const appCallback = encodeCallback('app', notionPageId);
   const prmCallback = encodeCallback('prm', notionPageId);
   const dscCallback = encodeCallback('dsc', notionPageId);
 
   return {
     inline_keyboard: [
+      [
+        { text: '🚀 Подготовить отклик', callback_data: appCallback },
+      ],
       [
         { text: '👍 Берём в Hot Match', callback_data: prmCallback },
         { text: '👎 В архив', callback_data: dscCallback },
@@ -104,6 +109,30 @@ export function buildTopic3ReviewKeyboard(notionPageId: string, jobUrl: string):
         { text: '🔗 Вакансия', url: jobUrl },
       ],
     ],
+  };
+}
+
+/**
+ * Builds the inline keyboard for the in-thread Application Delivery package (WP-3.2).
+ * Buttons:
+ * Row 1 (when jobUrl is present): [ 🔗 Открыть форму вакансии ] (url)
+ * Row 2: [ ✅ Я отправила отклик ] (applied:id)
+ */
+export function buildApplicationDeliveryKeyboard(
+  notionPageId: string,
+  jobUrl?: string
+): TelegramInlineKeyboardMarkup {
+  const appliedCallback = encodeCallback('applied', notionPageId);
+  const rows: TelegramInlineKeyboardButton[][] = [];
+
+  if (jobUrl && jobUrl.trim()) {
+    rows.push([{ text: '🔗 Открыть форму вакансии', url: jobUrl.trim() }]);
+  }
+
+  rows.push([{ text: '✅ Я отправила отклик', callback_data: appliedCallback }]);
+
+  return {
+    inline_keyboard: rows,
   };
 }
 
@@ -205,17 +234,69 @@ export function buildRejectReasonConfirmationKeyboard(reasonCode?: string): Tele
 }
 
 /**
- * Builds Notion API payload to update an Evaluation Log row with human verdict.
+ * Builds Notion API payload to update an Evaluation Log row with human verdict
+ * or transition status to "Applied" when `applied:<pageId>` is pressed.
  */
+export function buildEvaluationLogFeedbackPatch(
+  reasonCode: 'applied',
+  userComment?: string
+): {
+  properties: {
+    Status: { select: { name: 'Applied' } };
+    'Human Verdict': { select: { name: 'Applied' } };
+    Reason?: { rich_text: Array<{ text: { content: string } }> };
+  };
+};
 export function buildEvaluationLogFeedbackPatch(
   reasonCode?: string,
   userComment?: string
 ): {
   properties: {
-    'Human Verdict': { select: { name: 'Wrong – Should Reject' } };
+    Status?: { select: { name: 'Applied' | 'Rejected' } };
+    'Human Verdict': { select: { name: 'Wrong – Should Reject' | 'Applied' } };
+    Reason?: { rich_text: Array<{ text: { content: string } }> };
+  };
+};
+export function buildEvaluationLogFeedbackPatch(
+  reasonCode?: string,
+  userComment?: string
+): {
+  properties: {
+    Status?: { select: { name: 'Applied' | 'Rejected' } };
+    'Human Verdict': { select: { name: 'Wrong – Should Reject' | 'Applied' } };
     Reason?: { rich_text: Array<{ text: { content: string } }> };
   };
 } {
+  if (reasonCode === 'applied') {
+    return {
+      properties: {
+        Status: {
+          select: {
+            name: 'Applied',
+          },
+        },
+        'Human Verdict': {
+          select: {
+            name: 'Applied',
+          },
+        },
+        ...(userComment
+          ? {
+              Reason: {
+                rich_text: [
+                  {
+                    text: {
+                      content: userComment,
+                    },
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
+    };
+  }
+
   const code = reasonCode as RejectReasonCode;
   const reasonLabel = (code && REJECT_REASONS[code]) ? REJECT_REASONS[code].label : 'Manual Reject';
   const fullText = userComment ? `${reasonLabel}: ${userComment}` : reasonLabel;
@@ -250,19 +331,20 @@ export interface TelegramAlertJobInput {
   readonly overall_score?: number;
   readonly tech_stack_match?: number;
   readonly seniority_match?: number;
-  readonly reason?: string;
-  readonly company_dossier?: string;
+  readonly reason?: string | null;
+  readonly company_dossier?: string | null;
   readonly companyUrl?: string;
   readonly isHotMatch?: boolean;
 
   // Detailed alert fields (approved dry card format)
-  readonly project_domain?: string;
-  readonly project_summary?: string;
-  readonly project_scale?: string;
+  readonly project_domain?: string | null;
+  readonly project_summary?: string | null;
+  readonly project_scale?: string | null;
   readonly tasks_summary?: string[];
   readonly match_pros?: string[];
   readonly match_cons?: string[];
-  readonly net_salary?: string;
+  readonly pitch_hook?: string | null;
+  readonly net_salary?: string | null;
 
   // Stack breakdown (optional)
   readonly stack_core?: string | string[];
@@ -283,6 +365,7 @@ function hasDetailedAlertFields(job: TelegramAlertJobInput): boolean {
     (job.tasks_summary && job.tasks_summary.length > 0) ||
     (job.match_pros && job.match_pros.length > 0) ||
     (job.match_cons && job.match_cons.length > 0) ||
+    (job.pitch_hook && job.pitch_hook.trim()) ||
     job.net_salary ||
     job.stack_core ||
     job.stack_infra
@@ -457,6 +540,11 @@ export function formatTelegramAlertMessage(job: TelegramAlertJobInput): string {
     if (matchLines.length > 0) {
       lines.push(...matchLines);
     }
+  }
+
+  if (job.pitch_hook && job.pitch_hook.trim()) {
+    lines.push('');
+    lines.push(`🪝 <b>Хук для отклика:</b> ${escapeHtml(job.pitch_hook.trim())}`);
   }
 
   lines.push('');
