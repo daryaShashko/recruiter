@@ -6,6 +6,8 @@ Usage:
   python3 scripts/patch-n8n-hitl-review.py --check   # Verify scoring.js freshness and 100% node parity with live n8n
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
