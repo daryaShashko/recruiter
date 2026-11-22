@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Pre-push git hook (WP-7.3): enforces n8n live workflow parity and scoring.js freshness.
+# Enable locally via: git config core.hooksPath .githooks
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if [[ -n "${N8N_API_KEY:-}" || -f "$HOME/.n8n-recruiter-key" ]]; then
+  echo "[pre-push] Checking live n8n workflow parity and scoring.js freshness..."
+  python3 scripts/patch-n8n-hitl-review.py --check
+else
+  echo "[pre-push] WARN: Neither N8N_API_KEY nor ~/.n8n-recruiter-key found; skipping live n8n drift check."
+fi

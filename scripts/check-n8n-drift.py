@@ -292,7 +292,23 @@ def main(args: Optional[List[str]] = None) -> None:
         action="store_true",
         help="Update the baseline JSON file with current extracted parameters",
     )
+    parser.add_argument(
+        "--full-check",
+        action="store_true",
+        help="Delegate to patch-n8n-hitl-review.py --check for 100% node and scoring.js drift verification",
+    )
     parsed = parser.parse_args(args)
+
+    if parsed.full_check or (not parsed.workflow_file and not parsed.update_baseline):
+        patch_script = SCRIPT_DIR / "patch-n8n-hitl-review.py"
+        dist_scoring = SCRIPT_DIR.parent / "n8n" / "dist" / "evaluator" / "scoring.js"
+        if patch_script.exists() and dist_scoring.exists():
+            spec = importlib.util.spec_from_file_location("patch_n8n_hitl_review", patch_script)
+            if spec is not None and spec.loader is not None:
+                patch_mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(patch_mod)
+                patch_mod.main(["--check"])
+                return
 
     if parsed.workflow_file:
         workflows = load_workflow_file(parsed.workflow_file)

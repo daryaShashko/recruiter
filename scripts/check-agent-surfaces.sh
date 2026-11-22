@@ -198,6 +198,17 @@ if [[ -f "n8n/prompts/candidate_profile.md" ]]; then
   fi
 fi
 
+# 11. Live n8n workflow drift check (WP-7.3) when API key is configured.
+if [[ -n "${N8N_API_KEY:-}" || -f "$HOME/.n8n-recruiter-key" ]]; then
+  if python3 scripts/patch-n8n-hitl-review.py --check; then
+    pass "live n8n workflows and scoring.js are in sync with git"
+  else
+    fail "live n8n workflows or scoring.js drifted from git (run 'cd n8n && npm run build && python3 scripts/patch-n8n-hitl-review.py')"
+  fi
+else
+  warn "live n8n drift check skipped (neither N8N_API_KEY nor ~/.n8n-recruiter-key present)"
+fi
+
 echo
 if [[ "$FAILS" -gt 0 ]]; then
   echo "$FAILS check(s) failed."

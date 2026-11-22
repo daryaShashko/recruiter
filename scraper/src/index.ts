@@ -12,9 +12,103 @@ import { enrichMissingSalaries } from "./utils/salary-enricher";
 import { filterValidLinks } from "./utils/link-check";
 import { funnelTracker } from "./utils/funnel";
 import { deduplicateOffers } from "./utils/deduplicateOffers";
+import { calcFingerprint } from "./utils/fingerprint";
 import { JobOffer } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "true";
+
+function getKnownFingerprintsCachePath(): string {
+  const customPath = process.env.KNOWN_FINGERPRINTS_FILE?.trim();
+  if (customPath) {
+    return path.resolve(customPath);
+  }
+  return path.resolve(__dirname, "../../.cache/known-fingerprints.json");
+}
+
+function getOfferFingerprint(offer: JobOffer): string {
+  if (
+    typeof offer.fingerprint === "string" &&
+    /^[0-9a-f]{16}$/i.test(offer.fingerprint)
+  ) {
+    return offer.fingerprint.toLowerCase();
+  }
+  return calcFingerprint(offer.company || "", offer.title || "");
+}
+
+export function loadKnownFingerprints(cachePath: string = getKnownFingerprintsCachePath()): Set<string> {
+  if (process.env.DISABLE_FINGERPRINT_CACHE === "true" || process.env.NODE_ENV === "test") {
+    return new Set<string>();
+  }
+  try {
+    if (!fs.existsSync(cachePath)) {
+      return new Set<string>();
+    }
+    const raw = fs.readFileSync(cachePath, "utf-8");
+    const parsed: unknown = JSON.parse(raw);
+    const list = Array.isArray(parsed)
+      ? parsed
+      : parsed &&
+          typeof parsed === "object" &&
+          Array.isArray((parsed as { fingerprints?: unknown }).fingerprints)
+        ? (parsed as { fingerprints: unknown[] }).fingerprints
+        : [];
+    const set = new Set<string>();
+    for (const item of list) {
+      if (typeof item === "string" && item.trim().length > 0) {
+        set.add(item.trim().toLowerCase());
+      }
+    }
+    return set;
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export function saveKnownFingerprints(
+  fingerprints: Iterable<string>,
+  cachePath: string = getKnownFingerprintsCachePath(),
+): void {
+  if (
+    IS_DRY_RUN ||
+    process.env.DISABLE_FINGERPRINT_CACHE === "true" ||
+    process.env.NODE_ENV === "test"
+  ) {
+    return;
+  }
+  try {
+    const dir = path.dirname(cachePath);
+    fs.mkdirSync(dir, { recursive: true });
+    const unique = Array.from(new Set(Array.from(fingerprints, (fp) => fp.toLowerCase())));
+    const payload = {
+      updatedAt: new Date().toISOString(),
+      count: unique.length,
+      fingerprints: unique,
+    };
+    fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[PreDedup] Failed to save known fingerprints cache:", err);
+  }
+}
+
+export function filterKnownFingerprints(
+  offers: JobOffer[],
+  knownFingerprints: ReadonlySet<string>,
+): { freshOffers: JobOffer[]; skippedKnownCount: number } {
+  if (knownFingerprints.size === 0) {
+    return { freshOffers: offers, skippedKnownCount: 0 };
+  }
+  const freshOffers: JobOffer[] = [];
+  let skippedKnownCount = 0;
+  for (const offer of offers) {
+    const fp = getOfferFingerprint(offer);
+    if (knownFingerprints.has(fp)) {
+      skippedKnownCount++;
+    } else {
+      freshOffers.push(offer);
+    }
+  }
+  return { freshOffers, skippedKnownCount };
+}
 
 function saveDryRunOutput(offers: JobOffer[]): void {
   const outputDir = path.resolve(__dirname, "../../output");
@@ -94,20 +188,32 @@ async function main(): Promise<void> {
   });
 
   // Order matters: merge cross-board duplicates first (keeps every salary with the
-  // board it came from), then enrich remaining gaps via fuzzy title matching, and
-  // only then spend HTTP on link checks for unique offers.
+  // board it came from), then enrich remaining gaps via fuzzy title matching,
+  // pre-deduplicate against known fingerprints cache, and only then spend HTTP
+  // on link checks for unique new offers.
   const merged = deduplicateOffers(allOffers);
   const { offers: salaryEnriched, enrichedCount } =
     enrichMissingSalaries(merged);
-  const enrichedOffers = await filterValidLinks(salaryEnriched);
+  const knownFingerprints = loadKnownFingerprints();
+  const { freshOffers, skippedKnownCount } = filterKnownFingerprints(
+    salaryEnriched,
+    knownFingerprints,
+  );
+  const enrichedOffers = await filterValidLinks(freshOffers);
   console.log(
-    `\nTotal: ${allOffers.length} collected, ${allOffers.length - merged.length} duplicates merged, ${merged.length - enrichedOffers.length} dead links dropped, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
+    `\nTotal: ${allOffers.length} collected, ${allOffers.length - merged.length} duplicates merged, ${skippedKnownCount} known fingerprints skipped, ${freshOffers.length - enrichedOffers.length} dead links dropped, ${enrichedOffers.length} unique offers (${enrichedCount} missing salaries enriched across platforms)`,
   );
 
   const stats = funnelTracker.finalizeSent(enrichedOffers);
   funnelTracker.printSummaryTable();
 
   if (enrichedOffers.length === 0) {
+    if (skippedKnownCount > 0) {
+      console.log(
+        `\n[PreDedup] All ${skippedKnownCount} unique offers were already processed in previous runs. Nothing new to send.`,
+      );
+      return;
+    }
     process.stderr.write(
       "ERROR: 0 job offers collected after deduplication.\n" +
         "Possible causes: scraper API broken, site structure changed, or network issues.\n",
@@ -120,6 +226,10 @@ async function main(): Promise<void> {
   } else {
     try {
       await sendToWebhook(enrichedOffers, "scraper-combined", stats);
+      for (const offer of enrichedOffers) {
+        knownFingerprints.add(getOfferFingerprint(offer));
+      }
+      saveKnownFingerprints(knownFingerprints);
       console.log(
         `\n✅ Successfully sent ${enrichedOffers.length} offers to webhook`,
       );
