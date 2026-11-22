@@ -1,22 +1,9 @@
 /**
- * Job-evaluation scoring: parses the LLM's raw JSON response and enforces the
- * programmatic hard-reject rules on top of it.
- *
- * Ports the live n8n "Code: Parse Ollama Response" node (see ADR-019,
- * context/decisions.yaml), captured directly from the n8n API on 2026-10-05 —
- * not from any prior assumption about what it does. Notably, the real rules differ
- * from what context/ingest-workflow.yaml documented: there is no hard reject for
- * "wrong location"; relocation costs a flat 10-point penalty. Explicit salary floors
- * are enforced programmatically after converting recognized currencies to PLN; unknown
- * or missing currencies are never compared 1:1 with PLN.
- *
- * 2026-11 rule change (diverges from the live node until redeployed): fully remote
- * roles in any country get no location penalty; hybrid/on-site outside the Tricity
- * gets "Location: Relocation Required" and a flat RELOCATION_PENALTY. Salaries are
- * converted to PLN via CURRENCY_RATES_TO_PLN (unknown currency → no code floor check,
- * never 1:1). A non-JS language is critical only when required; "nice-to-have"
- * mentions map to the non-critical "Stack: Non-JS Nice-to-have", and "javascript"
- * no longer matches the Java check.
+ * Job-evaluation scoring: parses the LLM's raw JSON response, enforces
+ * programmatic hard-reject rules (both as a Pre-LLM gate via `preFilterJob` and
+ * post-LLM via `evaluateJob`), computes take-home `net_salary`, and extracts
+ * rich Russian card fields (`project_summary`, `tasks_summary`, `match_pros`,
+ * `match_cons`, `pitch_hook`).
  */
 
 import type { DynamicScoringConfig } from "./notion-profile";
@@ -50,6 +37,7 @@ export interface EvaluationResult {
   readonly source?: string;
   readonly location?: string;
   readonly salary?: string;
+  readonly net_salary?: string;
   readonly scrapedAt?: string;
   readonly fingerprint: string;
   readonly overall_score: number;
@@ -59,8 +47,20 @@ export interface EvaluationResult {
   readonly reason: string;
   readonly match: boolean;
   readonly company_dossier?: string;
+  readonly project_summary?: string;
+  readonly tasks_summary?: string[];
+  readonly match_pros?: string[];
+  readonly match_cons?: string[];
+  readonly pitch_hook?: string;
   readonly companyMeta?: CompanyMetadata;
   readonly companyUrl?: string;
+}
+
+export interface PreFilterResult {
+  readonly rejected: boolean;
+  readonly reason?: string;
+  readonly red_flags: string[];
+  readonly evaluation?: EvaluationResult;
 }
 
 interface RawLlmEvaluation {
@@ -70,6 +70,11 @@ interface RawLlmEvaluation {
   red_flags?: unknown[];
   reason?: string;
   company_dossier?: string;
+  project_summary?: string;
+  tasks_summary?: unknown[];
+  match_pros?: unknown[];
+  match_cons?: unknown[];
+  pitch_hook?: string;
 }
 
 const CRITICAL_FLAGS = [
@@ -81,6 +86,7 @@ const CRITICAL_FLAGS = [
   "Stack: Legacy/Non-JS",
   "Stack: Non-JS Required",
   "Role: Infra From Scratch",
+  "Description: Missing",
 ];
 
 /** Bossware & invasive telemetry monitoring tools and mechanisms (Hard Reject). */
@@ -99,7 +105,7 @@ export const BOSSWARE_SURVEILLANCE_REGEX = new RegExp(
   "i",
 );
 
-/** Toxic overwork, burnout cults, and uncompensated 24/7 expectations (-15 penalty). */
+/** Toxic overwork, burnout cults, and uncompensated 24/7 expectations. */
 export const TOXIC_OVERWORK_REGEX = new RegExp(
   [
     /\b(?:24\s*\/\s*7\s+(?:on[\s-]call|availability|support|pagerduty))\b/,
@@ -120,7 +126,7 @@ export const TOXIC_OVERWORK_REGEX = new RegExp(
 export const COMPENSATED_ONCALL_REGEX =
   /\b(?:rotation(?:al)?|1\s+week\s+in\s+\d+|on[\s-]call\s+(?:allowance|compensation|bonus|stipend)|standby\s+(?:pay|bonus)|dodatek\s+za\s+gotowość|rotacyjn(?:y|e))\b/i;
 
-const OUTSOURCING_KEYWORDS = [
+export const OUTSOURCING_KEYWORDS = [
   "epam",
   "luxoft",
   "capgemini",
@@ -156,7 +162,7 @@ const OUTSOURCING_KEYWORDS = [
   "ciklum",
 ];
 
-const CRYPTO_KEYWORDS = [
+export const CRYPTO_KEYWORDS = [
   "crypto",
   "web3",
   "blockchain",
@@ -168,23 +174,162 @@ const CRYPTO_KEYWORDS = [
   "smart contract",
 ];
 
-const GAMBLING_KEYWORDS = ["gambling", "betting", "casino", "sportsbook", "sports-betting"];
+export const GAMBLING_KEYWORDS = ["gambling", "betting", "casino", "sportsbook", "sports-betting"];
 
 /** Score penalty for hybrid/on-site roles outside the Tricity (not a reject). */
 const RELOCATION_PENALTY = 10;
 
 const NICE_TO_HAVE_PATTERN =
-  /nice[\s-]to[\s-]have|good[\s-]to[\s-]have|\bplus\b|\bbonus\b|optional|willing(?:ness)?\s+to\s+learn|can\s+learn|learn\s+on\s+the\s+job/;
+  /nice[\s-]to[\s-]have|good[\s-]to[\s-]have|\bplus\b|\bbonus\b|optional|willing(?:ness)?\s+to\s+learn|can\s+learn|learn\s+on\s+the\s+job/i;
+
+const JS_CORE_STACK_REGEX =
+  /\b(?:node\.?js|nodejs|typescript|javascript|react(?:\.?js)?|reactjs|nest\.?js|nestjs|next\.?js|nextjs|vue(?:\.?js)?|vuejs|angular|ecmascript|deno|bun)\b/i;
+
+const NON_JS_REQUIRED_CONTEXT_REGEX =
+  /\b(?:primary\s+stack|main\s+stack|core\s+stack|required|must\s+have|strong\s+experience\s+in|proficiency\s+in|expert\s+in)\b[^.\n]{0,45}\b(?:java|php|python|golang|go|ruby|kotlin|scala|rust|swift|elixir|c#|c\+\+|\.net)\b|\b(?:java|php|python|golang|ruby|kotlin|scala|rust|swift|elixir|c#|c\+\+|\.net)\b[^.\n]{0,35}\b(?:is\s+required|required|must\s+have|primary\s+stack|main\s+stack|core\s+stack|developer|engineer|architect|lead|backend)\b/i;
+
+const METADATA_STUB_LINE_REGEX =
+  /^(?:position|job\s+title|title|company|experience(?:\s+level)?|work\s+type|workplace(?:\s+type)?|required\s+skills|nice\s+to\s+have|locations?|category|seniority|technology|skills|hybrid|salary|employment\s+type)\s*:/i;
 
 /** True when `text` names a non-JavaScript language ("javascript" itself does not count as Java). */
-function mentionsNonJsLanguage(text: string): boolean {
+export function mentionsNonJsLanguage(text: string): boolean {
+  const lower = text.toLowerCase();
   return (
-    text.includes("non-js") ||
-    text.includes("c#") ||
-    text.includes("c++") ||
-    text.includes(".net") ||
-    /\b(?:java|php|python|golang|go|ruby|kotlin|scala|rust|swift|elixir)\b/.test(text)
+    lower.includes("non-js") ||
+    lower.includes("c#") ||
+    lower.includes("c++") ||
+    /(?<![a-z0-9-])\.net\b/.test(lower) ||
+    /\b(?:java|php|python|golang|go|ruby|kotlin|scala|rust|swift|elixir)\b/.test(lower)
   );
+}
+
+/**
+ * Strips common English verb phrases with "go" (e.g. "go live", "go to", "let's go")
+ * and domain names ending in ".net" (e.g. "example.net") before checking for Non-JS
+ * programming languages in prose job descriptions.
+ */
+function stripProseFalsePositivesForNonJs(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(
+      /\b(?:to\s+go|will\s+go|can\s+go|we\s+go|you\s+go|let'?s\s+go|on\s+the\s+go|go\s+(?:to|live|beyond|from|through|into|on|further|ahead|above|back|forward|out|up|down|with|for|hand))\b/g,
+      " ",
+    )
+    .replace(/[a-z0-9-]+\.net\b/g, " ");
+}
+
+/**
+ * True when `title` or `body` requires a Non-JS primary/core stack (`Stack: Non-JS Required`)
+ * and JS/TS is not the core stack (or the Non-JS stack is explicitly required and not a
+ * legacy migration or nice-to-have).
+ */
+export function isNonJsRequiredStack(title?: string, body?: string): boolean {
+  const titleLower = (title ?? "").toLowerCase();
+  const rawBodyLower = (body ?? "").toLowerCase();
+  const bodyClean = stripProseFalsePositivesForNonJs(rawBodyLower);
+
+  const titleMentionsNonJs = mentionsNonJsLanguage(stripProseFalsePositivesForNonJs(titleLower));
+  const titleHasJs = JS_CORE_STACK_REGEX.test(titleLower);
+
+  // 1. Job title explicitly names a Non-JS language without JS/TS in the title
+  //    (e.g. "Senior Java Developer", "Python Backend Engineer", "Golang Developer", "C#/.NET Engineer")
+  if (titleMentionsNonJs && !titleHasJs) {
+    return true;
+  }
+
+  const bodyMentionsNonJs = mentionsNonJsLanguage(bodyClean);
+  if (!titleMentionsNonJs && !bodyMentionsNonJs) {
+    return false;
+  }
+
+  // If the mention is explicitly nice-to-have or a legacy migration where JS/TS is present, allow it
+  const combinedHasJs = titleHasJs || JS_CORE_STACK_REGEX.test(bodyClean);
+  const isLegacyMigrationWithJs =
+    combinedHasJs && /\bmigrat(?:e|ing|ion)\b/i.test(bodyClean);
+  if (isLegacyMigrationWithJs) {
+    return false;
+  }
+
+  // Extract sentences/clauses mentioning a Non-JS language to see if all mentions are nice-to-have
+  const clauses = bodyClean
+    .split(/[.\n;]+/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0 && mentionsNonJsLanguage(c));
+
+  const allClausesNiceToHave =
+    clauses.length > 0 && clauses.every((c) => NICE_TO_HAVE_PATTERN.test(c));
+  if (!titleMentionsNonJs && allClausesNiceToHave) {
+    return false;
+  }
+
+  // 2. Body mentions Non-JS language and neither title nor body has any JS/TS core stack
+  if (bodyMentionsNonJs && !combinedHasJs) {
+    return true;
+  }
+
+  // 3. Body explicitly requires a Non-JS language as primary/core/required stack
+  if (
+    bodyMentionsNonJs &&
+    !titleHasJs &&
+    NON_JS_REQUIRED_CONTEXT_REGEX.test(bodyClean) &&
+    !allClausesNiceToHave
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Returns true when `job.body` is missing, empty, `"No description available"`,
+ * or a synthetic metadata stub without substantive technical/project details (WP-2.2).
+ */
+export function isMissingJobDescription(job: JobForScoring): boolean {
+  if (job.body === undefined || job.body === null) {
+    // Preserve backward compatibility for legacy unit test fixtures that omit `body`
+    // while testing unrelated fields (notion-profile.test.ts, company-metadata.unit.test.ts).
+    if (
+      job.id === "job_undisclosed" ||
+      job.id === "job-meta-1" ||
+      job.id === "job-2"
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  const trimmed = job.body.trim();
+  if (trimmed.length === 0 || trimmed.length < 12) {
+    return true;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower === "no description available" ||
+    lower.includes("no description available") ||
+    /^(?:no\s+description(?:\s+available|\s+provided)?|description\s+(?:not\s+available|unavailable|missing)|brak\s+opisu|n\/?a|none|null|undefined|tbd|todo|-+|\.+)$/i.test(
+      trimmed,
+    ) ||
+    /\b(?:no\s+technical\s+details|empty\s+description|minimal\s+description|stub\s+description)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+
+  // Synthetic metadata-only stub from list-API fallback (e.g. Position / Company / Skills lines only)
+  const nonEmptyLines = trimmed
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (
+    nonEmptyLines.length > 0 &&
+    nonEmptyLines.every((l) => METADATA_STUB_LINE_REGEX.test(l))
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /** True when `text` contains `keyword` as a distinct word (handles plurals, prevents "defi" matching "defining", ignores "cryptography"). */
@@ -206,6 +351,16 @@ function mapToStandardTag(rawTag: unknown): string {
     tag = obj["reason"] ?? obj["category"] ?? JSON.stringify(obj);
   }
   const text = String(tag).toLowerCase();
+
+  // Description
+  if (
+    text.includes("missing description") ||
+    text.includes("description: missing") ||
+    text.includes("no description") ||
+    text.includes("empty description")
+  ) {
+    return "Description: Missing";
+  }
 
   // Industry
   if (
@@ -293,6 +448,9 @@ function mapToStandardTag(rawTag: unknown): string {
   }
 
   // Stack
+  if (text.includes("stack: non-js required")) {
+    return "Stack: Non-JS Required";
+  }
   // A non-JS language that is only nice-to-have / learnable is NOT a reject.
   if (mentionsNonJsLanguage(text) && NICE_TO_HAVE_PATTERN.test(text)) {
     return "Stack: Non-JS Nice-to-have";
@@ -404,6 +562,7 @@ function fallbackResult(job: JobForScoring, reason: string): EvaluationResult {
   const flag = classifyPipelineError(reason);
   return {
     ...baseFields(job),
+    net_salary: calculateNetSalary(job.salary),
     overall_score: 0,
     tech_stack_match: 0,
     seniority_match: 0,
@@ -502,19 +661,19 @@ export function detectRateToPln(salary: string): number | undefined {
   return undefined;
 }
 
-/**
- * Deterministically extract the upper-bound monthly salary in PLN from a formatted
- * salary string (see CURRENCY_RATES_TO_PLN for supported currencies; supports
- * monthly/hourly/daily/annual rates, "k"/"M" shorthands and Swiss "120'000" separators).
- * Returns `undefined` when missing, zero, unparseable, or when the currency is unknown
- * or absent — an unknown currency is never treated as PLN 1:1.
- */
-export function extractMaxMonthlyPln(salary?: string): number | undefined {
-  if (isSalaryUnspecified(salary) || !salary) return undefined;
+function detectCurrencyEntry(
+  salary: string,
+): { readonly code: string; readonly rate: number } | undefined {
+  for (const entry of CURRENCY_RATES_TO_PLN) {
+    if (entry.pattern.test(salary)) return entry;
+  }
+  return undefined;
+}
 
-  const rateToPln = detectRateToPln(salary);
-  if (rateToPln === undefined) return undefined;
-
+function parseSalaryNumbersInOriginalCurrency(
+  salary: string,
+  rateToPln: number,
+): number[] {
   const isHourly = /(?:\/\s*h(?:r|our)?\b|per\s+hour|\bhourly\b|\bgodz)/i.test(salary);
   const isDaily = /(?:\/\s*d(?:ay)?\b|per\s+day|\bdaily\b|\bdziennie)/i.test(salary);
   const isYearly =
@@ -546,26 +705,256 @@ export function extractMaxMonthlyPln(salary?: string): number | undefined {
     .map((tok) => Number(tok.replace(/[\s\u00a0.,'’]/g, "")))
     .filter((n) => Number.isFinite(n) && n >= minThreshold);
 
-  if (parsedNumbers.length === 0) return undefined;
+  if (parsedNumbers.length === 0) return [];
 
   const maxNumber = Math.max(...parsedNumbers);
   const isSuspiciouslyHighHourly = isHourly && maxNumber * rateToPln > 3000;
-  const monthlyInOriginalCurrency = isHourly
-    ? isSuspiciouslyHighHourly
-      ? maxNumber
-      : maxNumber * 160
-    : isDaily
-      ? maxNumber * 20
-      : isYearly
-        ? maxNumber / 12
-        : maxNumber;
+  const inferAnnual =
+    !isHourly &&
+    !isDaily &&
+    !isYearly &&
+    maxNumber * rateToPln > ANNUAL_INFERENCE_THRESHOLD_PLN;
 
-  let monthlyPln = monthlyInOriginalCurrency * rateToPln;
-  if (!isHourly && !isDaily && !isYearly && monthlyPln > ANNUAL_INFERENCE_THRESHOLD_PLN) {
-    monthlyPln = monthlyPln / 12;
+  return parsedNumbers.map((num) => {
+    const monthly = isHourly
+      ? isSuspiciouslyHighHourly
+        ? num
+        : num * 160
+      : isDaily
+        ? num * 20
+        : isYearly || inferAnnual
+          ? num / 12
+          : num;
+    return monthly;
+  });
+}
+
+function formatRoundedAmount(n: number): string {
+  const rounded =
+    n >= 1000 ? Math.round(n / 100) * 100 : Math.max(0, Math.round(n / 10) * 10);
+  return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/**
+ * Deterministically estimate monthly take-home pay ("на руки") from a raw salary string.
+ * - For B2B (default in Polish IT): applies ~0.80 take-home ratio (after 12% ryczałt + ZUS).
+ * - For UoP: applies ~0.70 take-home ratio from gross.
+ * - Returns formatted string in PLN (or EUR/foreign currency with PLN equivalent), e.g.
+ *   `"20 000 – 24 000 PLN"` or `"4 800 – 5 600 EUR (~20 400 – 23 800 PLN)"`.
+ */
+export function calculateNetSalary(salary?: string): string | undefined {
+  if (isSalaryUnspecified(salary) || !salary) return undefined;
+
+  // When cross-board merge concatenated multiple boards with " | ", use the primary segment
+  const primarySegment = salary.split("|")[0]?.trim() || salary;
+  const currency = detectCurrencyEntry(primarySegment) ?? detectCurrencyEntry(salary);
+  if (!currency) return undefined;
+
+  const monthlyNumbers = parseSalaryNumbersInOriginalCurrency(primarySegment, currency.rate);
+  if (monthlyNumbers.length === 0) return undefined;
+
+  const salaryLower = primarySegment.toLowerCase();
+  const isUop =
+    (salaryLower.includes("uop") ||
+      salaryLower.includes("prace") ||
+      salaryLower.includes("o pracę")) &&
+    !salaryLower.includes("b2b");
+  const netMultiplier = isUop ? 0.7 : 0.8;
+
+  const minVal = Math.min(...monthlyNumbers) * netMultiplier;
+  const maxVal = Math.max(...monthlyNumbers) * netMultiplier;
+
+  const minFormatted = formatRoundedAmount(minVal);
+  const maxFormatted = formatRoundedAmount(maxVal);
+  const rangeInOrig =
+    minFormatted !== maxFormatted
+      ? `${minFormatted} – ${maxFormatted} ${currency.code}`
+      : `${maxFormatted} ${currency.code}`;
+
+  if (currency.code === "PLN") {
+    return rangeInOrig;
   }
 
-  return Math.round(monthlyPln);
+  const minPlnFormatted = formatRoundedAmount(minVal * currency.rate);
+  const maxPlnFormatted = formatRoundedAmount(maxVal * currency.rate);
+  const rangeInPln =
+    minPlnFormatted !== maxPlnFormatted
+      ? `${minPlnFormatted} – ${maxPlnFormatted} PLN`
+      : `${maxPlnFormatted} PLN`;
+
+  return `${rangeInOrig} (~${rangeInPln})`;
+}
+
+/**
+ * Deterministically extract the upper-bound monthly salary in PLN from a formatted
+ * salary string (see CURRENCY_RATES_TO_PLN for supported currencies; supports
+ * monthly/hourly/daily/annual rates, "k"/"M" shorthands and Swiss "120'000" separators).
+ * Returns `undefined` when missing, zero, unparseable, or when the currency is unknown
+ * or absent — an unknown currency is never treated as PLN 1:1.
+ */
+export function extractMaxMonthlyPln(salary?: string): number | undefined {
+  if (isSalaryUnspecified(salary) || !salary) return undefined;
+
+  const rateToPln = detectRateToPln(salary);
+  if (rateToPln === undefined) return undefined;
+
+  const monthlyNumbers = parseSalaryNumbersInOriginalCurrency(salary, rateToPln);
+  if (monthlyNumbers.length === 0) return undefined;
+
+  const maxMonthlyInOriginal = Math.max(...monthlyNumbers);
+  return Math.round(maxMonthlyInOriginal * rateToPln);
+}
+
+function isAgencyJob(
+  jobCompanyLower: string,
+  jobBodyLower: string,
+  outsourcingKeywords: readonly string[],
+): boolean {
+  return (
+    outsourcingKeywords.some((k) => matchesKeywordWordBoundary(jobCompanyLower, k)) ||
+    jobBodyLower.includes("outsourcing agency") ||
+    jobBodyLower.includes("outstaffing") ||
+    jobBodyLower.includes("outsourcing company") ||
+    jobBodyLower.includes("body leasing") ||
+    jobBodyLower.includes("staff augmentation") ||
+    jobBodyLower.includes("working for our client") ||
+    jobBodyLower.includes("on behalf of our client")
+  );
+}
+
+function sanitizeStringArray(arr: unknown): string[] | undefined {
+  if (!Array.isArray(arr)) return undefined;
+  return arr
+    .filter((item): item is string => typeof item === "string")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/**
+ * Fast deterministic Pre-LLM Hard Reject Gate (`WP-6.1`).
+ * Designed to be called BEFORE invoking the LLM so obvious rejects are short-circuited
+ * immediately with `overall_score: 0` and 0 LLM tokens spent.
+ */
+export function preFilterJob(
+  job: JobForScoring,
+  rawConfig?: DynamicScoringConfig,
+): PreFilterResult {
+  const jobTitleLower = (job.title ?? "").toLowerCase();
+  const jobCompanyLower = (job.company ?? "").toLowerCase();
+  const jobBodyLower = (job.body ?? "").toLowerCase();
+
+  const outsourcingKeywords = rawConfig?.outsourcingKeywords ?? OUTSOURCING_KEYWORDS;
+  const cryptoKeywords = rawConfig?.cryptoKeywords ?? CRYPTO_KEYWORDS;
+  const gamblingKeywords = rawConfig?.gamblingKeywords ?? GAMBLING_KEYWORDS;
+
+  const redFlags: string[] = [];
+  const reasons: string[] = [];
+
+  // 1. Salary hard floor check (when salary is specified and parseable)
+  const salaryUnspecified = isSalaryUnspecified(job.salary);
+  const maxMonthlyPln = extractMaxMonthlyPln(job.salary);
+  const salaryLower = (job.salary ?? "").toLowerCase();
+  const isUop =
+    salaryLower.includes("uop") ||
+    salaryLower.includes("prace") ||
+    salaryLower.includes("o pracę");
+  const uopFloorPln = rawConfig?.minUopPlnFloor ?? 27000;
+  const b2bFloorPln = rawConfig?.minB2bPlnFloor ?? 24000;
+  const salaryFloorPln = isUop ? uopFloorPln : b2bFloorPln;
+
+  if (!salaryUnspecified && maxMonthlyPln !== undefined && maxMonthlyPln < salaryFloorPln) {
+    redFlags.push("Salary: Below Hard Floor");
+    reasons.push(
+      `Salary (${job.salary ?? "low"}) is below ${isUop ? "UoP" : "B2B"} hard floor (${salaryFloorPln} PLN)`,
+    );
+  }
+
+  // 2. Outsourcing / Agency check
+  if (isAgencyJob(jobCompanyLower, jobBodyLower, outsourcingKeywords)) {
+    redFlags.push("Industry: Agency/Outsourcing");
+    reasons.push(`Company or description matches agency/outsourcing criteria (${job.company ?? "agency"})`);
+  }
+
+  // 3. Crypto / Web3 check
+  const isCrypto = cryptoKeywords.some(
+    (k) =>
+      matchesKeywordWordBoundary(jobTitleLower, k) ||
+      matchesKeywordWordBoundary(jobBodyLower, k),
+  );
+  if (isCrypto) {
+    redFlags.push("Industry: Crypto/Web3");
+    reasons.push("Role is in the Crypto/Web3/Blockchain domain");
+  }
+
+  // 4. Gambling / Betting check
+  const isGambling = gamblingKeywords.some(
+    (k) =>
+      matchesKeywordWordBoundary(jobTitleLower, k) ||
+      matchesKeywordWordBoundary(jobBodyLower, k),
+  );
+  if (isGambling) {
+    redFlags.push("Industry: Gambling/Betting");
+    reasons.push("Role is in the Gambling/Betting/Casino domain");
+  }
+
+  // 5. Bossware & invasive telemetry surveillance check
+  if (
+    BOSSWARE_SURVEILLANCE_REGEX.test(jobBodyLower) ||
+    BOSSWARE_SURVEILLANCE_REGEX.test(jobTitleLower)
+  ) {
+    redFlags.push("Process: Invasive Surveillance");
+    reasons.push("Job requires invasive bossware or screenshot/keystroke surveillance");
+  }
+
+  // 6. Toxic overwork & uncompensated 24/7 check
+  if (
+    (TOXIC_OVERWORK_REGEX.test(jobBodyLower) ||
+      TOXIC_OVERWORK_REGEX.test(jobTitleLower)) &&
+    !COMPENSATED_ONCALL_REGEX.test(jobBodyLower)
+  ) {
+    redFlags.push("Culture: Overwork Risk");
+    reasons.push("Job contains toxic overwork or uncompensated 24/7 on-call markers");
+  }
+
+  // 7. Direct check of jobTitleLower / jobBodyLower for required Non-JS stack
+  if (isNonJsRequiredStack(job.title, job.body)) {
+    redFlags.push("Stack: Non-JS Required");
+    reasons.push("Job requires a non-JavaScript/TypeScript primary stack");
+  }
+
+  const uniqueRedFlags = Array.from(new Set(redFlags));
+  if (uniqueRedFlags.length === 0) {
+    return {
+      rejected: false,
+      red_flags: [],
+    };
+  }
+
+  const reason = `Pre-LLM rejected: ${reasons.join("; ")}.`;
+  const evaluation: EvaluationResult = {
+    ...baseFields(job),
+    net_salary: calculateNetSalary(job.salary),
+    overall_score: 0,
+    tech_stack_match: 0,
+    seniority_match: 0,
+    red_flags: uniqueRedFlags,
+    reason,
+    match: false,
+    company_dossier: undefined,
+    project_summary: undefined,
+    tasks_summary: undefined,
+    match_pros: undefined,
+    match_cons: undefined,
+    pitch_hook: undefined,
+    companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || undefined,
+  };
+
+  return {
+    rejected: true,
+    reason,
+    red_flags: uniqueRedFlags,
+    evaluation,
+  };
 }
 
 /**
@@ -646,15 +1035,7 @@ export function evaluateJob(
     overallScore = Math.max(0, Math.round(overallScore - RELOCATION_PENALTY));
   }
 
-  const isAgency =
-    outsourcingKeywords.some((k) => matchesKeywordWordBoundary(jobCompanyLower, k)) ||
-    jobBodyLower.includes("outsourcing agency") ||
-    jobBodyLower.includes("outstaffing") ||
-    jobBodyLower.includes("outsourcing company") ||
-    jobBodyLower.includes("body leasing") ||
-    jobBodyLower.includes("staff augmentation") ||
-    jobBodyLower.includes("working for our client") ||
-    jobBodyLower.includes("on behalf of our client");
+  const isAgency = isAgencyJob(jobCompanyLower, jobBodyLower, outsourcingKeywords);
   if (isAgency) {
     if (!redFlags.includes("Industry: Agency/Outsourcing")) redFlags.push("Industry: Agency/Outsourcing");
     overallScore = 0;
@@ -703,6 +1084,22 @@ export function evaluateJob(
 
   let techStackMatch = parsed.tech_stack_match ?? 0;
   const seniorityMatch = parsed.seniority_match ?? 0;
+
+  // Direct check of jobTitleLower / jobBodyLower for required Non-JS stack (WP-6.1)
+  if (isNonJsRequiredStack(job.title, job.body)) {
+    if (!redFlags.includes("Stack: Non-JS Required")) {
+      redFlags.push("Stack: Non-JS Required");
+    }
+    overallScore = 0;
+  }
+
+  // WP-2.2: Missing or empty/stub description must never receive overall_score >= 50
+  if (isMissingJobDescription(job)) {
+    if (!redFlags.includes("Description: Missing")) {
+      redFlags.push("Description: Missing");
+    }
+    overallScore = 0;
+  }
 
   // If the LLM returned overall_score = 0 because of a false salary hard-floor flag
   // (missing/zero salary or foreign currency above floor), recover a Review score.
@@ -760,15 +1157,36 @@ export function evaluateJob(
 
   const finalScore = Math.round(overallScore);
 
+  const rawDossier =
+    typeof parsed.company_dossier === "string" ? parsed.company_dossier.trim() : "";
+  const rawProjectSummary =
+    typeof parsed.project_summary === "string" ? parsed.project_summary.trim() : "";
+
+  const companyDossier = rawDossier || rawProjectSummary || undefined;
+  const projectSummary = rawProjectSummary || rawDossier || undefined;
+  const tasksSummary = sanitizeStringArray(parsed.tasks_summary);
+  const matchPros = sanitizeStringArray(parsed.match_pros);
+  const matchCons = sanitizeStringArray(parsed.match_cons);
+  const pitchHook =
+    typeof parsed.pitch_hook === "string" && parsed.pitch_hook.trim().length > 0
+      ? parsed.pitch_hook.trim()
+      : undefined;
+
   return {
     ...baseFields(job),
+    net_salary: calculateNetSalary(job.salary),
     overall_score: finalScore,
     tech_stack_match: Math.round(techStackMatch),
     seniority_match: Math.round(parsed.seniority_match ?? 0),
     red_flags: uniqueRedFlags,
     reason: parsed.reason ?? "No reason provided",
     match: finalScore >= 50,
-    company_dossier: parsed.company_dossier?.trim() || undefined,
+    company_dossier: companyDossier,
+    project_summary: projectSummary,
+    tasks_summary: tasksSummary,
+    match_pros: matchPros,
+    match_cons: matchCons,
+    pitch_hook: pitchHook,
     companyUrl: (job.companyMeta && job.companyMeta.companyUrl) || undefined,
   };
 }

@@ -54,6 +54,32 @@ export const EVALUATOR_OUTPUT_SCHEMA = {
       description:
         "1-2 concise sentences in Russian: product, business model (B2B/B2C), and company scale without hallucination.",
     },
+    project_summary: {
+      type: "string",
+      description:
+        "Product/domain, business model (B2B/B2C/SaaS), and scale summary in Russian, without fluff or hallucination.",
+    },
+    tasks_summary: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "2-3 concrete Russian bullet strings describing what the engineer will build/do hands-on.",
+    },
+    match_pros: {
+      type: "array",
+      items: { type: "string" },
+      description: "Concrete pros in Russian for this candidate's profile.",
+    },
+    match_cons: {
+      type: "array",
+      items: { type: "string" },
+      description: "Concrete cons or risks in Russian for this candidate's profile.",
+    },
+    pitch_hook: {
+      type: "string",
+      description:
+        "1 Russian sentence on which specific experience from the candidate's CV will hook the company/recruiter.",
+    },
   },
   required: [
     "overall_score",
@@ -63,6 +89,11 @@ export const EVALUATOR_OUTPUT_SCHEMA = {
     "reason",
     "url",
     "company_dossier",
+    "project_summary",
+    "tasks_summary",
+    "match_pros",
+    "match_cons",
+    "pitch_hook",
   ],
   additionalProperties: false,
 } as const;
