@@ -200,8 +200,13 @@ fi
 
 # 11. Live n8n workflow drift check (WP-7.3) when API key is configured.
 if [[ -n "${N8N_API_KEY:-}" || -f "$HOME/.n8n-recruiter-key" ]]; then
-  if python3 scripts/patch-n8n-hitl-review.py --check; then
+  python3 scripts/patch-n8n-hitl-review.py --check
+  n8n_check_rc=$?
+  if [[ "$n8n_check_rc" -eq 0 ]]; then
     pass "live n8n workflows and scoring.js are in sync with git"
+  elif [[ "$n8n_check_rc" -eq 2 && "$ONLINE" != "true" ]]; then
+    pass "n8n/dist/evaluator/scoring.js is fresh (matches n8n/evaluator/scoring.ts)"
+    warn "live n8n API unreachable from current network; run 'python3 scripts/patch-n8n-hitl-review.py' when off corporate network"
   else
     fail "live n8n workflows or scoring.js drifted from git (run 'cd n8n && npm run build && python3 scripts/patch-n8n-hitl-review.py')"
   fi

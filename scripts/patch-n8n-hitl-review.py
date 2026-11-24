@@ -196,6 +196,15 @@ return unique;
 """
 
 
+def build_restore_batch_items_code() -> str:
+    return r"""// Node: Code: Restore Batch Items
+// Restores all deduplicated job items after executeOnce Notion profile/criteria nodes
+// so Split In Batches: 1 loops over every job while keeping Notion data cached in execution context.
+
+return $('Code: Dedup Batch').all();
+"""
+
+
 def build_check_duplicate_code() -> str:
     return """const resp = $input.first().json;
 const job = $('Split In Batches: 1').item.json;
@@ -1383,6 +1392,7 @@ def get_expected_ingest_nodes() -> dict:
     return {
         "Code: Normalize Jobs": ("jsCode", build_normalize_jobs_code()),
         "Code: Dedup Batch": ("jsCode", build_dedup_batch_code()),
+        "Code: Restore Batch Items": ("jsCode", build_restore_batch_items_code()),
         "Code: Check Duplicate": ("jsCode", build_check_duplicate_code()),
         "Code: LLM Router": ("jsCode", build_llm_router_code()),
         "Code: Parse Ollama Response": ("jsCode", build_parse_ollama_code()),
@@ -1401,15 +1411,21 @@ def find_callback_workflow(all_workflows: list) -> dict | None:
 
 
 def rewire_notion_profile_before_loop(wf: dict) -> bool:
-    """Ensure Read Candidate Profile & Notion: Read Matching Criteria are cached/hoisted once per batch.
+    """Ensure Read Candidate Profile & Notion: Read Matching Criteria run once per batch
+    and Code: Restore Batch Items restores the full job array before Split In Batches: 1.
 
-    If in the live workflow `IF: Already in Notion?` false-branch connects directly to
-    `Read Candidate Profile -> Notion: Read Matching Criteria -> Code: Build Ollama Payload`,
-    rewire `Code: Dedup Batch -> Read Candidate Profile -> Notion: Read Matching Criteria -> Split In Batches: 1`
-    and `IF: Already in Notion?` (false) -> `Code: Build Ollama Payload` so Notion is queried once per batch.
+    Target graph:
+      Code: Dedup Batch
+        -> Read Candidate Profile (executeOnce: true)
+        -> Notion: Read Matching Criteria (executeOnce: true)
+        -> Code: Restore Batch Items (returns $('Code: Dedup Batch').all())
+        -> Split In Batches: 1
+      IF: Already in Notion? (false branch)
+        -> Code: Build Ollama Payload
     """
-    connections = wf.get("connections", {})
-    nodes_by_name = {n.get("name"): n for n in wf.get("nodes", [])}
+    connections = wf.setdefault("connections", {})
+    nodes = wf.setdefault("nodes", [])
+    nodes_by_name = {n.get("name"): n for n in nodes}
     required = {
         "Code: Dedup Batch",
         "Split In Batches: 1",
@@ -1425,48 +1441,67 @@ def rewire_notion_profile_before_loop(wf: dict) -> bool:
     if len(if_already) < 2:
         return False
 
-    false_branch = if_already[1]
-    if not any(edge.get("node") == "Read Candidate Profile" for edge in false_branch):
-        return False
+    changed = False
+    restore_node_name = "Code: Restore Batch Items"
+    if restore_node_name not in nodes_by_name:
+        split_pos = nodes_by_name["Split In Batches: 1"].get("position", [13152, 5168])
+        restore_node = {
+            "parameters": {
+                "jsCode": build_restore_batch_items_code(),
+            },
+            "id": "node-restore-batch-items",
+            "name": restore_node_name,
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [split_pos[0] - 48, split_pos[1]],
+        }
+        nodes.append(restore_node)
+        nodes_by_name[restore_node_name] = restore_node
+        changed = True
 
-    # Rewire:
-    # 1. Code: Dedup Batch -> Read Candidate Profile
-    connections["Code: Dedup Batch"] = {
-        "main": [[{"node": "Read Candidate Profile", "type": "main", "index": 0}]]
+    expected_edges = {
+        "Code: Dedup Batch": [[{"node": "Read Candidate Profile", "type": "main", "index": 0}]],
+        "Read Candidate Profile": [[{"node": "Notion: Read Matching Criteria", "type": "main", "index": 0}]],
+        "Notion: Read Matching Criteria": [[{"node": restore_node_name, "type": "main", "index": 0}]],
+        restore_node_name: [[{"node": "Split In Batches: 1", "type": "main", "index": 0}]],
     }
-    # 2. Read Candidate Profile -> Notion: Read Matching Criteria
-    connections["Read Candidate Profile"] = {
-        "main": [[{"node": "Notion: Read Matching Criteria", "type": "main", "index": 0}]]
-    }
-    # 3. Notion: Read Matching Criteria -> Split In Batches: 1
-    connections["Notion: Read Matching Criteria"] = {
-        "main": [[{"node": "Split In Batches: 1", "type": "main", "index": 0}]]
-    }
-    # 4. IF: Already in Notion? (false branch) -> Code: Build Ollama Payload
-    if_already[1] = [{"node": "Code: Build Ollama Payload", "type": "main", "index": 0}]
+    for src_node, target_main in expected_edges.items():
+        if connections.get(src_node, {}).get("main") != target_main:
+            connections[src_node] = {"main": target_main}
+            changed = True
 
-    # Ensure Read Candidate Profile and Notion: Read Matching Criteria have executeOnce=True
+    expected_false_branch = [{"node": "Code: Build Ollama Payload", "type": "main", "index": 0}]
+    if if_already[1] != expected_false_branch:
+        if_already[1] = expected_false_branch
+        changed = True
+
     for node_name in ("Read Candidate Profile", "Notion: Read Matching Criteria"):
-        nodes_by_name[node_name]["executeOnce"] = True
+        if nodes_by_name[node_name].get("executeOnce") is not True:
+            nodes_by_name[node_name]["executeOnce"] = True
+            changed = True
 
-    return True
+    return changed
 
 
 def run_check_mode(headers: dict) -> None:
     verify_scoring_dist_freshness()
     expected_nodes = get_expected_ingest_nodes()
 
-    # 1. Fetch all workflows
-    list_req = urllib.request.Request(f"{BASE_URL}/api/v1/workflows?limit=100", headers=headers)
-    with urllib.request.urlopen(list_req, timeout=30) as resp:
-        all_wf = json.loads(resp.read().decode()).get("data", [])
+    try:
+        # 1. Fetch all workflows
+        list_req = urllib.request.Request(f"{BASE_URL}/api/v1/workflows?limit=100", headers=headers)
+        with urllib.request.urlopen(list_req, timeout=30) as resp:
+            all_wf = json.loads(resp.read().decode()).get("data", [])
 
-    # 2. Fetch Ingest Jobs workflow
-    req = urllib.request.Request(
-        f"{BASE_URL}/api/v1/workflows/{INGEST_WORKFLOW_ID}", headers=headers
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        wf = json.loads(resp.read().decode())
+        # 2. Fetch Ingest Jobs workflow
+        req = urllib.request.Request(
+            f"{BASE_URL}/api/v1/workflows/{INGEST_WORKFLOW_ID}", headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            wf = json.loads(resp.read().decode())
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+        print(f"UNREACHABLE: scoring.js is fresh, but live n8n API at {BASE_URL} is unreachable: {exc}")
+        sys.exit(2)
 
     nodes_by_name = {n.get("name", ""): n for n in wf.get("nodes", [])}
     drifts = []
@@ -1483,6 +1518,22 @@ def run_check_mode(headers: dict) -> None:
                 f"(expected {len(expected_val)} chars, live has {len(actual_val)} chars)"
             )
 
+    # Verify batch-restoring connection chain before Split In Batches: 1
+    connections = wf.get("connections", {})
+    expected_chain = {
+        "Code: Dedup Batch": "Read Candidate Profile",
+        "Read Candidate Profile": "Notion: Read Matching Criteria",
+        "Notion: Read Matching Criteria": "Code: Restore Batch Items",
+        "Code: Restore Batch Items": "Split In Batches: 1",
+    }
+    for src_node, expected_dst in expected_chain.items():
+        main_edges = connections.get(src_node, {}).get("main", [])
+        first_targets = [e.get("node") for e in (main_edges[0] if main_edges else [])]
+        if first_targets != [expected_dst]:
+            drifts.append(
+                f"Ingest Jobs: connection '{src_node}' -> {first_targets} (expected ['{expected_dst}'])"
+            )
+
     # 3. Check callback workflow
     cb_summary = find_callback_workflow(all_wf)
     if cb_summary is None:
@@ -1491,9 +1542,13 @@ def run_check_mode(headers: dict) -> None:
         )
     else:
         cb_id = cb_summary.get("id")
-        cb_req = urllib.request.Request(f"{BASE_URL}/api/v1/workflows/{cb_id}", headers=headers)
-        with urllib.request.urlopen(cb_req, timeout=30) as resp:
-            cb_wf = json.loads(resp.read().decode())
+        try:
+            cb_req = urllib.request.Request(f"{BASE_URL}/api/v1/workflows/{cb_id}", headers=headers)
+            with urllib.request.urlopen(cb_req, timeout=30) as resp:
+                cb_wf = json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            print(f"UNREACHABLE: scoring.js is fresh, but live n8n API at {BASE_URL} is unreachable: {exc}")
+            sys.exit(2)
 
         if not cb_wf.get("active"):
             drifts.append(f"Callback workflow '{cb_wf.get('name')}' ({cb_id}) is inactive (active=false)")
@@ -1567,6 +1622,12 @@ def main(argv: list[str] | None = None) -> None:
     patched_count = 0
     expected_nodes = get_expected_ingest_nodes()
 
+    if rewire_notion_profile_before_loop(wf):
+        patched_count += 1
+        print(
+            "✅ Hoisted Read Candidate Profile & Notion: Read Matching Criteria + wired Code: Restore Batch Items before Split In Batches: 1"
+        )
+
     for node in nodes:
         name = node.get("name", "")
         if name in expected_nodes:
@@ -1582,10 +1643,6 @@ def main(argv: list[str] | None = None) -> None:
             print(f"✅ Patched {name} ({param_key})")
         elif name in ("Read Candidate Profile", "Notion: Read Matching Criteria"):
             node["executeOnce"] = True
-
-    if rewire_notion_profile_before_loop(wf):
-        patched_count += 1
-        print("✅ Hoisted Read Candidate Profile & Notion: Read Matching Criteria before Split In Batches: 1")
 
     if patched_count > 0:
         payload = {

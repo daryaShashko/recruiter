@@ -41,6 +41,15 @@ flow:
   - node: "Code: Dedup Batch"
     desc: In-memory dedup on fingerprint + urlNorm + url; logs dropped items
 
+  - node: "Read Candidate Profile"
+    desc: Queries active CV rows from Notion once per batch (executeOnce=true)
+
+  - node: "Notion: Read Matching Criteria"
+    desc: Queries active Matching Criteria rows from Notion once per batch (executeOnce=true)
+
+  - node: "Code: Restore Batch Items"
+    desc: "Restores full deduplicated job array via $('Code: Dedup Batch').all() after executeOnce Notion reads"
+
   - node: "Split In Batches: 1"
     desc: Loops one job at a time
     done_output: "→ NoOp: All Done → Code: Prepare Digest → Telegram: Send Digest"
@@ -63,13 +72,7 @@ flow:
   - node: "IF: Already in Notion?"
     desc: "isDuplicate == true?"
     true: "→ NoOp: Skip Duplicate → back to Split In Batches: 1"
-    false: "→ Read Candidate Profile → Notion: Read Matching Criteria → Code: Build Ollama Payload"
-
-  - node: "Read Candidate Profile"
-    desc: Queries active CV rows from Notion with the existing notionApi credential
-
-  - node: "Notion: Read Matching Criteria"
-    desc: Queries active Matching Criteria rows from Notion for each new job
+    false: "→ Code: Build Ollama Payload"
 
   - node: "Code: Build Ollama Payload"
     desc: Builds the system prompt from current Notion CV and criteria; on read failure sets profileError, never uses a local fallback
