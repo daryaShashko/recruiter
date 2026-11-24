@@ -180,7 +180,7 @@ for (const item of items) {
   const urlNorm = String(j.urlNorm || '').trim();
   const url = String(j.url || '').trim();
 
-  if ((fp && seenFingerprints.has(fp)) || (urlNorm && seenUrls.has(urlNorm)) || (url && seenUrls.has(url))) {
+  if (fp ? seenFingerprints.has(fp) : ((urlNorm && seenUrls.has(urlNorm)) || (url && seenUrls.has(url)))) {
     console.log(`[BatchDedup] DROP "${j.title}" @ ${j.company} (fp=${fp})`);
     continue;
   }
@@ -209,7 +209,12 @@ def build_check_duplicate_code() -> str:
     return """const resp = $input.first().json;
 const job = $('Split In Batches: 1').item.json;
 
-const results = Array.isArray(resp.results) ? resp.results : [];
+if (resp?.error || !Array.isArray(resp?.results)) {
+  console.log(`[Dedup] FAIL-CLOSED "${job.title}" @ ${job.company} — Notion lookup failed: ${JSON.stringify(resp?.error || 'missing results')}`);
+  return [{ json: { ...job, isDuplicate: true, dedupError: true } }];
+}
+
+const results = resp.results;
 let isDuplicate = false;
 
 for (const match of results) {
@@ -242,6 +247,109 @@ if (isDuplicate) {
 
 return [{ json: { ...job, isDuplicate } }];
 """
+
+
+def build_ollama_payload_code() -> str:
+    repo_root = Path(__file__).resolve().parent.parent
+    template_path = repo_root / "n8n" / "prompts" / "evaluator-template.json"
+    messages = json.loads(template_path.read_text(encoding="utf-8"))
+    system_template = next(m["content"] for m in messages if m.get("role") == "system")
+    before_profile, after_profile = system_template.split("{{profile}}", 1)
+
+    header = r"""// Node: Code: Build Ollama Payload
+// Compiles active Notion Candidate Profile & Matching Criteria into systemPrompt (synced with n8n/prompts/evaluator-template.json)
+
+const cv = $('Read Candidate Profile').first().json;
+const criteria = $('Notion: Read Matching Criteria').first().json;
+const readText = (value, key) => {
+  const property = value?.[key];
+  const parts = property?.rich_text || property?.title;
+  return Array.isArray(parts) ? parts.map(part => part.plain_text || '').join('') : '';
+};
+const readSelect = (value, key) => value?.[key]?.select?.name || '';
+const isComplete = (value) => value && Array.isArray(value.results) &&
+  value.has_more === false && value.results.length > 0 && !value.error;
+
+let profile = '';
+let scoringConfig = null;
+let profileError = '';
+
+if (!isComplete(cv) || !isComplete(criteria)) {
+  profileError = 'Notion CV or Matching Criteria query failed, returned no rows, or requires pagination';
+} else {
+  const cvRows = cv.results.filter(row => row.properties?.Active?.checkbox === true)
+    .sort((a, b) => (a.properties.Order?.number ?? 0) - (b.properties.Order?.number ?? 0));
+  const criteriaRows = criteria.results.filter(row => row.properties?.Active?.checkbox === true)
+    .sort((a, b) => (a.properties.Order?.number ?? 0) - (b.properties.Order?.number ?? 0));
+  if (!cvRows.length || !criteriaRows.length || criteriaRows.some(row =>
+      !readText(row.properties, 'Rule Description (For Prompt)') ||
+      !readText(row.properties, 'Rule Name'))) {
+    profileError = 'Notion CV or active criteria are incomplete';
+  } else {
+    const grouped = new Map();
+    for (const row of cvRows) {
+      const p = row.properties;
+      const section = readSelect(p, 'Section');
+      if (!grouped.has(section)) grouped.set(section, []);
+      grouped.get(section).push('- ' + readText(p, 'Title') + ': ' + readText(p, 'Highlight / Summary'));
+    }
+    const sections = Array.from(grouped, ([section, entries]) => '## ' + section + '\n' + entries.join('\n'));
+    const rules = criteriaRows.map(row => {
+      const p = row.properties;
+      return '- ' + readText(p, 'Rule Name') + ' [' + readSelect(p, 'Rule Type') + ']: ' + readText(p, 'Rule Description (For Prompt)');
+    });
+    profile = '# Candidate Profile & Preferences\n\n' + sections.join('\n\n') +
+      '\n\n## Active Matching Criteria (Notion)\n' + rules.join('\n');
+
+    const findKeywords = (hint, fallback) => {
+      const row = criteriaRows.find(r => readText(r.properties, 'Rule Name').toLowerCase().includes(hint));
+      const list = row ? readText(row.properties, 'Value / Keywords').split(/[,;\n|]+/).map(x => x.trim().toLowerCase()).filter(Boolean) : [];
+      return Array.from(new Set([...fallback, ...list]));
+    };
+    const floor = criteriaRows.find(r => readText(r.properties, 'Rule Name').toLowerCase().includes('salary floor'));
+    const salaryFloor = Number(readText(floor?.properties, 'Value / Keywords').match(/\d{4,6}/)?.[0] || 22000);
+    scoringConfig = {
+      tricityKeywords: findKeywords('allowed locations', ['gdansk', 'gdańsk', 'gdynia', 'sopot']),
+      outsourcingKeywords: findKeywords('outsourcing', ['epam', 'luxoft', 'itelence']),
+      cryptoKeywords: findKeywords('crypto', ['crypto', 'web3', 'blockchain']),
+      gamblingKeywords: findKeywords('gambling', ['gambling', 'betting', 'casino']),
+      minB2bPlnFloor: salaryFloor,
+    };
+  }
+}
+
+const job = $('Split In Batches: 1').item.json;
+if (profileError) {
+  console.error('[Notion] Candidate profile unavailable: ' + profileError);
+  return [{ json: { ...job, profileError } }];
+}
+"""
+    prompt_line = (
+        f"\nconst systemPrompt = {json.dumps(before_profile, ensure_ascii=False)} + profile + "
+        f"{json.dumps(after_profile, ensure_ascii=False)};\n"
+    )
+    footer = r"""
+const userContent = [
+  `Job Title: ${job.title}`,
+  `Company: ${job.company}`,
+  `Location: ${job.location || 'Not specified'}`,
+  `Salary: ${job.salary || 'Not specified'}`,
+  `URL: ${job.url}`,
+  '',
+  'Job Description:',
+  job.body || 'No description available'
+].join('\n');
+
+return [{
+  json: {
+    ...job,
+    systemPrompt,
+    userMessage: userContent,
+    scoringConfig
+  }
+}];
+"""
+    return header + prompt_line + footer
 
 
 def build_llm_router_code() -> str:
@@ -911,6 +1019,13 @@ const rejected = validEvaluated.filter(j => (j.overall_score || 0) < 50);
 
 const sanitizeMd = (s) => String(s || '').replace(/[*_`\[\]]/g, '').trim();
 
+const truncateHook = (s, maxLen = 160) => {
+  const clean = sanitizeMd(s);
+  if (clean.length <= maxLen) return clean;
+  const sliced = clean.slice(0, maxLen).replace(/[\s,;:(\-]+[^\s,;:(\-]*$/, '').trim();
+  return (sliced || clean.slice(0, maxLen)).replace(/[(\[,;:\-\s]+$/, '') + '…';
+};
+
 const topMatches = [...validEvaluated]
   .filter(j => (j.overall_score || 0) >= 50)
   .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
@@ -927,7 +1042,7 @@ if (topMatches.length > 0) {
     const comp = sanitizeMd(j.company || 'Компания');
     const sal = sanitizeMd(j.net_salary ? `${j.salary || ''} (~${j.net_salary})` : (j.salary || 'ЗП не указана'));
     const hookRaw = j.pitch_hook || j.project_summary || j.company_dossier || j.reason || '';
-    const hook = sanitizeMd(hookRaw).slice(0, 140);
+    const hook = truncateHook(hookRaw, 160);
     const linkPart = j.url ? `[${title}](${j.url})` : `*${title}*`;
     return `${idx + 1}. ${badge} ${linkPart} @ *${comp}* (${j.overall_score}/100)\n   💵 ${sal}\n   💡 ${hook}`;
   });
@@ -1387,6 +1502,16 @@ def build_callback_workflow_payload(name: str = "Telegram Bot") -> dict:
     }
 
 
+def build_restore_job_payload_code() -> str:
+    return r"""// Node: Code: Restore Job Payload
+// Restores parsed job payload after Notion: Log to Eval Log while preserving evalLogPageId.
+
+const job = $('Code: Parse Ollama Response').item.json;
+const evalLogPageId = $('Notion: Log to Eval Log').item.json?.id || '';
+return [{ json: { ...job, evalLogPageId } }];
+"""
+
+
 def get_expected_ingest_nodes() -> dict:
     """Return expected code / jsonBody for all managed nodes in Ingest Jobs workflow."""
     return {
@@ -1394,8 +1519,11 @@ def get_expected_ingest_nodes() -> dict:
         "Code: Dedup Batch": ("jsCode", build_dedup_batch_code()),
         "Code: Restore Batch Items": ("jsCode", build_restore_batch_items_code()),
         "Code: Check Duplicate": ("jsCode", build_check_duplicate_code()),
+        "Code: Build Ollama Payload": ("jsCode", build_ollama_payload_code()),
         "Code: LLM Router": ("jsCode", build_llm_router_code()),
         "Code: Parse Ollama Response": ("jsCode", build_parse_ollama_code()),
+        "Code: Restore Job Payload": ("jsCode", build_restore_job_payload_code()),
+        "Notion: Update Log with TG Info": ("pageId", "={{ $json.evalLogPageId || $('Notion: Log to Eval Log').item.json.id }}"),
         "Telegram: Send Alert": ("jsonBody", build_telegram_send_alert_json_body()),
         "Telegram: Send Review Alert": ("jsonBody", build_telegram_send_review_alert_json_body()),
         "Code: Prepare Digest": ("jsCode", build_prepare_digest_code()),

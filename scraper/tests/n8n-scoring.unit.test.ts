@@ -234,6 +234,16 @@ describe("WP-6.1: Pre-LLM Hard Reject Gate preFilterJob() & Direct Non-JS Check"
     );
     expect(bodyLeasing.rejected).toBe(true);
     expect(bodyLeasing.red_flags).toContain("Industry: Agency/Outsourcing");
+
+    // Partial dynamicConfig.outsourcingKeywords from Notion must merge with built-in OUTSOURCING_KEYWORDS
+    const itelence = preFilterJob(makeJob({ company: "ITELENCE" }), {
+      cryptoKeywords: ["crypto"],
+      gamblingKeywords: ["gambling"],
+      outsourcingKeywords: ["epam", "luxoft"],
+      tricityKeywords: ["gdańsk"],
+    });
+    expect(itelence.rejected).toBe(true);
+    expect(itelence.red_flags).toContain("Industry: Agency/Outsourcing");
   });
 
   it("pre-rejects CRYPTO_KEYWORDS and GAMBLING_KEYWORDS without false positives on 'defining' or 'cryptography'", () => {

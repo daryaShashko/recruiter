@@ -90,7 +90,9 @@ describe("notion-profile compiler & Notion API client", () => {
     const cfg = compileDynamicScoringConfig(customCriteria);
     expect(cfg.minB2bPlnFloor).toBe(25000);
     expect(cfg.minUopPlnFloor).toBe(27000);
-    expect(cfg.outsourcingKeywords).toEqual(["netguru", "stx next", "custom-bodyshop"]);
+    expect(cfg.outsourcingKeywords).toEqual(
+      expect.arrayContaining(["epam", "netguru", "stx next", "custom-bodyshop"]),
+    );
     // Unspecified gates fall back safely to defaults
     expect(cfg.cryptoKeywords).toContain("blockchain");
 

@@ -160,6 +160,7 @@ export const OUTSOURCING_KEYWORDS = [
   "avenga",
   "n-ix",
   "ciklum",
+  "itelence",
 ];
 
 export const CRYPTO_KEYWORDS = [
@@ -843,9 +844,15 @@ export function preFilterJob(
   const jobCompanyLower = (job.company ?? "").toLowerCase();
   const jobBodyLower = (job.body ?? "").toLowerCase();
 
-  const outsourcingKeywords = rawConfig?.outsourcingKeywords ?? OUTSOURCING_KEYWORDS;
-  const cryptoKeywords = rawConfig?.cryptoKeywords ?? CRYPTO_KEYWORDS;
-  const gamblingKeywords = rawConfig?.gamblingKeywords ?? GAMBLING_KEYWORDS;
+  const outsourcingKeywords = Array.from(
+    new Set([...OUTSOURCING_KEYWORDS, ...(rawConfig?.outsourcingKeywords ?? [])]),
+  );
+  const cryptoKeywords = Array.from(
+    new Set([...CRYPTO_KEYWORDS, ...(rawConfig?.cryptoKeywords ?? [])]),
+  );
+  const gamblingKeywords = Array.from(
+    new Set([...GAMBLING_KEYWORDS, ...(rawConfig?.gamblingKeywords ?? [])]),
+  );
 
   const redFlags: string[] = [];
   const reasons: string[] = [];
@@ -996,9 +1003,15 @@ export function evaluateJob(
     "trojmiasto",
     "trójmiasto",
   ];
-  const outsourcingKeywords = dynamicConfig?.outsourcingKeywords ?? OUTSOURCING_KEYWORDS;
-  const cryptoKeywords = dynamicConfig?.cryptoKeywords ?? CRYPTO_KEYWORDS;
-  const gamblingKeywords = dynamicConfig?.gamblingKeywords ?? GAMBLING_KEYWORDS;
+  const outsourcingKeywords = Array.from(
+    new Set([...OUTSOURCING_KEYWORDS, ...(dynamicConfig?.outsourcingKeywords ?? [])]),
+  );
+  const cryptoKeywords = Array.from(
+    new Set([...CRYPTO_KEYWORDS, ...(dynamicConfig?.cryptoKeywords ?? [])]),
+  );
+  const gamblingKeywords = Array.from(
+    new Set([...GAMBLING_KEYWORDS, ...(dynamicConfig?.gamblingKeywords ?? [])]),
+  );
 
   const isRemote =
     jobLocationLower.includes("remote") ||

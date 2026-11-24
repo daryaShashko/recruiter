@@ -15,6 +15,11 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import {
+  CRYPTO_KEYWORDS,
+  GAMBLING_KEYWORDS,
+  OUTSOURCING_KEYWORDS,
+} from "./scoring";
 
 export type CvSection =
   | "Role & Summary"
@@ -457,7 +462,9 @@ export function compileDynamicScoringConfig(
     );
     if (!match) return [...fallback];
     const parsed = parseKeywordList(match.valueOrKeywords);
-    return parsed.length > 0 ? parsed : [...fallback];
+    return parsed.length > 0
+      ? [...new Set([...fallback, ...parsed])]
+      : [...fallback];
   };
 
   const salaryGate = activeGates.find(
@@ -504,39 +511,9 @@ export function compileDynamicScoringConfig(
   return {
     minB2bPlnFloor: minB2bPlnFloor ?? 24000,
     minUopPlnFloor: minUopPlnFloor ?? 27000,
-    cryptoKeywords: findKeywords("crit-reject-crypto", "crypto", [
-      "crypto",
-      "web3",
-      "blockchain",
-      "solana",
-      "bitcoin",
-      "ethereum",
-      "nft",
-      "defi",
-      "smart contract",
-    ]),
-    gamblingKeywords: findKeywords("crit-reject-gambling", "gambling", [
-      "gambling",
-      "betting",
-      "casino",
-      "sportsbook",
-      "sports-betting",
-    ]),
-    outsourcingKeywords: findKeywords("crit-reject-outsourcing", "outsourcing", [
-      "epam",
-      "luxoft",
-      "capgemini",
-      "accenture",
-      "sii",
-      "infosys",
-      "cognizant",
-      "wipro",
-      "tcs",
-      "tata consultancy",
-      "outstaffing",
-      "outsourcing agency",
-      "outsourcing company",
-    ]),
+    cryptoKeywords: findKeywords("crit-reject-crypto", "crypto", CRYPTO_KEYWORDS),
+    gamblingKeywords: findKeywords("crit-reject-gambling", "gambling", GAMBLING_KEYWORDS),
+    outsourcingKeywords: findKeywords("crit-reject-outsourcing", "outsourcing", OUTSOURCING_KEYWORDS),
     tricityKeywords: [
       "gdansk",
       "gdańsk",
