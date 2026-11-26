@@ -92,19 +92,22 @@ export function extractSalary(types: RawEmploymentType[]): string | undefined {
       Boolean((e.fromPerUnit && e.fromPerUnit > 0) || (e.toPerUnit && e.toPerUnit > 0)),
   );
 
+  const isMonthUnit = (unit?: string): boolean => (unit ?? "").toLowerCase() === "month";
+  const isHourUnit = (unit?: string): boolean => (unit ?? "").toLowerCase() === "hour";
+
   const best =
     valid.find(
       (e) =>
         e.currency === "PLN" &&
         e.currencySource === "original" &&
         e.type === "b2b" &&
-        e.unit === "Month",
+        isMonthUnit(e.unit),
     ) ??
     valid.find(
       (e) =>
         e.currency === "PLN" &&
         e.currencySource === "original" &&
-        e.unit === "Month",
+        isMonthUnit(e.unit),
     ) ??
     valid.find(
       (e) => e.currency === "PLN" && e.currencySource === "original",
@@ -113,17 +116,17 @@ export function extractSalary(types: RawEmploymentType[]): string | undefined {
       (e) =>
         e.currencySource === "original" &&
         e.type === "b2b" &&
-        e.unit === "Month",
+        isMonthUnit(e.unit),
     ) ??
     valid.find(
-      (e) => e.currencySource === "original" && e.unit === "Month",
+      (e) => e.currencySource === "original" && isMonthUnit(e.unit),
     ) ??
     valid.find((e) => e.currencySource === "original") ??
     valid[0];
 
   if (!best) return undefined;
 
-  const isHourly = best.unit === "Hour";
+  const isHourly = isHourUnit(best.unit);
   const hasPerUnit = Boolean(
     (best.fromPerUnit && best.fromPerUnit > 0) || (best.toPerUnit && best.toPerUnit > 0),
   );

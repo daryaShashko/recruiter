@@ -366,6 +366,11 @@ describe("WP-6.1: Pre-LLM Hard Reject Gate preFilterJob() & Direct Non-JS Check"
 
   it("preserves existing salary parsing, pipeline error classification, and exchange rate metadata", () => {
     expect(extractMaxMonthlyPln("25 000 – 30 000 PLN B2B")).toBe(30000);
+    // Mislabeled hourly rates (e.g. JustJoin "130–145 PLN B2B/mo") are inferred as hourly (x160)
+    expect(extractMaxMonthlyPln("130–145 PLN B2B/mo")).toBe(23200);
+    expect(extractMaxMonthlyPln("160–180 PLN B2B/mo")).toBe(28800);
+    expect(preFilterJob(makeJob({ salary: "160–180 PLN B2B/mo" })).rejected).toBe(false);
+    expect(calculateNetSalary("160–180 PLN B2B/mo")).toBe("20 500 – 23 000 PLN");
     expect(RATES_AS_OF_DATE).toBe("2026-11-16");
     expect(CURRENCY_RATES_TO_PLN.RATES_AS_OF_DATE).toBe("2026-11-16");
     expect(classifyPipelineError("429 Too Many Requests")).toBe("Pipeline: Quota Error");

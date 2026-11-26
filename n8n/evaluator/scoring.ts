@@ -654,6 +654,13 @@ export const CURRENCY_RATES_TO_PLN: ReadonlyArray<{
  */
 const ANNUAL_INFERENCE_THRESHOLD_PLN = 100_000;
 
+/**
+ * At or below this PLN value a salary without an hourly marker (e.g. "130–145 PLN B2B/mo"
+ * when an employer enters an hourly rate in a monthly field) is assumed to be hourly.
+ * No realistic monthly IT salary is <= 600 PLN/month (~140 EUR/month).
+ */
+const HOURLY_INFERENCE_THRESHOLD_PLN = 600;
+
 /** Returns the PLN conversion rate for the currency in `salary`, or undefined if unknown/absent. */
 export function detectRateToPln(salary: string): number | undefined {
   for (const { pattern, rate } of CURRENCY_RATES_TO_PLN) {
@@ -710,6 +717,11 @@ function parseSalaryNumbersInOriginalCurrency(
 
   const maxNumber = Math.max(...parsedNumbers);
   const isSuspiciouslyHighHourly = isHourly && maxNumber * rateToPln > 3000;
+  const inferHourly =
+    !isHourly &&
+    !isDaily &&
+    !isYearly &&
+    maxNumber * rateToPln <= HOURLY_INFERENCE_THRESHOLD_PLN;
   const inferAnnual =
     !isHourly &&
     !isDaily &&
@@ -717,15 +729,16 @@ function parseSalaryNumbersInOriginalCurrency(
     maxNumber * rateToPln > ANNUAL_INFERENCE_THRESHOLD_PLN;
 
   return parsedNumbers.map((num) => {
-    const monthly = isHourly
-      ? isSuspiciouslyHighHourly
-        ? num
-        : num * 160
-      : isDaily
-        ? num * 20
-        : isYearly || inferAnnual
-          ? num / 12
-          : num;
+    const monthly =
+      isHourly || inferHourly
+        ? isSuspiciouslyHighHourly
+          ? num
+          : num * 160
+        : isDaily
+          ? num * 20
+          : isYearly || inferAnnual
+            ? num / 12
+            : num;
     return monthly;
   });
 }

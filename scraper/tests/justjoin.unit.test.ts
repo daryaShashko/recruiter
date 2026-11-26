@@ -166,6 +166,21 @@ describe('extractSalary', () => {
     expect(result).not.toContain('/mo');
   });
 
+  it('matches lowercase unit "hour" and "month" case-insensitively', () => {
+    const hourly = extractSalary([{
+      from: 130,
+      to: 145,
+      currency: 'PLN',
+      currencySource: 'original',
+      type: 'b2b',
+      unit: 'hour',
+      gross: false,
+    }]);
+    expect(hourly).toBeDefined();
+    expect(hourly).toContain('/h');
+    expect(hourly).not.toContain('/mo');
+  });
+
   it('prefers fromPerUnit/toPerUnit for hourly rate when JustJoin precomputes monthly from/to', () => {
     const types: RawEmploymentType[] = [{
       from: 15120,

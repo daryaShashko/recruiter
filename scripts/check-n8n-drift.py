@@ -295,7 +295,7 @@ def main(args: Optional[List[str]] = None) -> None:
     parser.add_argument(
         "--full-check",
         action="store_true",
-        help="Delegate to patch-n8n-hitl-review.py --check for 100% node and scoring.js drift verification",
+        help="Delegate to patch-n8n-hitl-review.py --check for 100%% node and scoring.js drift verification",
     )
     parsed = parser.parse_args(args)
 
